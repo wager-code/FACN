@@ -228,7 +228,7 @@ public sealed class CloudPageViewModel : ViewModelBase
         }
         else
         {
-            var comparison = ContentIdentity.CompareVersions(local.Version, item.Version);
+            var comparison = ContentIdentity.CompareVersions(local.Version, item.EffectiveGameVersion);
             item.InstallStateCode = !comparison.Ordered ? "unknown" : comparison.Compare > 0 ? "newer" : "current";
             item.InstallState = !comparison.Ordered
                 ? $"版本不可比 · 本地 {local.Version}"
@@ -283,12 +283,12 @@ public sealed class CloudPageViewModel : ViewModelBase
             var matched = match.Entry;
             if (matched is { Valid: true })
             {
-                var comparison = ContentIdentity.CompareVersions(matched.Version, item.Version);
+                var comparison = ContentIdentity.CompareVersions(matched.Version, item.EffectiveGameVersion);
                 if ((comparison.Ordered && comparison.Compare > 0) || !comparison.Ordered)
                 {
                     var detail = comparison.Ordered
-                        ? $"本地版本 {matched.Version} 高于云端版本 {item.Version}，继续会降级。"
-                        : $"无法安全比较本地版本 {matched.Version} 与云端版本 {item.Version}。";
+                        ? $"本地游戏版本 {matched.Version} 高于云端包内版本 {item.EffectiveGameVersion}，继续会降级。"
+                        : $"无法安全比较本地游戏版本 {matched.Version} 与云端包内版本 {item.EffectiveGameVersion}。";
                     var answer = MessageBox.Show(detail + "\n\n是否仍要手动覆盖？", "确认覆盖本地内容", MessageBoxButton.YesNo, MessageBoxImage.Warning);
                     if (answer != MessageBoxResult.Yes) { Status = "已取消安装"; return; }
                 }

@@ -18,7 +18,7 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
             return new(true, false, "本地内容损坏" + detail);
         }
 
-        var comparison = ContentIdentity.CompareVersions(matched.Version, remote.Version);
+        var comparison = ContentIdentity.CompareVersions(matched.Version, remote.EffectiveGameVersion);
         if (comparison.Ordered && comparison.Compare < 0) return new(true, false, "本地版本较旧");
         if (comparison.Ordered && comparison.Compare > 0) return new(false, false, "本地版本较新，保护不降级");
         if (comparison.Ordered && comparison.Compare == 0 && !string.IsNullOrWhiteSpace(remote.EffectiveContentHash))
@@ -67,7 +67,7 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                                 // 双重确认的云端副本，就无需选择或覆盖任何一个玩家目录。
                                 foreach (var candidate in locals.Where(x =>
                                     x.Valid && ContentIdentity.MatchScore(x, entry) == match.Score &&
-                                    ContentIdentity.VersionsEquivalent(x.Version, entry.Version)))
+                                    ContentIdentity.VersionsEquivalent(x.Version, entry.EffectiveGameVersion)))
                                 {
                                     status?.Report($"核对 {entry.Name} 的重复副本…");
                                     var hash = await ContentHash.DirectorySha256Async(candidate.Root, ct);

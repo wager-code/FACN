@@ -442,6 +442,10 @@ var futureMetadata = JsonSerializer.Deserialize<CloudContentEntry>("""
 """)!;
 Check(futureMetadata.AuthorText == "Mapper" && futureMetadata.CategoryText == "竞技" && futureMetadata.TagsText.Contains("2v2", StringComparison.Ordinal), "兼容未来作者、说明、分类和标签字段");
 Check(futureMetadata.PublishedAtValue != DateTimeOffset.MinValue, "发布时间可用于稳定排序");
+var splitVersionMetadata = JsonSerializer.Deserialize<CloudContentEntry>("""{"version":"13","game_version":"3"}""")!;
+Check(splitVersionMetadata.Version == "13" && splitVersionMetadata.EffectiveGameVersion == "3" &&
+      splitVersionMetadata.VersionDisplay.Contains("游戏版本 3"),
+    "云端清单可分别读取发布标签与游戏内部版本");
 var selectionNotified = false;
 futureMetadata.PropertyChanged += (_, e) => selectionNotified |= e.PropertyName == nameof(CloudContentEntry.IsSelected);
 futureMetadata.IsSelected = true;
@@ -494,6 +498,16 @@ var strictRemote = Cloud("strict-map", "strict-map");
 strictRemote.Version = strictWithoutManifestHash.Version;
 var strictDecision = SyncService.Decide(strictWithoutManifestHash, strictRemote);
 Check(!strictDecision.ShouldInstall && strictDecision.Reason.Contains("避免重复覆盖", StringComparison.Ordinal), "同版本且清单缺少内容指纹时不自动重复覆盖");
+var releaseLabeled = Cloud("release-map", "release-map");
+releaseLabeled.Version = "13";
+releaseLabeled.GameVersion = "3";
+releaseLabeled.ContentSha256 = new string('a', 64);
+var releaseLocal = Local("release-map", "release-map");
+releaseLocal.Version = "3";
+var releaseDecision = SyncService.Decide(releaseLocal, releaseLabeled);
+Check(releaseLabeled.EffectiveGameVersion == "3" && releaseLabeled.VersionDisplay.Contains("游戏版本 3") &&
+      releaseDecision.VerifyContentHash && !releaseDecision.ShouldInstall,
+    "发布标签与游戏内部版本分开时按真实版本决定同步并继续校验内容");
 
 Check(SafeArchive.ValidateRelativePath("map/file.scmap").EndsWith(Path.Combine("map", "file.scmap"), StringComparison.Ordinal), "安全相对路径通过");
 CheckThrows(() => SafeArchive.ValidateRelativePath("../outside.txt"), "拒绝目录穿越");
@@ -919,6 +933,14 @@ try
     var repeatedManualMod = await modInstaller.InstallAsync(modEntry, modRoot, existingVersion: "1");
     Check(!repeatedManualMod && (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
         "手动再次安装完全相同的 MOD 包不会重复覆盖或备份");
+    var releaseLabeledMod = new CloudContentEntry
+    {
+        Kind = "MOD", Id = modEntry.Id, Name = modEntry.Name, Version = "2026.08.15", GameVersion = "1",
+        FolderName = modEntry.FolderName, File = modEntry.File, Size = modEntry.Size, Sha256 = modEntry.Sha256
+    };
+    var releaseLabeledInstall = await modInstaller.InstallAsync(releaseLabeledMod, modRoot, existingVersion: "1");
+    Check(!releaseLabeledInstall && (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
+        "发布版本是日期但包内游戏版本一致时能安全验包且不重复覆盖");
     var changedVersionBlocked = false;
     try { await modInstaller.InstallAsync(modEntry, modRoot, existingVersion: "0"); }
     catch (InvalidOperationException ex) when (ex.Message.Contains("版本在安装期间发生变化")) { changedVersionBlocked = true; }

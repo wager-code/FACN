@@ -276,7 +276,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
             throw new IOException("目标目录已存在，拒绝覆盖：" + destination);
 
         // 即使用户手动点击安装，也不要给完全相同的目录再建备份或执行替换。
-        if (current.Valid && ContentIdentity.VersionsEquivalent(current.Version, entry.Version))
+        if (current.Valid && ContentIdentity.VersionsEquivalent(current.Version, entry.EffectiveGameVersion))
         {
             var currentHash = await ContentHash.DirectorySha256Async(localRoot, ct);
             var packageHash = await ContentHash.DirectorySha256Async(source, ct);
@@ -330,8 +330,8 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         if (!actual.Valid) throw new InvalidDataException($"{stage}结构校验失败：{actual.Detail}");
         if (!string.Equals(actual.Kind, expected.Kind, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException($"{stage}类型不一致：清单为 {expected.Kind}，实际为 {actual.Kind}");
-        if (!ContentIdentity.VersionsEquivalent(actual.Version, expected.Version))
-            throw new InvalidDataException($"{stage}版本不一致：清单版本 {expected.Version}，文件内真实版本 {actual.Version}。请管理员重新审核并发布正确的安装包。");
+        if (!ContentIdentity.VersionsEquivalent(actual.Version, expected.EffectiveGameVersion))
+            throw new InvalidDataException($"{stage}版本不一致：清单游戏版本 {expected.EffectiveGameVersion}，文件内真实版本 {actual.Version}。请管理员重新审核并发布正确的安装包。");
         if (ContentIdentity.MatchScore(actual, expected) < 76)
             throw new InvalidDataException($"{stage}内容身份不一致：清单 ID {expected.Id} 与包内 ID/目录 {actual.Id}/{actual.Folder} 无法安全匹配");
     }

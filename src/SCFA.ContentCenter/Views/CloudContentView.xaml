@@ -67,7 +67,7 @@
                             <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock x:Name="FavoriteMark" Text="☆" FontSize="17" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/><DataTemplate.Triggers><DataTrigger Binding="{Binding IsFavorite}" Value="True"><Setter TargetName="FavoriteMark" Property="Text" Value="★"/><Setter TargetName="FavoriteMark" Property="Foreground" Value="{StaticResource WarningBrush}"/></DataTrigger></DataTemplate.Triggers></DataTemplate></DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="名称" Binding="{Binding Name, Mode=OneWay}" Width="2*" MinWidth="180"/>
-                        <DataGridTextColumn Header="版本" Binding="{Binding Version, Mode=OneWay}" Width="85"/>
+                        <DataGridTextColumn Header="版本" Binding="{Binding VersionDisplay, Mode=OneWay}" Width="150"/>
                         <DataGridTemplateColumn Header="本地状态" Width="180">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -113,7 +113,7 @@
                 <Grid Grid.Column="2" Margin="0,1,18,0">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="82"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-                    <TextBlock Text="版本 / 大小" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Column="1"><Run Text="{Binding SelectedItem.Version, TargetNullValue=—}"/><Run Text="  ·  "/><Run Text="{Binding SelectedItem.SizeText, TargetNullValue=—}"/></TextBlock>
+                    <TextBlock Text="版本 / 大小" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Column="1"><Run Text="{Binding SelectedItem.VersionDisplay, TargetNullValue=—}"/><Run Text="  ·  "/><Run Text="{Binding SelectedItem.SizeText, TargetNullValue=—}"/></TextBlock>
                     <TextBlock Grid.Row="1" Text="作者 / 分类" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="1" Grid.Column="1"><Run Text="{Binding SelectedItem.AuthorText, TargetNullValue=—}"/><Run Text="  ·  "/><Run Text="{Binding SelectedItem.CategoryText, TargetNullValue=—}"/></TextBlock>
                     <TextBlock Grid.Row="2" Text="安装路径" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.InstallPath, TargetNullValue=—}" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedItem.InstallPath}"/>
                     <TextBlock Grid.Row="3" Text="标签" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.TagsText, TargetNullValue=—}" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedItem.TagsText}"/>

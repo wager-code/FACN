@@ -16,6 +16,7 @@ public sealed class CloudContentEntry : INotifyPropertyChanged
     [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("version")] public string Version { get; set; } = "";
+    [JsonPropertyName("game_version")] public string GameVersion { get; set; } = "";
     [JsonPropertyName("sha256")] public string Sha256 { get; set; } = "";
     [JsonPropertyName("content_sha256")] public string ContentSha256 { get; set; } = "";
     [JsonPropertyName("content_hash")] public string LegacyContentHash { get; set; } = "";
@@ -31,6 +32,10 @@ public sealed class CloudContentEntry : INotifyPropertyChanged
     [JsonPropertyName("tags")] public List<string> Tags { get; set; } = [];
     [JsonIgnore] public string Kind { get; set; } = "";
     [JsonIgnore] public string EffectiveContentHash => string.IsNullOrWhiteSpace(ContentSha256) ? LegacyContentHash : ContentSha256;
+    [JsonIgnore] public string EffectiveGameVersion => string.IsNullOrWhiteSpace(GameVersion) ? Version : GameVersion;
+    [JsonIgnore] public string VersionDisplay => string.IsNullOrWhiteSpace(GameVersion) ||
+        string.Equals(GameVersion.Trim(), Version.Trim(), StringComparison.OrdinalIgnoreCase)
+        ? Version : $"{Version}（游戏版本 {GameVersion}）";
     [JsonIgnore] public string SizeText => FormatBytes(Size);
     [JsonIgnore] public string InstallState { get => _installState; set => Set(ref _installState, value); }
     [JsonIgnore] public string InstallStateCode { get => _installStateCode; set => Set(ref _installStateCode, value); }
