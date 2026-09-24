@@ -395,13 +395,7 @@ public sealed class SettingsPageViewModel : ViewModelBase
 
     private static bool HasAdminAccess()
     {
-        var user = App.Services.CurrentUser;
-        return !App.Services.OfflineMode &&
-               (user.RoleKey.Contains("admin", StringComparison.OrdinalIgnoreCase) ||
-                user.Permissions.Any(x => x.Equals("*", StringComparison.OrdinalIgnoreCase) ||
-                                          x.StartsWith("users.", StringComparison.OrdinalIgnoreCase) ||
-                                          x.StartsWith("submissions.", StringComparison.OrdinalIgnoreCase) ||
-                                          x.StartsWith("audit.", StringComparison.OrdinalIgnoreCase)));
+        return !App.Services.OfflineMode && AccessPolicy.CanManageSettings(App.Services.CurrentUser);
     }
 
     private static string HealthLabel(string value, string emptyLabel)

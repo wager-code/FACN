@@ -464,6 +464,13 @@ Check(AccessPolicy.CanReadUsers(userManager) && AccessPolicy.CanManageUsers(user
     "服务器用户管理权限可读取、修改和撤销会话");
 Check(!AccessPolicy.CanReadAudit(misleadingRole) && !AccessPolicy.CanUnpublish(misleadingRole) &&
       !AccessPolicy.CanApproveReviews(misleadingRole), "非管理员角色名不能因为含有 admin 字样获得管理操作入口");
+Check(AccessPolicy.CanOpenAdminWorkspace(reviewReader) && !AccessPolicy.CanManageSettings(reviewReader),
+    "审核只读账号可进入审核工作区但不能调整服务器连接设置");
+var settingsManager = new UserInfo { RoleKey = "configurator", Permissions = ["settings.cloud"] };
+Check(AccessPolicy.CanManageSettings(settingsManager) && !AccessPolicy.CanOpenAdminWorkspace(settingsManager),
+    "服务器设置权限只开放高级设置，不扩大到其他管理页面");
+Check(!AccessPolicy.CanOpenAdminWorkspace(misleadingRole) && !AccessPolicy.CanManageSettings(misleadingRole),
+    "伪装管理员角色名不会显示管理导航或高级设置");
 var auditEnvelope = JsonSerializer.Deserialize<AuditFetchResult>("""
 {"records":[{"id":"audit-1","time":"2026-09-25T01:00:00Z","actor_name":"reviewer","action":"review.approve","target_name":"map-one","result":"success","detail":"approved","remote_ip":"127.0.0.1"}],"integrity_ok":true,"integrity_message":"ok","total":1}
 """)!;

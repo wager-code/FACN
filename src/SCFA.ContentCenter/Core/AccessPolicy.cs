@@ -11,6 +11,8 @@ public static class AccessPolicy
     public static bool CanRevokeSessions(UserInfo user) => Has(user, "sessions.revoke", "users.manage", "users.write");
     public static bool CanReadAudit(UserInfo user) => Has(user, "audit.read");
     public static bool CanUnpublish(UserInfo user) => Has(user, "content.manage", "content.unpublish");
+    public static bool CanOpenAdminWorkspace(UserInfo user) => Has(user, "review.read", "review.approve", "submissions.review", "submissions.write", "users.read", "users.manage", "users.write", "audit.read", "server.read");
+    public static bool CanManageSettings(UserInfo user) => Has(user, "settings.cloud", "settings.submission");
 
     private static bool Has(UserInfo user, params string[] permissions)
     {

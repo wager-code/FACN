@@ -185,8 +185,7 @@ public sealed class MainViewModel : ViewModelBase
 
     private static bool IsAdminUser()
     {
-        var user = App.Services.CurrentUser;
-        return !App.Services.OfflineMode && (user.RoleKey.Contains("admin", StringComparison.OrdinalIgnoreCase) || user.Permissions.Any(x => x.Equals("*", StringComparison.OrdinalIgnoreCase) || x.StartsWith("users.", StringComparison.OrdinalIgnoreCase) || x.StartsWith("submissions.", StringComparison.OrdinalIgnoreCase) || x.StartsWith("audit.", StringComparison.OrdinalIgnoreCase)));
+        return !App.Services.OfflineMode && AccessPolicy.CanOpenAdminWorkspace(App.Services.CurrentUser);
     }
 
     private static async Task LogoutAsync()
