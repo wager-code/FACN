@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
 using SCFA.ContentCenter.Commands;
+using SCFA.ContentCenter.Core;
 using SCFA.ContentCenter.Models;
 
 namespace SCFA.ContentCenter.ViewModels;
@@ -65,9 +66,9 @@ public sealed class UsersPageViewModel : ViewModelBase
     public AdminChoice SelectedRole { get => _selectedRole; set => Set(ref _selectedRole, value); }
     public AdminChoice SelectedStatus { get => _selectedStatus; set => Set(ref _selectedStatus, value); }
     public string Status { get => _status; set => Set(ref _status, value); }
-    public bool CanRead => HasPermission("users.read", "users.write", "admin");
-    public bool CanWrite => HasPermission("users.write", "users.manage", "admin");
-    public bool CanRevokeSessions => HasPermission("sessions.revoke", "users.write", "admin");
+    public bool CanRead => AccessPolicy.CanReadUsers(App.Services.CurrentUser);
+    public bool CanWrite => AccessPolicy.CanManageUsers(App.Services.CurrentUser);
+    public bool CanRevokeSessions => AccessPolicy.CanRevokeSessions(App.Services.CurrentUser);
     public int TotalCount => Items.Count;
     public int VisibleCount => ItemsView.Cast<AdminUserRecord>().Count();
     public int ActiveCount => Items.Count(x => x.Status.Equals("active", StringComparison.OrdinalIgnoreCase));
@@ -134,13 +135,6 @@ public sealed class UsersPageViewModel : ViewModelBase
             await RefreshAsync();
         }
         catch (Exception ex) { Status = "撤销失败：" + ex.Message; MessageBox.Show(ex.Message, "会话撤销失败", MessageBoxButton.OK, MessageBoxImage.Error); }
-    }
-
-    private static bool HasPermission(params string[] expected)
-    {
-        var user = App.Services.CurrentUser;
-        if (user.RoleKey.Contains("admin", StringComparison.OrdinalIgnoreCase)) return true;
-        return user.Permissions.Any(value => expected.Any(item => value.Equals(item, StringComparison.OrdinalIgnoreCase) || value.Equals("*", StringComparison.OrdinalIgnoreCase)));
     }
 
     private void NotifySummaries()

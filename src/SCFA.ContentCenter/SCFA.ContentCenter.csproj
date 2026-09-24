@@ -10,9 +10,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>SCFA内容中心</AssemblyName>
     <RootNamespace>SCFA.ContentCenter</RootNamespace>
-    <Version>4.0.0.35</Version>
-    <FileVersion>4.0.0.35</FileVersion>
-    <InformationalVersion>4.0.0-dev35</InformationalVersion>
+    <Version>4.0.0.36</Version>
+    <FileVersion>4.0.0.36</FileVersion>
+    <InformationalVersion>4.0.0-dev36</InformationalVersion>
     <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
   <ItemGroup>

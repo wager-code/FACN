@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
 using SCFA.ContentCenter.Commands;
+using SCFA.ContentCenter.Core;
 using SCFA.ContentCenter.Models;
 
 namespace SCFA.ContentCenter.ViewModels;
@@ -96,9 +97,5 @@ public sealed class OperationsPageViewModel : ViewModelBase
         }
     }
 
-    private static bool CanReadAudit()
-    {
-        var user = App.Services.CurrentUser;
-        return user.RoleKey.Contains("admin", StringComparison.OrdinalIgnoreCase) || user.Permissions.Any(x => x.Equals("audit.read", StringComparison.OrdinalIgnoreCase) || x.Equals("*", StringComparison.OrdinalIgnoreCase));
-    }
+    private static bool CanReadAudit() => AccessPolicy.CanReadAudit(App.Services.CurrentUser);
 }

@@ -37,7 +37,7 @@ public sealed class CloudPageViewModel : ViewModelBase
     public string LibraryFilter { get => _libraryFilter; set { if (Set(ref _libraryFilter, value)) RefreshFilteredView(); } }
     public string FavoriteActionText => SelectedItem?.IsFavorite == true ? "取消收藏" : "收藏所选内容";
     public Visibility AdminActionVisibility => CanUnpublish ? Visibility.Visible : Visibility.Collapsed;
-    public bool CanUnpublish => HasPermission("content.unpublish", "content.manage", "admin");
+    public bool CanUnpublish => AccessPolicy.CanUnpublish(App.Services.CurrentUser);
     public int TotalCount => Items.Count;
     public int VisibleCount => ItemsView.Cast<object>().Count();
     public int SelectedCount => Items.Count(x => x.IsSelected);
@@ -414,14 +414,6 @@ public sealed class CloudPageViewModel : ViewModelBase
             Status = "下架失败：" + ex.Message;
             MessageBox.Show(ex.Message, "下架失败", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-    }
-
-    private static bool HasPermission(params string[] expected)
-    {
-        var user = App.Services.CurrentUser;
-        if (user.RoleKey.Contains("admin", StringComparison.OrdinalIgnoreCase)) return true;
-        return user.Permissions.Any(value => expected.Any(item =>
-            value.Equals(item, StringComparison.OrdinalIgnoreCase) || value.Equals("*", StringComparison.OrdinalIgnoreCase)));
     }
 
     private async Task<bool> InstallIfNeededAsync(CloudContentEntry item, CancellationToken ct)

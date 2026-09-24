@@ -452,6 +452,18 @@ Check(InstallService.ContentKey("地图", " test-map ") == "地图:test-map", "�
 var protectedLoginPassword = LoginCredentialProtector.Protect("Regression-Password-123!");
 Check(LoginCredentialProtector.TryUnprotect(protectedLoginPassword, out var unprotectedLoginPassword) && unprotectedLoginPassword == "Regression-Password-123!", "记住密码使用 Windows 当前用户加密并可安全恢复");
 Check(!LoginCredentialProtector.TryUnprotect("not-valid-base64", out _), "损坏或伪造的已保存密码不会被使用");
+var reviewReader = new UserInfo { RoleKey = "reviewer", Permissions = ["review.read"] };
+var reviewApprover = new UserInfo { RoleKey = "reviewer", Permissions = ["review.approve"] };
+var userManager = new UserInfo { RoleKey = "manager", Permissions = ["users.manage"] };
+var misleadingRole = new UserInfo { RoleKey = "not_admin", Permissions = [] };
+Check(AccessPolicy.CanReadReviews(reviewReader) && !AccessPolicy.CanApproveReviews(reviewReader),
+    "服务器审核只读权限可读取队列但不能提交审核决定");
+Check(AccessPolicy.CanReadReviews(reviewApprover) && AccessPolicy.CanApproveReviews(reviewApprover),
+    "服务器审核批准权限可读取队列并提交审核决定");
+Check(AccessPolicy.CanReadUsers(userManager) && AccessPolicy.CanManageUsers(userManager) && AccessPolicy.CanRevokeSessions(userManager),
+    "服务器用户管理权限可读取、修改和撤销会话");
+Check(!AccessPolicy.CanReadAudit(misleadingRole) && !AccessPolicy.CanUnpublish(misleadingRole) &&
+      !AccessPolicy.CanApproveReviews(misleadingRole), "非管理员角色名不能因为含有 admin 字样获得管理操作入口");
 
 var damaged = Local("damaged-map", "damaged-map", valid: false);
 damaged.Detail = "缺少 scenario.lua";

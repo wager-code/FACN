@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Net;
 using System.Windows;
 using SCFA.ContentCenter.Commands;
+using SCFA.ContentCenter.Core;
 using SCFA.ContentCenter.Models;
 
 namespace SCFA.ContentCenter.ViewModels;
@@ -34,14 +36,15 @@ public sealed class ReviewPageViewModel : ViewModelBase
     }
     public string ReviewMessage { get => _reviewMessage; set { if (Set(ref _reviewMessage, value)) OnPropertyChanged(nameof(ReviewMessageCount)); } }
     public string Status { get => _status; set => Set(ref _status, value); }
-    public bool CanReview => HasPermission("submissions.review", "submissions.write", "admin");
+    public bool CanRead => AccessPolicy.CanReadReviews(App.Services.CurrentUser);
+    public bool CanReview => AccessPolicy.CanApproveReviews(App.Services.CurrentUser);
     public int QueueCount => Items.Count;
     public int MapCount => Items.Count(x => x.Kind.Contains("地图", StringComparison.CurrentCultureIgnoreCase) || x.Kind.Equals("map", StringComparison.OrdinalIgnoreCase));
     public int ModCount => Items.Count(x => x.Kind.Contains("mod", StringComparison.OrdinalIgnoreCase) || x.Kind.Contains("模组", StringComparison.CurrentCultureIgnoreCase));
     public long TotalBytes => Items.Sum(x => Math.Max(0, x.Size));
     public string TotalSizeText => FormatBytes(TotalBytes);
     public int ReviewMessageCount => ReviewMessage.Length;
-    public string PermissionLabel => CanReview ? "审核权限已验证" : "当前账号无审核权限";
+    public string PermissionLabel => CanReview ? "可审核投稿" : CanRead ? "可查看审核队列" : "当前账号无审核权限";
     public string SelectedTitle => SelectedItem is null ? "请选择一条投稿" : SelectedItem.Name;
     public string SelectedMetadata => SelectedItem is null ? "选择后查看作者、分类、标签与内容说明" : $"{SelectedItem.Kind} · {SelectedItem.Version} · 投稿人 {SelectedItem.Submitter}";
     public string SelectedPackage => SelectedItem is null ? "—" : $"{SelectedItem.Files} 个文件 · {SelectedItem.SizeText}";
@@ -51,7 +54,7 @@ public sealed class ReviewPageViewModel : ViewModelBase
 
     private async Task RefreshAsync()
     {
-        if (!CanReview) { Status = "当前账号没有投稿审核权限。"; return; }
+        if (!CanRead) { Status = "当前账号没有投稿审核读取权限。"; return; }
         try
         {
             Status = "正在读取待审核投稿…";
@@ -60,6 +63,11 @@ public sealed class ReviewPageViewModel : ViewModelBase
             foreach (var item in items.OrderByDescending(x => x.CreatedAt)) Items.Add(item);
             NotifySummaries();
             Status = $"审核队列已读取 · {Items.Count} 项";
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            Status = "服务器尚未提供当前配置的审核列表接口，请在软件设置中核对审核 API 路径。";
+            App.Services.Log.Error("审核列表接口不存在", ex);
         }
         catch (Exception ex)
         {
@@ -89,12 +97,6 @@ public sealed class ReviewPageViewModel : ViewModelBase
         }
     }
 
-    private static bool HasPermission(params string[] expected)
-    {
-        var user = App.Services.CurrentUser;
-        if (user.RoleKey.Contains("admin", StringComparison.OrdinalIgnoreCase)) return true;
-        return user.Permissions.Any(value => expected.Any(item => value.Equals(item, StringComparison.OrdinalIgnoreCase) || value.Equals("*", StringComparison.OrdinalIgnoreCase)));
-    }
     private void NotifySummaries()
     {
         OnPropertyChanged(nameof(QueueCount));
