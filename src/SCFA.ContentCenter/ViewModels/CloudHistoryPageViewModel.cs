@@ -113,8 +113,8 @@ public sealed class CloudHistoryPageViewModel : ViewModelBase
             var detail = item.HistoryState == "历史版本" ? "你选择的是云端历史版本，安装可能降级当前内容。" : "将安装当前正式版本。";
             if (MessageBox.Show($"{detail}\n\n{item.Name} · {item.Version}\n继续前会自动备份当前本地内容。", "确认安装版本", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             Status = $"正在安装 {item.Name} {item.Version}…";
-            await App.Services.Install.InstallAsync(item, local?.Root, existingVersion: local?.Version);
-            Status = "安装完成；原版本可在历史回滚页面恢复。";
+            var changed = await App.Services.Install.InstallAsync(item, local?.Root, existingVersion: local?.Version);
+            Status = changed ? "安装完成；原版本可在历史回滚页面恢复。" : "内容已相同，未重复覆盖。";
         }
         catch (OperationCanceledException) { Status = "安装已取消。"; }
         catch (Exception ex)

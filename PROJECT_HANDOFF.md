@@ -10,9 +10,11 @@ Updated: 2026-09-25. This file is intentionally safe for the public source repos
 
 ## Confirmed state
 
-- The client source in this repository builds and has regression checks. The latest published source milestone is dev38.
+- The client source in this repository builds and has regression checks. The latest source milestone is dev39.
 - Account sign-in and several authenticated client functions were exercised successfully during development.
 - The client can read the published COS catalog and has been checked against real local map and MOD directories.
+- The sync center avoids repeating an installation when the local and cloud versions match but the catalog has no content fingerprint. When a fingerprint exists, it still checks the full installed directory and repairs a mismatch after backing up the local copy.
+- Catalog entries with the same declared destination folder are rejected before installation. Package metadata, version, and content are verified before replacing a local copy; the installer checks the local version again immediately before replacement.
 - The deployed service does not currently fulfill the client's review-list request. Review and publication are therefore not end-to-end verified.
 - The current repository does not contain the account-service source.
 
@@ -24,7 +26,9 @@ Updated: 2026-09-25. This file is intentionally safe for the public source repos
 
 ## Recommended next milestone
 
-Preserve the existing account service and published COS objects while implementing a testable submission and review service. The intended flow is: authenticated submission, isolated pending content, package validation, authorized human decision, publication, and recorded history. Confirm the integration against a test deployment before changing production routing or published content.
+First, run a supervised sync with a small test library and inspect the resulting backups and status messages. A catalog item without a content fingerprint cannot prove that an edited same-version local folder matches the cloud package; automatic sync deliberately leaves that folder alone. Add fingerprints when publishing new content.
+
+Then preserve the existing account service and published COS objects while implementing a testable submission and review service. The intended flow is: authenticated submission, isolated pending content, package validation, authorized human decision, publication, and recorded history. Confirm the integration against a test deployment before changing production routing or published content.
 
 ## Moving to another computer
 

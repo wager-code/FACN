@@ -237,11 +237,14 @@ public sealed class CloudCatalogService
     {
         if (entries.Count > MaxManifestEntries) throw new InvalidDataException($"{kind}清单条目超过安全上限 {MaxManifestEntries}");
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in entries)
         {
             if (string.IsNullOrWhiteSpace(item.Id) || string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.Version) || string.IsNullOrWhiteSpace(item.File))
                 throw new InvalidDataException($"{kind}清单包含缺少 id/name/version/file 的条目");
             if (!ids.Add(item.Id.Trim())) throw new InvalidDataException($"{kind}清单包含重复 ID：{item.Id}");
+            if (!string.IsNullOrWhiteSpace(item.FolderName) && !folders.Add(item.FolderName.Trim()))
+                throw new InvalidDataException($"{kind}清单包含重复目标目录：{item.FolderName}。已停止读取整份清单，避免覆盖玩家内容");
             if (item.Size < 0 || item.Size > MaxPackageBytes) throw new InvalidDataException($"{kind} {item.Name} 的 size 超出安全范围");
             if (!IsOptionalSha256(item.Sha256) || !IsOptionalSha256(item.EffectiveContentHash))
                 throw new InvalidDataException($"{kind} {item.Name} 的 SHA-256 格式无效");

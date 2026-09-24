@@ -12,14 +12,14 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private readonly SemaphoreSlim _recentGate = new(1, 1);
 
-    public async Task InstallAsync(CloudContentEntry entry, string? existingRoot = null, CancellationToken ct = default, string? existingVersion = null)
+    public async Task<bool> InstallAsync(CloudContentEntry entry, string? existingRoot = null, CancellationToken ct = default, string? existingVersion = null)
     {
         await _operationGate.WaitAsync(ct);
-        try { await InstallCoreAsync(entry, existingRoot, ct, existingVersion); }
+        try { return await InstallCoreAsync(entry, existingRoot, ct, existingVersion); }
         finally { _operationGate.Release(); }
     }
 
-    private async Task InstallCoreAsync(CloudContentEntry entry, string? existingRoot, CancellationToken ct, string? existingVersion)
+    private async Task<bool> InstallCoreAsync(CloudContentEntry entry, string? existingRoot, CancellationToken ct, string? existingVersion)
     {
         if (string.IsNullOrWhiteSpace(entry.File)) throw new InvalidOperationException("云端清单没有 ZIP 文件路径");
         if (entry.Size < 0 || entry.Size > CloudCatalogService.MaxPackageBytes) throw new InvalidDataException("云端包大小超出安全范围");
@@ -94,15 +94,16 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
 
             task.Progress = 80;
             task.Detail = "正在安装到游戏目录";
-            var destination = string.IsNullOrWhiteSpace(existingRoot)
+            var result = string.IsNullOrWhiteSpace(existingRoot)
                 ? await InstallFreshAsync(source, installRoot, top, entry, operationCt)
                 : await InstallOverLocalAsync(source, installRoot, top, existingRoot, entry, existingVersion ?? "", operationCt);
 
             await RememberInstalledAsync(entry);
             task.Progress = 100;
             task.Status = "完成";
-            task.Detail = "安装并复检完成：" + destination;
-            log.Info($"Installed and verified {entry.Kind} {entry.Name} {entry.Version} -> {destination}");
+            task.Detail = (result.Changed ? "安装并复检完成：" : "本地内容已相同，未重复覆盖：") + result.Destination;
+            log.Info($"{(result.Changed ? "Installed and verified" : "Already identical, skipped replacement")} {entry.Kind} {entry.Name} {entry.Version} -> {result.Destination}");
+            return result.Changed;
         }
         catch (OperationCanceledException) when (operationCt.IsCancellationRequested)
         {
@@ -214,7 +215,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         }
     }
 
-    private async Task<string> InstallFreshAsync(string source, string installRoot, string top, CloudContentEntry entry, CancellationToken ct)
+    private async Task<(string Destination, bool Changed)> InstallFreshAsync(string source, string installRoot, string top, CloudContentEntry entry, CancellationToken ct)
     {
         var destination = Path.Combine(installRoot, top);
         if (Directory.Exists(destination))
@@ -225,7 +226,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
                 if (got.Equals(entry.EffectiveContentHash.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     await VerifyInstalledAsync(destination, entry, ct);
-                    return destination;
+                    return (destination, false);
                 }
             }
             throw new IOException($"目标目录已存在但尚未确认属于同一{entry.Kind}：{destination}；请先扫描本地内容后再更新");
@@ -234,7 +235,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         try
         {
             await VerifyInstalledAsync(destination, entry, ct);
-            return destination;
+            return (destination, true);
         }
         catch
         {
@@ -243,7 +244,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         }
     }
 
-    private async Task<string> InstallOverLocalAsync(
+    private async Task<(string Destination, bool Changed)> InstallOverLocalAsync(
         string source,
         string installRoot,
         string top,
@@ -260,11 +261,28 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
             throw new InvalidOperationException("只允许自动更新内容目录下的直接子文件夹；嵌套内容请先人工确认");
         if (!Directory.Exists(localRoot))
             throw new DirectoryNotFoundException("准备更新的本地目录已不存在：" + localRoot);
+        if ((File.GetAttributes(localRoot) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException("匹配的本地目录是符号链接/重解析点，已阻止自动覆盖：" + localRoot);
+
+        // 下载期间本地版本可能已经被游戏或另一个进程改动，替换前必须重新读取。
+        var current = await local.AnalyzeDirectoryAsync(localRoot, ct);
+        if (!string.IsNullOrWhiteSpace(existingVersion) &&
+            !ContentIdentity.VersionsEquivalent(current.Version, existingVersion))
+            throw new InvalidOperationException($"本地版本在安装期间发生变化（原 {existingVersion}，现 {current.Version}），已取消覆盖；请重新扫描后再试");
 
         var parent = Path.GetDirectoryName(localRoot) ?? installRoot;
         var destination = Path.Combine(parent, top);
         if (!string.Equals(destination, localRoot, StringComparison.OrdinalIgnoreCase) && Directory.Exists(destination))
             throw new IOException("目标目录已存在，拒绝覆盖：" + destination);
+
+        // 即使用户手动点击安装，也不要给完全相同的目录再建备份或执行替换。
+        if (current.Valid && ContentIdentity.VersionsEquivalent(current.Version, entry.Version))
+        {
+            var currentHash = await ContentHash.DirectorySha256Async(localRoot, ct);
+            var packageHash = await ContentHash.DirectorySha256Async(source, ct);
+            if (currentHash.Equals(packageHash, StringComparison.OrdinalIgnoreCase))
+                return (localRoot, false);
+        }
 
         await backups.CreateAsync(localRoot, entry.Kind, entry.Id, entry.Name, existingVersion, $"安装 {entry.Version} 前自动备份", ct);
         ct.ThrowIfCancellationRequested();
@@ -292,7 +310,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         }
 
         try { if (Directory.Exists(old)) Directory.Delete(old, true); } catch { }
-        return destination;
+        return (destination, true);
     }
 
     private async Task VerifyInstalledAsync(string destination, CloudContentEntry entry, CancellationToken ct)

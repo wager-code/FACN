@@ -223,9 +223,8 @@ public sealed class CloudPageViewModel : ViewModelBase
         }
         else if (decision.ShouldInstall)
         {
-            var strictRepair = decision.Reason.Contains("严格一致性", StringComparison.CurrentCultureIgnoreCase);
-            item.InstallStateCode = strictRepair ? "repair" : "update";
-            item.InstallState = strictRepair ? "需要严格校验 · 清单无内容指纹" : $"可更新 · 本地 {local.Version}";
+            item.InstallStateCode = "update";
+            item.InstallState = $"可更新 · 本地 {local.Version}";
         }
         else
         {
@@ -233,7 +232,8 @@ public sealed class CloudPageViewModel : ViewModelBase
             item.InstallStateCode = !comparison.Ordered ? "unknown" : comparison.Compare > 0 ? "newer" : "current";
             item.InstallState = !comparison.Ordered
                 ? $"版本不可比 · 本地 {local.Version}"
-                : comparison.Compare > 0 ? $"本地较新 · {local.Version}" : "已是当前版本";
+                : comparison.Compare > 0 ? $"本地较新 · {local.Version}"
+                : string.IsNullOrWhiteSpace(item.EffectiveContentHash) ? "同版本 · 云端无内容指纹，自动跳过" : "已是当前版本";
         }
     }
 
@@ -292,9 +292,16 @@ public sealed class CloudPageViewModel : ViewModelBase
                     var answer = MessageBox.Show(detail + "\n\n是否仍要手动覆盖？", "确认覆盖本地内容", MessageBoxButton.YesNo, MessageBoxImage.Warning);
                     if (answer != MessageBoxResult.Yes) { Status = "已取消安装"; return; }
                 }
+                else if (comparison.Compare == 0)
+                {
+                    var answer = MessageBox.Show(
+                        "本地已有相同版本。若文件内容不同，手动重装会先备份，再替换本地目录。\n\n是否继续？",
+                        "确认重装同版本内容", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                    if (answer != MessageBoxResult.Yes) { Status = "已取消安装"; return; }
+                }
             }
-            await App.Services.Install.InstallAsync(item, matched?.Root, existingVersion: matched?.Version);
-            Status = "安装完成";
+            var changed = await App.Services.Install.InstallAsync(item, matched?.Root, existingVersion: matched?.Version);
+            Status = changed ? "安装完成" : "内容已相同，未重复覆盖";
             await RefreshAsync();
         }
         catch (OperationCanceledException) { Status = "安装已取消"; }
@@ -430,8 +437,7 @@ public sealed class CloudPageViewModel : ViewModelBase
             shouldInstall = !localHash.Equals(item.EffectiveContentHash, StringComparison.OrdinalIgnoreCase);
         }
         if (!shouldInstall) return false;
-        await App.Services.Install.InstallAsync(item, matched?.Root, ct, matched?.Version);
-        return true;
+        return await App.Services.Install.InstallAsync(item, matched?.Root, ct, matched?.Version);
     }
 
     private void SelectVisible()

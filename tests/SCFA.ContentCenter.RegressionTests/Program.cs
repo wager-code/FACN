@@ -424,6 +424,8 @@ Check(!ContentIdentity.VersionsEquivalent("alpha1", "beta1") && !labeled.Ordered
 Check(ContentIdentity.VersionsEquivalent("v1.0.0", "1"), "常规版本前缀和尾零保持兼容");
 var numeric = ContentIdentity.CompareVersions("1.9", "1.10");
 Check(numeric.Ordered && numeric.Compare < 0, "数字版本按分段数值排序");
+Check(!ContentIdentity.CompareVersions("3", "v2026.08.15").Ordered,
+    "带 v 前缀的日期版本不能与普通数字版本误判大小后自动覆盖");
 
 var futureMetadata = JsonSerializer.Deserialize<CloudContentEntry>("""
 {
@@ -491,7 +493,7 @@ var strictWithoutManifestHash = Local("strict-map", "strict-map");
 var strictRemote = Cloud("strict-map", "strict-map");
 strictRemote.Version = strictWithoutManifestHash.Version;
 var strictDecision = SyncService.Decide(strictWithoutManifestHash, strictRemote);
-Check(strictDecision.ShouldInstall && strictDecision.Reason.Contains("严格一致性", StringComparison.Ordinal), "同版本但清单缺少内容指纹时仍执行严格整目录同步");
+Check(!strictDecision.ShouldInstall && strictDecision.Reason.Contains("避免重复覆盖", StringComparison.Ordinal), "同版本且清单缺少内容指纹时不自动重复覆盖");
 
 Check(SafeArchive.ValidateRelativePath("map/file.scmap").EndsWith(Path.Combine("map", "file.scmap"), StringComparison.Ordinal), "安全相对路径通过");
 CheckThrows(() => SafeArchive.ValidateRelativePath("../outside.txt"), "拒绝目录穿越");
@@ -850,9 +852,11 @@ try
     var duplicateCloud = new CloudCatalogService(config, duplicateClient);
     var duplicateSync = new SyncService(duplicateCloud, localContent,
         new InstallService(duplicateCloud, pathService, localContent, backups, tasks, log, config), log);
-    var duplicateResult = await duplicateSync.SyncAllAsync(["地图"]);
-    Check(duplicateResult.Failed == 1 && duplicateResult.Messages.Any(x => x.Contains("目标目录重复")),
-        "一键同步阻止两个云端项目写入同一个玩家目录");
+    var duplicateBlocked = false;
+    try { await duplicateSync.SyncAllAsync(["地图"]); }
+    catch (InvalidDataException ex) when (ex.Message.Contains("重复目标目录")) { duplicateBlocked = true; }
+    Check(duplicateBlocked && (await File.ReadAllTextAsync(syncScenario)).Contains("map_version = 9"),
+        "云端清单目标目录重复时整批停止，任何玩家目录均不会先被覆盖");
 
     var nestedParent = Path.Combine(mapsRoot, "wrapper");
     ZipFile.ExtractToDirectory(syncPackagePath, nestedParent);
@@ -882,10 +886,38 @@ try
     var firstModSync = await modSync.SyncAllAsync(["MOD"]);
     Check(firstModSync.Installed == 1 && firstModSync.Failed == 0 && File.Exists(Path.Combine(modRoot, "mod_info.lua")),
         "一键同步会安装并识别有效 MOD");
+    var modBackupsBeforeRepeat = (await backups.ListAsync()).Count;
+    var repeatedModSync = await modSync.SyncAllAsync(["MOD"]);
+    Check(repeatedModSync.Skipped == 1 && repeatedModSync.Installed == 0 &&
+          (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
+        "无内容指纹的同版本 MOD 再次同步不会重复安装或创建备份");
+    var repeatedManualMod = await modInstaller.InstallAsync(modEntry, modRoot, existingVersion: "1");
+    Check(!repeatedManualMod && (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
+        "手动再次安装完全相同的 MOD 包不会重复覆盖或备份");
+    var changedVersionBlocked = false;
+    try { await modInstaller.InstallAsync(modEntry, modRoot, existingVersion: "0"); }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("版本在安装期间发生变化")) { changedVersionBlocked = true; }
+    Check(changedVersionBlocked && File.Exists(Path.Combine(modRoot, "mod_info.lua")) &&
+          (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
+        "安装前复核本地版本，版本已变化时不覆盖玩家 MOD");
+    var wrongModVersion = new CloudContentEntry
+    {
+        Kind = "MOD", Id = modEntry.Id, Name = modEntry.Name, Version = "2",
+        FolderName = modEntry.FolderName, File = modEntry.File, Size = modEntry.Size, Sha256 = modEntry.Sha256
+    };
+    var wrongPackageBlocked = false;
+    try { await modInstaller.InstallAsync(wrongModVersion, modRoot, existingVersion: "1"); }
+    catch (InvalidDataException ex) when (ex.Message.Contains("版本不一致")) { wrongPackageBlocked = true; }
+    Check(wrongPackageBlocked && File.Exists(Path.Combine(modRoot, "mod_info.lua")) &&
+          (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
+        "云端标注版本与 MOD 包内真实版本不一致时保留玩家原文件");
     var scannedMod = (await localContent.ScanAsync("MOD")).Single(x => x.Root == modRoot);
     Check(scannedMod.Valid && scannedMod.Id == "sync_mod" && scannedMod.Version == "1", "安装后的 MOD 可被本地扫描识别");
     var modExtra = Path.Combine(modRoot, "player_extra.lua");
     await File.WriteAllTextAsync(modExtra, "player mod change");
+    var editedModSync = await modSync.SyncAllAsync(["MOD"]);
+    Check(editedModSync.Skipped == 1 && File.Exists(modExtra),
+        "缺少云端内容指纹时不会擅自覆盖同版本 MOD 的玩家改动");
     await modInstaller.UninstallAsync(scannedMod);
     Check(!Directory.Exists(modRoot), "MOD 安全卸载会移除目标目录");
     var modBackup = (await backups.ListAsync()).FirstOrDefault(x => x.Name == scannedMod.Name);

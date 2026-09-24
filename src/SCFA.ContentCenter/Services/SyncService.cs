@@ -24,7 +24,7 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
         if (comparison.Ordered && comparison.Compare == 0 && !string.IsNullOrWhiteSpace(remote.EffectiveContentHash))
             return new(false, true, "正在校验内容指纹");
         if (comparison.Ordered && comparison.Compare == 0)
-            return new(true, false, "正式清单缺少内容指纹，严格一致性模式重新安装");
+            return new(false, false, "版本相同，但云端缺少内容指纹；为避免重复覆盖已跳过");
         if (!comparison.Ordered) return new(false, false, "版本无法安全排序，避免自动覆盖");
         return new(false, false, "已是最新");
     }
@@ -44,19 +44,18 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                 // 无效内容也必须参与精确 ID/目录匹配，否则损坏目录会被当作“本地缺失”，
                 // 随后的全新安装又会因为目标目录已存在而失败，最终永远无法自动修复。
                 var locals = (await local.ScanAsync(kind, ct)).ToArray();
-                var claimedFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                var claimedLocalRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var entry in remote)
+                // 先完成整份清单的匹配。冲突必须在任何目录被改动之前发现，
+                // 否则清单中排在前面的项目可能已经覆盖了冲突目录。
+                var plans = remote.Select(entry => (Entry: entry, Match: ContentIdentity.FindBestResult(locals, entry))).ToArray();
+                var conflictingRoots = plans
+                    .Where(plan => !plan.Match.Ambiguous && plan.Match.Entry is not null)
+                    .GroupBy(plan => Path.GetFullPath(plan.Match.Entry!.Root), StringComparer.OrdinalIgnoreCase)
+                    .Where(group => group.Count() > 1)
+                    .Select(group => group.Key)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var (entry, match) in plans)
                 {
                     ct.ThrowIfCancellationRequested();
-                    if (!string.IsNullOrWhiteSpace(entry.FolderName) && !claimedFolders.Add(entry.FolderName.Trim()))
-                    {
-                        summary.Failed++;
-                        summary.Messages.Add($"{kind} {entry.Name}：云端清单中目标目录重复，已阻止自动安装");
-                        log.Error($"同步清单目标目录重复: {kind} {entry.FolderName}");
-                        continue;
-                    }
-                    var match = ContentIdentity.FindBestResult(locals, entry);
                     if (match.Ambiguous)
                     {
                         summary.Failed++;
@@ -65,7 +64,7 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                         continue;
                     }
                     var matched = match.Entry;
-                    if (matched is not null && !claimedLocalRoots.Add(Path.GetFullPath(matched.Root)))
+                    if (matched is not null && conflictingRoots.Contains(Path.GetFullPath(matched.Root)))
                     {
                         summary.Failed++;
                         summary.Messages.Add($"{kind} {entry.Name}：同一本地目录匹配了多个云端项目，已阻止重复覆盖");
@@ -101,7 +100,16 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                     try
                     {
                         status?.Report($"{reason}，正在安装 {entry.Name} V{entry.Version}…");
-                        await installer.InstallAsync(entry, matched?.Root, ct, matched?.Version); summary.Installed++; summary.Messages.Add($"{kind} {entry.Name}：{reason} → 已安装");
+                        if (await installer.InstallAsync(entry, matched?.Root, ct, matched?.Version))
+                        {
+                            summary.Installed++;
+                            summary.Messages.Add($"{kind} {entry.Name}：{reason} → 已安装");
+                        }
+                        else
+                        {
+                            summary.Skipped++;
+                            summary.Messages.Add($"{kind} {entry.Name}：内容已相同，未重复覆盖");
+                        }
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                     catch (Exception ex) { summary.Failed++; summary.Messages.Add($"{kind} {entry.Name}：失败 - {ex.Message}"); log.Error("同步失败: " + entry.Name, ex); }

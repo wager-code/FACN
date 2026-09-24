@@ -20,9 +20,7 @@ public static class ContentIdentity
 
     public static string CanonicalVersion(string? value)
     {
-        var s = (value ?? "").Trim().ToLowerInvariant();
-        foreach (var p in new[] { "version", "ver", "v" })
-            if (s.StartsWith(p, StringComparison.OrdinalIgnoreCase)) { s = s[p.Length..].Trim(); break; }
+        var s = StripVersionPrefix(value);
         if (!NumericVersion.IsMatch(s) && !DateVersion.IsMatch(s)) return NormalizeKey(s);
         var nums = Regex.Matches(s, @"[0-9]+").Select(m => m.Value.TrimStart('0')).Select(v => v.Length == 0 ? "0" : v).ToList();
         if (nums.Count == 0) return NormalizeKey(s);
@@ -42,7 +40,7 @@ public static class ContentIdentity
     {
         if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b)) return (0, false);
         if (VersionsEquivalent(a, b)) return (0, true);
-        if (DateVersion.IsMatch(a.Trim()) != DateVersion.IsMatch(b.Trim())) return (0, false);
+        if (DateVersion.IsMatch(StripVersionPrefix(a)) != DateVersion.IsMatch(StripVersionPrefix(b))) return (0, false);
         var ca = CanonicalVersion(a); var cb = CanonicalVersion(b);
         if (!NumericVersion.IsMatch(ca) || !NumericVersion.IsMatch(cb)) return (0, false);
         var pa = ca.Split('.'); var pb = cb.Split('.');
@@ -54,6 +52,14 @@ public static class ContentIdentity
             var c = string.CompareOrdinal(va, vb); if (c != 0) return (c < 0 ? -1 : 1, true);
         }
         return (0, true);
+    }
+
+    private static string StripVersionPrefix(string? value)
+    {
+        var s = (value ?? "").Trim().ToLowerInvariant();
+        foreach (var p in new[] { "version", "ver", "v" })
+            if (s.StartsWith(p, StringComparison.Ordinal)) return s[p.Length..].Trim();
+        return s;
     }
 
     public static int MatchScore(LocalContentEntry local, CloudContentEntry cloud)
