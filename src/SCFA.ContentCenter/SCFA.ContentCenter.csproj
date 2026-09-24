@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>SCFA内容中心</AssemblyName>
+    <RootNamespace>SCFA.ContentCenter</RootNamespace>
+    <Version>4.0.0.33</Version>
+    <FileVersion>4.0.0.33</FileVersion>
+    <InformationalVersion>4.0.0-dev33</InformationalVersion>
+    <Platforms>AnyCPU</Platforms>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\command_deck_background.png" />
+    <Resource Include="Assets\Fluent\*.png" />
+  </ItemGroup>
+</Project>

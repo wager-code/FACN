@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCFA.ContentCenter", "src\SCFA.ContentCenter\SCFA.ContentCenter.csproj", "{C28889FC-B6C6-47AD-BF02-300D30E1A947}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCFA.ContentCenter.RegressionTests", "tests\SCFA.ContentCenter.RegressionTests\SCFA.ContentCenter.RegressionTests.csproj", "{611F482D-E0F7-44E4-B10C-49E63730EEB6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C28889FC-B6C6-47AD-BF02-300D30E1A947}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C28889FC-B6C6-47AD-BF02-300D30E1A947}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C28889FC-B6C6-47AD-BF02-300D30E1A947}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C28889FC-B6C6-47AD-BF02-300D30E1A947}.Release|Any CPU.Build.0 = Release|Any CPU
+		{611F482D-E0F7-44E4-B10C-49E63730EEB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{611F482D-E0F7-44E4-B10C-49E63730EEB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{611F482D-E0F7-44E4-B10C-49E63730EEB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{611F482D-E0F7-44E4-B10C-49E63730EEB6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
