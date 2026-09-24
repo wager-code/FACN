@@ -96,7 +96,13 @@
                     <Border x:Name="UserCard" Grid.Row="2" Margin="12" Padding="12" Background="#0D1D30" CornerRadius="10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="72"/></Grid.ColumnDefinitions>
-                            <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource PrimaryMutedBrush}" VerticalAlignment="Center"><TextBlock Text="{Binding UserInitial}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="NoWrap"/></Border>
+                            <Button x:Name="ProfileButton" Grid.Column="0" Width="40" Height="40" MinHeight="40" Padding="0" BorderThickness="0" Background="Transparent" Style="{StaticResource ButtonBaseStyle}" Command="{Binding EditProfileCommand}" ToolTip="编辑个人资料" AutomationProperties.Name="编辑个人资料">
+                                <Grid Width="40" Height="40">
+                                    <Border CornerRadius="10" Background="{StaticResource PrimaryMutedBrush}"/>
+                                    <TextBlock Text="{Binding UserInitial}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="NoWrap"/>
+                                    <Rectangle RadiusX="10" RadiusY="10"><Rectangle.Fill><ImageBrush ImageSource="{Binding AvatarPath}" Stretch="UniformToFill"/></Rectangle.Fill></Rectangle>
+                                </Grid>
+                            </Button>
                             <StackPanel x:Name="UserIdentityPanel" Grid.Column="1" VerticalAlignment="Center" Margin="10,0,6,0"><TextBlock Text="{Binding UserDisplay}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/><TextBlock Text="{Binding RoleDisplay}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,3,0,0"/></StackPanel>
                             <Button x:Name="LogoutButton" Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="退出登录" Command="{Binding LogoutCommand}" ToolTip="退出当前账号" Padding="9,0" MinHeight="32" Width="72"/>
                         </Grid>

@@ -13,6 +13,8 @@ jobs:
           dotnet-version: '8.0.x'
       - run: dotnet restore SCFA.ContentCenter.sln
       - run: dotnet build SCFA.ContentCenter.sln -c Release --no-restore
+      - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build
+      - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --profile-ui-smoke
       - run: dotnet publish src/SCFA.ContentCenter/SCFA.ContentCenter.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=None -o artifacts/win-x64
       - uses: actions/upload-artifact@v4
         with:

@@ -2,6 +2,7 @@
 **/bin/
 **/obj/
 artifacts/
+_源码备份/
 *.user
 *.suo
 *.log

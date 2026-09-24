@@ -82,6 +82,60 @@ if (args.Contains("--login-ui-preview", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+if (args.Contains("--profile-ui-smoke", StringComparer.OrdinalIgnoreCase))
+{
+    Exception? profileError = null;
+    var uiThread = new Thread(() =>
+    {
+        var previousConfig = Environment.GetEnvironmentVariable("SCFA_CONTENT_HUB_CONFIG_DIR");
+        var previousData = Environment.GetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR");
+        var isolated = Path.Combine(Path.GetTempPath(), "scfa_profile_smoke_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_CONFIG_DIR", isolated);
+            Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR", Path.Combine(isolated, "data"));
+            var application = new SCFA.ContentCenter.App();
+            application.InitializeComponent();
+            var services = ServiceRegistry.CreateAsync().GetAwaiter().GetResult();
+            typeof(SCFA.ContentCenter.App).GetProperty("Services")!.SetValue(null, services);
+            var window = new SCFA.ContentCenter.Views.ProfileWindow("offline")
+            {
+                ShowInTaskbar = false,
+                Opacity = 0
+            };
+            var root = (System.Windows.FrameworkElement)window.Content;
+            root.Measure(new System.Windows.Size(560, 570));
+            root.Arrange(new System.Windows.Rect(0, 0, 560, 570));
+            root.UpdateLayout();
+            var preview = new RenderTargetBitmap(560, 570, 96, 96, PixelFormats.Pbgra32);
+            preview.Render(root);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(preview));
+            var output = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "ui-dev34", "profile-560x570.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+            using (var stream = File.Create(output)) encoder.Save(stream);
+            window.Show();
+            window.UpdateLayout();
+            window.Close();
+            application.Shutdown();
+        }
+        catch (Exception ex) { profileError = ex; }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_CONFIG_DIR", previousConfig);
+            Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR", previousData);
+            try { if (Directory.Exists(isolated)) Directory.Delete(isolated, true); } catch { }
+        }
+    });
+    uiThread.SetApartmentState(ApartmentState.STA);
+    uiThread.Start();
+    uiThread.Join();
+    if (profileError is null) Console.WriteLine("PASS  个人资料窗口可实际构造和布局");
+    else Console.Error.WriteLine("FAIL  个人资料窗口运行异常：" + profileError);
+    Environment.Exit(profileError is null ? 0 : 1);
+    return;
+}
+
 if (args.Contains("--submission-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
 {
     Exception? bindingError = null;
@@ -579,6 +633,7 @@ try
     config.Current.LoginPasswordEncrypted = protectedLoginPassword;
     config.Current.AutoLogin = true;
     config.Current.LoginAccounts = [new LoginAccountRecord { Account = "player@example.com", PasswordEncrypted = protectedLoginPassword }];
+    config.Current.LocalUserProfiles = [new LocalUserProfile { UserKey = "offline", DisplayName = "本机玩家", QQ = "12345678", Phone = "13800138000" }];
     await config.SaveAsync();
     var reloadedConfig = new ConfigService();
     await reloadedConfig.LoadAsync();
@@ -586,6 +641,7 @@ try
     Check(reloadedConfig.Current.RecentContentKeys.SequenceEqual(["MOD:recent-mod"]), "最近安装列表去重后可持久保存");
     Check(reloadedConfig.Current.ExtensionData?.ContainsKey("future_setting") == true, "事务式保存继续保留未来版本未知配置字段");
     Check(reloadedConfig.Current.RememberLoginAccount && reloadedConfig.Current.RememberLoginPassword && reloadedConfig.Current.AutoLogin && reloadedConfig.Current.LoginPasswordEncrypted == protectedLoginPassword && reloadedConfig.Current.LoginAccounts.Count == 1, "记住账号、密码、自动登录和多账号记录可持久保存");
+    Check(reloadedConfig.Current.LocalUserProfiles.Count == 1 && reloadedConfig.Current.LocalUserProfiles[0].DisplayName == "本机玩家" && reloadedConfig.Current.LocalUserProfiles[0].QQ == "12345678", "本机个人资料可持久保存");
     var syncHistoryDirectory = Path.Combine(configDirectory, "sync-history");
     var history = new SyncHistoryService(syncHistoryDirectory);
     await history.AppendAsync(new SyncRunRecord { Scope = "地图专项同步", Status = "完成", Installed = 2, Messages = ["地图 A：已安装"] });
@@ -675,7 +731,8 @@ try
     var log = new LogService();
     var tasks = new TaskService();
     var backups = new BackupService(pathService, log);
-    var installer = new InstallService(packageCloud, pathService, backups, tasks, log, config);
+    var localContent = new LocalContentService(pathService, log);
+    var installer = new InstallService(packageCloud, pathService, localContent, backups, tasks, log, config);
     await installer.InstallAsync(new CloudContentEntry
     {
         Kind = "地图",
@@ -709,7 +766,6 @@ try
     var strictRepairBackup = (await backups.ListAsync()).FirstOrDefault(x => x.Name == "严格一致性测试地图");
     Check(strictRepairBackup is not null && File.Exists(Path.Combine(strictRepairBackup.ContentRoot, "player_extra.lua")), "严格修复前备份仍保留被移出的多余文件以便回滚");
 
-    var localContent = new LocalContentService(pathService, log);
     var submissionEntry = await localContent.AnalyzeDirectoryAsync(Path.Combine(mapsRoot, "recent_map"));
     var legacyMapRoot = Path.Combine(mapsRoot, "legacy_map");
     Directory.CreateDirectory(legacyMapRoot);
@@ -759,7 +815,7 @@ try
     CheckThrows(() => SubmissionService.ValidatePreviewImage(fakeJpegPath), "投稿预览图拒绝扩展名与真实格式不一致");
 
     using var submissionAuth = new AuthApiClient("http://localhost:18080", "");
-    var submissions = new SubmissionService(config, submissionAuth, pathService, tasks, log);
+    var submissions = new SubmissionService(config, submissionAuth, pathService, localContent, tasks, log);
     validDraft.PreviewPath = previewPath;
     await submissions.SaveDraftAsync(submissionEntry, validDraft);
     var loadedDraft = await submissions.LoadDraftAsync(submissionEntry);
