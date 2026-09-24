@@ -822,6 +822,31 @@ try
     Check(firstSync.Installed == 1 && firstSync.Failed == 0 && Directory.Exists(syncRoot), "一键同步会从云端清单安装缺失地图");
     var unchangedSync = await syncService.SyncAllAsync(["地图"]);
     Check(unchangedSync.Skipped == 1 && unchangedSync.Installed == 0, "一键同步对内容指纹一致的地图不会重复安装");
+    var alternatePackage = CreateMapPackage("sync_map_v2");
+    var alternatePackagePath = Path.Combine(configDirectory, "alternate-map.zip");
+    await File.WriteAllBytesAsync(alternatePackagePath, alternatePackage);
+    ZipFile.ExtractToDirectory(alternatePackagePath, mapsRoot);
+    var alternateRoot = Path.Combine(mapsRoot, "sync_map_v2");
+    var ambiguousEntry = new CloudContentEntry
+    {
+        Kind = "地图", Id = "sync_map", Name = syncEntry.Name, Version = syncEntry.Version,
+        FolderName = syncEntry.FolderName, File = syncEntry.File, Size = syncEntry.Size,
+        Sha256 = syncEntry.Sha256, ContentSha256 = syncEntry.ContentSha256
+    };
+    Check(ContentIdentity.FindBestResult((await localContent.ScanAsync("地图")).ToArray(), ambiguousEntry).Ambiguous,
+        "两个地图版本共享同一 ID 时会识别为多个候选目录");
+    using var ambiguousClient = new HttpClient(new CatalogPackageHandler(new MapManifest { ManifestVersion = 1, Maps = [ambiguousEntry] }, syncPackage))
+    { Timeout = Timeout.InfiniteTimeSpan };
+    var ambiguousCloud = new CloudCatalogService(config, ambiguousClient);
+    var ambiguousSync = new SyncService(ambiguousCloud, localContent,
+        new InstallService(ambiguousCloud, pathService, localContent, backups, tasks, log, config), log);
+    var beforeAmbiguousBackupCount = (await backups.ListAsync()).Count;
+    var verifiedAmbiguous = await ambiguousSync.SyncAllAsync(["地图"]);
+    Check(verifiedAmbiguous.Skipped == 1 && verifiedAmbiguous.Failed == 0 &&
+          verifiedAmbiguous.Messages.Any(x => x.Contains("其他本地副本保留")) &&
+          Directory.Exists(alternateRoot) && (await backups.ListAsync()).Count == beforeAmbiguousBackupCount,
+        "多个同 ID 地图中已有云端指纹一致的版本时保留全部副本且不重复覆盖");
+    Directory.Delete(alternateRoot, recursive: true);
     var syncExtraFile = Path.Combine(syncRoot, "player_extra.lua");
     await File.WriteAllTextAsync(syncExtraFile, "local change for rollback");
     var repairSync = await syncService.SyncAllAsync(["地图"]);
