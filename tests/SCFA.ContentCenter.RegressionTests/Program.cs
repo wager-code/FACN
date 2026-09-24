@@ -464,6 +464,13 @@ Check(AccessPolicy.CanReadUsers(userManager) && AccessPolicy.CanManageUsers(user
     "服务器用户管理权限可读取、修改和撤销会话");
 Check(!AccessPolicy.CanReadAudit(misleadingRole) && !AccessPolicy.CanUnpublish(misleadingRole) &&
       !AccessPolicy.CanApproveReviews(misleadingRole), "非管理员角色名不能因为含有 admin 字样获得管理操作入口");
+var auditEnvelope = JsonSerializer.Deserialize<AuditFetchResult>("""
+{"records":[{"id":"audit-1","time":"2026-09-25T01:00:00Z","actor_name":"reviewer","action":"review.approve","target_name":"map-one","result":"success","detail":"approved","remote_ip":"127.0.0.1"}],"integrity_ok":true,"integrity_message":"ok","total":1}
+""")!;
+Check(auditEnvelope.Records.Count == 1 && auditEnvelope.IntegrityOk == true && auditEnvelope.Total == 1,
+    "生产审计 records 包装结构与完整性字段可读取");
+Check(auditEnvelope.Records[0].EffectiveActor == "reviewer" && auditEnvelope.Records[0].EffectiveTarget == "map-one" &&
+      auditEnvelope.Records[0].EffectiveIp == "127.0.0.1", "生产审计操作者、目标和来源 IP 字段可显示");
 
 var damaged = Local("damaged-map", "damaged-map", valid: false);
 damaged.Detail = "缺少 scenario.lua";

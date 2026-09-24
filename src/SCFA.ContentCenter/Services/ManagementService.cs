@@ -48,10 +48,15 @@ public sealed class ManagementService(ConfigService config, AuthApiClient auth, 
     }
 
     public async Task<IReadOnlyList<AuditRecord>> FetchAuditAsync(CancellationToken ct = default)
+        => (await FetchAuditResultAsync(ct)).Records;
+
+    public async Task<AuditFetchResult> FetchAuditResultAsync(CancellationToken ct = default)
     {
         EnsureAuthenticated();
         var root = await auth.GetJsonAsync<JsonElement>(NormalizePath(config.Current.AuditApiPath, "/v1/admin/audit"), ct);
-        return ExtractList<AuditRecord>(root, "audit", "events", "items", "data");
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("records", out _))
+            return root.Deserialize<AuditFetchResult>(_json) ?? new AuditFetchResult();
+        return new AuditFetchResult { Records = ExtractList<AuditRecord>(root, "audit", "events", "items", "data").ToList() };
     }
 
     private void EnsureAuthenticated()

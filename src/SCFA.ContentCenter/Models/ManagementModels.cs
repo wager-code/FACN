@@ -84,10 +84,26 @@ public sealed class AuditRecord
     [JsonPropertyName("time")] public string Time { get; set; } = "";
     [JsonPropertyName("created_at")] public string CreatedAt { get; set; } = "";
     [JsonPropertyName("actor")] public string Actor { get; set; } = "";
+    [JsonPropertyName("actor_name")] public string ActorName { get; set; } = "";
+    [JsonPropertyName("actor_id")] public string ActorId { get; set; } = "";
     [JsonPropertyName("action")] public string Action { get; set; } = "";
     [JsonPropertyName("target")] public string Target { get; set; } = "";
+    [JsonPropertyName("target_name")] public string TargetName { get; set; } = "";
+    [JsonPropertyName("target_id")] public string TargetId { get; set; } = "";
     [JsonPropertyName("result")] public string Result { get; set; } = "";
     [JsonPropertyName("detail")] public string Detail { get; set; } = "";
     [JsonPropertyName("ip")] public string Ip { get; set; } = "";
+    [JsonPropertyName("remote_ip")] public string RemoteIp { get; set; } = "";
+    [JsonIgnore] public string EffectiveActor => !string.IsNullOrWhiteSpace(Actor) ? Actor : !string.IsNullOrWhiteSpace(ActorName) ? ActorName : ActorId;
+    [JsonIgnore] public string EffectiveTarget => !string.IsNullOrWhiteSpace(Target) ? Target : !string.IsNullOrWhiteSpace(TargetName) ? TargetName : TargetId;
+    [JsonIgnore] public string EffectiveIp => !string.IsNullOrWhiteSpace(Ip) ? Ip : RemoteIp;
     public string EffectiveTime => string.IsNullOrWhiteSpace(Time) ? CreatedAt : Time;
+}
+
+public sealed class AuditFetchResult
+{
+    [JsonPropertyName("records")] public List<AuditRecord> Records { get; set; } = [];
+    [JsonPropertyName("integrity_ok")] public bool? IntegrityOk { get; set; }
+    [JsonPropertyName("integrity_message")] public string IntegrityMessage { get; set; } = "";
+    [JsonPropertyName("total")] public int? Total { get; set; }
 }

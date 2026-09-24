@@ -53,9 +53,9 @@
                     <DataGrid Grid.Row="1" ItemsSource="{Binding AuditView}" SelectedItem="{Binding SelectedAudit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinHeight="250">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn Header="操作 / 操作者" Width="1.2*" MinWidth="165">
-                                <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding Action}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Actor}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding Action}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding EffectiveActor}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="目标" Binding="{Binding Target}" Width="1.2*" MinWidth="155"/>
+                            <DataGridTextColumn Header="目标" Binding="{Binding EffectiveTarget}" Width="1.2*" MinWidth="155"/>
                             <DataGridTextColumn Header="结果" Binding="{Binding Result}" Width="78"/>
                         </DataGrid.Columns>
                     </DataGrid>
@@ -72,7 +72,7 @@
                     </StackPanel>
                     <Grid Grid.Row="1" Margin="0,17,0,0">
                         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                        <StackPanel><TextBlock Text="来源 IP" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding SelectedAudit.Ip, TargetNullValue=—}"/></StackPanel>
+                        <StackPanel><TextBlock Text="来源 IP" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding SelectedAudit.EffectiveIp, TargetNullValue=—}"/></StackPanel>
                         <StackPanel Grid.Column="1"><TextBlock Text="记录 ID" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding SelectedAudit.Id, TargetNullValue=—}" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedAudit.Id}"/></StackPanel>
                     </Grid>
                     <Border Grid.Row="2" Style="{StaticResource InsetBorder}" Margin="0,16,0,0" Padding="13">
