@@ -44,9 +44,18 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                 // 无效内容也必须参与精确 ID/目录匹配，否则损坏目录会被当作“本地缺失”，
                 // 随后的全新安装又会因为目标目录已存在而失败，最终永远无法自动修复。
                 var locals = (await local.ScanAsync(kind, ct)).ToArray();
+                var claimedFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var claimedLocalRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var entry in remote)
                 {
                     ct.ThrowIfCancellationRequested();
+                    if (!string.IsNullOrWhiteSpace(entry.FolderName) && !claimedFolders.Add(entry.FolderName.Trim()))
+                    {
+                        summary.Failed++;
+                        summary.Messages.Add($"{kind} {entry.Name}：云端清单中目标目录重复，已阻止自动安装");
+                        log.Error($"同步清单目标目录重复: {kind} {entry.FolderName}");
+                        continue;
+                    }
                     var match = ContentIdentity.FindBestResult(locals, entry);
                     if (match.Ambiguous)
                     {
@@ -56,6 +65,13 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                         continue;
                     }
                     var matched = match.Entry;
+                    if (matched is not null && !claimedLocalRoots.Add(Path.GetFullPath(matched.Root)))
+                    {
+                        summary.Failed++;
+                        summary.Messages.Add($"{kind} {entry.Name}：同一本地目录匹配了多个云端项目，已阻止重复覆盖");
+                        log.Error($"同步本地目录重复匹配: {kind} {matched.Root}");
+                        continue;
+                    }
                     var decision = Decide(matched, entry);
                     var shouldInstall = decision.ShouldInstall;
                     var reason = decision.Reason;

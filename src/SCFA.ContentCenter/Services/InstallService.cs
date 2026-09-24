@@ -256,6 +256,8 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         var localRoot = Path.GetFullPath(existingRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (!localRoot.StartsWith(fullInstallRoot, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("匹配到的本地内容不在当前安装目录内，已阻止自动覆盖");
+        if (!string.Equals(Path.GetDirectoryName(localRoot), installRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("只允许自动更新内容目录下的直接子文件夹；嵌套内容请先人工确认");
         if (!Directory.Exists(localRoot))
             throw new DirectoryNotFoundException("准备更新的本地目录已不存在：" + localRoot);
 

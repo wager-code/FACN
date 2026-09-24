@@ -1,4 +1,4 @@
-# SCFA 内容中心 C# V4.0.0-dev34
+# SCFA 内容中心 C# V4.0.0-dev35
 
 这是从 `V3.0.0-dev51` Go/Win32 工程迁移出的第一版 C# / WPF 工程，目标不是套壳，而是逐步替代原客户端。
 
@@ -88,7 +88,7 @@ C# 版继续读取 `%LOCALAPPDATA%\SCFAContentHub\config.json`。序列化时使
 ## 开发基线
 
 - Go 对照版本：V3.0.0-dev51
-- C# 迁移版本：V4.0.0-dev34
+- C# 迁移版本：V4.0.0-dev35
 - 客户端框架：.NET 8 / WPF
 - 第三方 NuGet：0
 
