@@ -22,13 +22,13 @@ Updated: 2026-09-25. This file is intentionally safe for the public source repos
 - On 2026-09-25, an isolated live-COS sync installed the two corrected map ZIPs and one small MOD ZIP, then skipped all three on a repeat run without a new backup. An injected same-version map edit was backed up and repaired; an injected newer map version was preserved. No game directory was used for this test.
 - A read-only scan of `E:\SCFA\maps` and `E:\SCFA\mods` found 80 valid local maps and 7 valid local MODs. All 17 unambiguous published maps and all 6 published MODs matched their catalog directory fingerprints. The remaining map, Saltrock Colony, has multiple local copies; one copy matched the published version and content fingerprint exactly, so sync would skip while preserving all copies. No E: game content was changed.
 - On 2026-09-25 at 10:58:55 CST, the signed-in packaged client `V4.0.0-dev41` ran the full sync in its Sync Center. The UI reported 0 installed/updated, 24 skipped, and 0 failed. This matches the read-only E: audit: all 18 published maps and 6 published MODs were left in place.
-- The deployed service does not currently fulfill the client's review-list request. Review and publication are therefore not end-to-end verified.
+- A read-only production check on 2026-09-25 found account service version 8 healthy, ordinary submission POST registered, and the signed-in administrator able to read their own submission list, user list, and audit records. The same administrator has `review.read` and `review.approve`, but `GET /v1/admin/submissions` returns 404. Seven alternate read paths did not expose a review queue. Review and publication are therefore not end-to-end verified.
 - The current repository does not contain the account-service source.
 
 ## Unknowns: do not guess
 
 - The owner recalls a third-party site or service for reviewing player submissions. Its name, role, and integration details have not been recovered. Do not claim a specific vendor was used.
-- The source and exact build process for the deployed account-service executable are not yet available.
+- The source and exact build process for the deployed account-service executable are not yet available. Local source and GitHub inventory found no backend source. Earlier server file-manager screenshots show a deployment archive and service configuration, but their contents have not been obtained or verified.
 - No production review or publication action has been validated. Do not treat a client screen or a permission name as proof of a working server workflow.
 
 ## Recommended next milestone
