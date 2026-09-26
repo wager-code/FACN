@@ -1,9 +1,10 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Text.RegularExpressions;
 
 namespace SCFA.ContentCenter.Services;
 
-/// <summary>Reads the game's embedded 256px map preview without changing map files.</summary>
+/// <summary>Reads the game's embedded map preview, including a sibling map referenced by a scenario, without changing files.</summary>
 public static class MapPreviewService
 {
     private const int PreviewLengthOffset = 30;
@@ -18,9 +19,10 @@ public static class MapPreviewService
         {
             if ((File.GetAttributes(mapRoot) & FileAttributes.ReparsePoint) != 0) return null;
             var scmaps = Directory.EnumerateFiles(mapRoot, "*.scmap", SearchOption.TopDirectoryOnly).Take(2).ToArray();
-            if (scmaps.Length == 1 && (File.GetAttributes(scmaps[0]) & FileAttributes.ReparsePoint) == 0)
+            var scmap = scmaps.Length == 1 ? scmaps[0] : scmaps.Length == 0 ? FindReferencedScmap(mapRoot) : null;
+            if (scmap is not null && (File.GetAttributes(scmap) & FileAttributes.ReparsePoint) == 0)
             {
-                var embedded = TryReadEmbedded(scmaps[0]);
+                var embedded = TryReadEmbedded(scmap);
                 if (embedded is not null) return embedded;
             }
             return TryLoadNamedImage(mapRoot);
@@ -29,6 +31,26 @@ public static class MapPreviewService
         {
             return null;
         }
+    }
+
+    private static string? FindReferencedScmap(string mapRoot)
+    {
+        var scenarios = Directory.EnumerateFiles(mapRoot, "*_scenario.lua", SearchOption.TopDirectoryOnly).Take(2).ToArray();
+        if (scenarios.Length != 1 || (File.GetAttributes(scenarios[0]) & FileAttributes.ReparsePoint) != 0) return null;
+        var scenario = File.ReadAllText(scenarios[0]);
+        var match = Regex.Match(scenario, "(?mi)^\\s*map\\s*=\\s*['\"]([^'\"]+)['\"]");
+        if (!match.Success) return null;
+        var parts = match.Groups[1].Value.Replace('\\', '/').Trim('/').Split('/');
+        if (parts.Length != 3 || !parts[0].Equals("maps", StringComparison.OrdinalIgnoreCase) ||
+            !parts[2].EndsWith(".scmap", StringComparison.OrdinalIgnoreCase) ||
+            parts.Skip(1).Any(part => part is "." or ".." || part.Length == 0 ||
+                part.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)) return null;
+        var mapsRoot = Directory.GetParent(mapRoot)?.FullName;
+        if (mapsRoot is null) return null;
+        var referencedFolder = Path.Combine(mapsRoot, parts[1]);
+        if (!Directory.Exists(referencedFolder) || (File.GetAttributes(referencedFolder) & FileAttributes.ReparsePoint) != 0) return null;
+        var referencedScmap = Path.Combine(referencedFolder, parts[2]);
+        return File.Exists(referencedScmap) ? referencedScmap : null;
     }
 
     private static BitmapSource? TryReadEmbedded(string path)

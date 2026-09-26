@@ -112,7 +112,9 @@ public sealed class LocalContentService(GamePathService paths, LogService log)
     private static bool IsRoot(string dir, string kind)
     {
         if (kind == "MOD") return File.Exists(Path.Combine(dir, "mod_info.lua"));
-        try { return Directory.EnumerateFiles(dir, "*.scmap", SearchOption.TopDirectoryOnly).Any(); } catch { return false; }
+        try { return Directory.EnumerateFiles(dir, "*.scmap", SearchOption.TopDirectoryOnly).Any() ||
+                     Directory.EnumerateFiles(dir, "*_scenario.lua", SearchOption.TopDirectoryOnly).Any(); }
+        catch { return false; }
     }
 
     private static LocalContentEntry AnalyzeMod(string root, CancellationToken ct)

@@ -130,6 +130,7 @@ public sealed class LocalContentEntry
     public bool Valid { get; set; }
     public string Detail { get; set; } = "";
     public string CloudState { get; set; } = "未核对";
+    [JsonIgnore] public BitmapSource? Preview { get; set; }
     public string SizeText => Bytes < 1024 * 1024 ? $"{Bytes / 1024d:F1} KB" : $"{Bytes / 1024d / 1024d:F1} MB";
 }
 

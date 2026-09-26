@@ -35,7 +35,7 @@
 
         <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True">
             <Grid>
-                <DataGrid ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AlternationCount="2" RowHeight="42" ColumnHeaderHeight="38">
+                <DataGrid ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AlternationCount="2" RowHeight="56" ColumnHeaderHeight="38">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Header="状态" Width="88">
                             <DataGridTemplateColumn.CellTemplate>
@@ -47,7 +47,19 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="游戏名称 / 名称" Binding="{Binding Name}" Width="2*" MinWidth="190"/>
+                        <DataGridTemplateColumn Header="游戏名称 / 名称" Width="2*" MinWidth="210">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Width="48" Height="44" Margin="0,0,8,0" Background="#0A1727" BorderBrush="#29415D" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Kind}" Value="地图"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                            <Image Source="{Binding Preview, Mode=OneWay}" Stretch="Uniform"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTextColumn Header="版本" Binding="{Binding Version}" Width="90"/>
                         <DataGridTextColumn Header="内容 ID" Binding="{Binding Id}" Width="165"/>
                         <DataGridTextColumn Header="目录" Binding="{Binding Folder}" Width="150"/>

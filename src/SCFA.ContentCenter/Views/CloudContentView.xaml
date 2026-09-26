@@ -56,7 +56,7 @@
             <Grid>
                 <DataGrid ItemsSource="{Binding ItemsView}"
                           SelectedItem="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                          AlternationCount="2" RowHeight="42" ColumnHeaderHeight="38" IsReadOnly="True">
+                          AlternationCount="2" RowHeight="56" ColumnHeaderHeight="38" IsReadOnly="True">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Header="选择" Width="54">
                             <DataGridTemplateColumn.CellTemplate>
@@ -85,9 +85,15 @@
                         <DataGridTemplateColumn Header="游戏名称 / 名称" Width="2*" MinWidth="190">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <StackPanel VerticalAlignment="Center" ToolTip="{Binding NameContextText}">
-                                        <TextBlock Text="{Binding DisplayName, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding NameContextText, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontSize="10" Foreground="{StaticResource TextMutedBrush}"/>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" ToolTip="{Binding NameContextText}">
+                                        <Border Width="48" Height="44" Margin="0,0,8,0" Background="#0A1727" BorderBrush="#29415D" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Kind}" Value="地图"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                            <Image Source="{Binding DisplayPreviewSource, Mode=OneWay}" Stretch="Uniform"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DisplayName, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding NameContextText, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontSize="10" Foreground="{StaticResource TextMutedBrush}"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>

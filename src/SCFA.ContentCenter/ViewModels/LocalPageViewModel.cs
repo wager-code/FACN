@@ -39,9 +39,8 @@ public sealed class LocalPageViewModel : ViewModelBase
         {
             if (!Set(ref _selected, value)) return;
             OnPropertyChanged(nameof(SelectedState));
-            SelectedPreview = null;
+            SelectedPreview = value?.Preview;
             OnPropertyChanged(nameof(PreviewStateText));
-            if (Kind == "地图" && value is { Valid: true }) _ = LoadPreviewAsync(value);
             OpenFolderCommand.RaiseCanExecuteChanged();
             UninstallCommand.RaiseCanExecuteChanged();
         }
@@ -78,16 +77,6 @@ public sealed class LocalPageViewModel : ViewModelBase
     {
         if (SelectedItem is null || !Directory.Exists(SelectedItem.Root)) return;
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{SelectedItem.Root}\"") { UseShellExecute = true });
-    }
-
-    private async Task LoadPreviewAsync(LocalContentEntry item)
-    {
-        try
-        {
-            var image = await Task.Run(() => MapPreviewService.TryLoad(item.Root));
-            if (ReferenceEquals(SelectedItem, item)) SelectedPreview = image;
-        }
-        catch (Exception ex) { App.Services.Log.Error("本地地图预览读取失败: " + item.Root, ex); }
     }
 
     private async Task UninstallAsync()
@@ -128,7 +117,13 @@ public sealed class LocalPageViewModel : ViewModelBase
     {
         try
         {
-            Status = "正在扫描真实游戏目录…"; var items = await App.Services.Local.ScanAsync(Kind); SelectedItem = null; Items.Clear(); foreach (var x in items) Items.Add(x);
+            Status = "正在扫描真实游戏目录…";
+            var items = await App.Services.Local.ScanAsync(Kind);
+            if (Kind == "地图") await Task.Run(() =>
+            {
+                foreach (var item in items) item.Preview = MapPreviewService.TryLoad(item.Root);
+            });
+            SelectedItem = null; Items.Clear(); foreach (var x in items) Items.Add(x);
             ItemsView.Refresh();
             UpdateSummaries();
             Status = $"扫描完成 · 有效 {Items.Count(x => x.Valid)} · 异常 {Items.Count(x => !x.Valid)}";

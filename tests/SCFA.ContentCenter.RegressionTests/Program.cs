@@ -767,6 +767,31 @@ try
     var mapsRoot = Path.Combine(configDirectory, "player", "Maps");
     Directory.CreateDirectory(mapsRoot);
     config.Current.MapsDir = mapsRoot;
+    var previewRoot = Path.Combine(configDirectory, "preview_fixture");
+    Directory.CreateDirectory(previewRoot);
+    var embeddedPreviewPath = Path.Combine(previewRoot, "preview_fixture.scmap");
+    await File.WriteAllBytesAsync(embeddedPreviewPath, CreatePreviewMapBytes());
+    var gamePreview = await Task.Run(() => MapPreviewService.TryLoad(previewRoot));
+    var previewPixels = new byte[16];
+    gamePreview?.CopyPixels(previewPixels, 8, 0);
+    Check(gamePreview is { PixelWidth: 2, PixelHeight: 2, IsFrozen: true } &&
+          previewPixels.Take(4).SequenceEqual(new byte[] { 0, 0, 255, 255 }),
+        "可从 .scmap 内嵌 DDS 读取与游戏地图选择界面一致的预览，并可跨线程显示");
+    var truncatedPreview = (await File.ReadAllBytesAsync(embeddedPreviewPath))[..100];
+    await File.WriteAllBytesAsync(embeddedPreviewPath, truncatedPreview);
+    Check(MapPreviewService.TryLoad(previewRoot) is null, "不完整的地图预览不会令目录扫描或页面崩溃");
+    var namedPreviewPath = Path.Combine(previewRoot, "preview.png");
+    var encoder = new PngBitmapEncoder();
+    encoder.Frames.Add(BitmapFrame.Create(gamePreview!));
+    using (var output = File.Create(namedPreviewPath)) encoder.Save(output);
+    Check(MapPreviewService.TryLoad(previewRoot) is { PixelWidth: > 0, PixelHeight: > 0 },
+        "不支持的 .scmap 预览可以回退到地图文件夹中的 PNG");
+    await File.WriteAllBytesAsync(namedPreviewPath, [1, 2, 3, 4]);
+    Check(MapPreviewService.TryLoad(previewRoot) is null, "损坏的 PNG 预览不会阻止地图列表加载");
+    var displayMap = new CloudContentEntry { Id = "preview_fixture", Name = "云端目录标题", FolderName = "preview_fixture", Kind = "地图", GameName = "游戏大厅名称" };
+    Check(displayMap.DisplayName == "游戏大厅名称" && displayMap.NameContextText.Contains("云端目录标题") &&
+          displayMap.NameContextText.Contains("preview_fixture"),
+        "云端地图优先显示游戏名称，同时保留云端标题和目录供辨认");
     var packagePayload = CreateMapPackage("recent_map");
     using var packageClient = new HttpClient(new StaticPackageHandler(packagePayload)) { Timeout = Timeout.InfiniteTimeSpan };
     var packageCloud = new CloudCatalogService(config, packageClient);
@@ -774,6 +799,19 @@ try
     var tasks = new TaskService();
     var backups = new BackupService(pathService, log);
     var localContent = new LocalContentService(pathService, log);
+    var referencedMap = Path.Combine(mapsRoot, "shared_preview");
+    var scenarioOnlyMap = Path.Combine(mapsRoot, "scenario_only");
+    Directory.CreateDirectory(referencedMap);
+    Directory.CreateDirectory(scenarioOnlyMap);
+    await File.WriteAllBytesAsync(Path.Combine(referencedMap, "shared_preview.scmap"), CreatePreviewMapBytes());
+    await File.WriteAllTextAsync(Path.Combine(scenarioOnlyMap, "scenario_only_scenario.lua"),
+        "ScenarioInfo = { map = '/maps/shared_preview/shared_preview.scmap' }\nmap = '/maps/shared_preview/shared_preview.scmap'\n");
+    Check(MapPreviewService.TryLoad(scenarioOnlyMap) is { PixelWidth: 2, PixelHeight: 2 },
+        "无 .scmap 的场景可从同一地图库中被引用的地图读取游戏预览");
+    Check((await localContent.ScanAsync("地图")).Any(x => x.Folder == "scenario_only" && !x.Valid),
+        "引用其他 .scmap 的场景仍出现在本地列表，但不会被误判为可发布地图包");
+    Directory.Delete(scenarioOnlyMap, recursive: true);
+    Directory.Delete(referencedMap, recursive: true);
     var installer = new InstallService(packageCloud, pathService, localContent, backups, tasks, log, config);
     await installer.InstallAsync(new CloudContentEntry
     {
@@ -868,6 +906,19 @@ try
     };
     Check(ContentIdentity.FindBestResult((await localContent.ScanAsync("地图")).ToArray(), ambiguousEntry).Ambiguous,
         "两个地图版本共享同一 ID 时会识别为多个候选目录");
+    var ambiguousLocals = (await localContent.ScanAsync("地图")).ToArray();
+    var verifiedDuplicate = await ContentIdentity.FindVerifiedCopyAsync(ambiguousLocals, ambiguousEntry,
+        ContentIdentity.FindBestResult(ambiguousLocals, ambiguousEntry).Score);
+    Check(verifiedDuplicate is not null && verifiedDuplicate.Root == syncRoot,
+        "多个本地版本中已存在云端指纹一致的副本时可识别为已安装");
+    var mismatchedDuplicate = new CloudContentEntry
+    {
+        Kind = "地图", Id = ambiguousEntry.Id, Name = ambiguousEntry.Name, Version = ambiguousEntry.Version,
+        FolderName = ambiguousEntry.FolderName, ContentSha256 = new string('0', 64), Aliases = ambiguousEntry.Aliases
+    };
+    Check(await ContentIdentity.FindVerifiedCopyAsync(ambiguousLocals, mismatchedDuplicate,
+          ContentIdentity.FindBestResult(ambiguousLocals, mismatchedDuplicate).Score) is null,
+        "多个本地目录都不符合云端内容指纹时仍拒绝擅自选择覆盖目标");
     using var ambiguousClient = new HttpClient(new CatalogPackageHandler(new MapManifest { ManifestVersion = 1, Maps = [ambiguousEntry] }, syncPackage))
     { Timeout = Timeout.InfiniteTimeSpan };
     var ambiguousCloud = new CloudCatalogService(config, ambiguousClient);
@@ -879,7 +930,27 @@ try
           verifiedAmbiguous.Messages.Any(x => x.Contains("其他本地副本保留")) &&
           Directory.Exists(alternateRoot) && (await backups.ListAsync()).Count == beforeAmbiguousBackupCount,
         "多个同 ID 地图中已有云端指纹一致的版本时保留全部副本且不重复覆盖");
-    Directory.Delete(alternateRoot, recursive: true);
+    var conflictCandidates = ambiguousLocals.Where(x => ContentIdentity.MatchScore(x, ambiguousEntry) ==
+        ContentIdentity.FindBestResult(ambiguousLocals, ambiguousEntry).Score).ToArray();
+    var conflictInstaller = new InstallService(ambiguousCloud, pathService, localContent, backups, tasks, log, config);
+    var wrongVersionConflict = new CloudContentEntry
+    {
+        Kind = "地图", Id = ambiguousEntry.Id, Name = ambiguousEntry.Name, Version = "999",
+        FolderName = ambiguousEntry.FolderName, File = ambiguousEntry.File, Size = ambiguousEntry.Size,
+        Sha256 = ambiguousEntry.Sha256, ContentSha256 = ambiguousEntry.ContentSha256
+    };
+    var rejectedConflictPackage = false;
+    try { await conflictInstaller.ReplaceConflictsAsync(wrongVersionConflict, conflictCandidates); }
+    catch (InvalidDataException) { rejectedConflictPackage = true; }
+    Check(rejectedConflictPackage && Directory.Exists(syncRoot) && Directory.Exists(alternateRoot),
+        "清理冲突前先校验云端包内版本，异常包不会删除本地目录");
+    await conflictInstaller.ReplaceConflictsAsync(ambiguousEntry, conflictCandidates);
+    var conflictBackups = (await backups.ListAsync()).Where(x => x.Reason == "清理重复版本并安装云端内容前自动备份").ToArray();
+    Check(Directory.Exists(syncRoot) && !Directory.Exists(alternateRoot) &&
+          string.Equals(await ContentHash.DirectorySha256Async(syncRoot), syncContentHash, StringComparison.OrdinalIgnoreCase) &&
+          conflictBackups.Length == 2 && conflictBackups.All(x => Directory.Exists(x.ContentRoot)) &&
+          conflictBackups.Any(x => x.OriginalRoot == syncRoot) && conflictBackups.Any(x => x.OriginalRoot == alternateRoot),
+        "手动清理重复目录会安装经校验的云端版本，并保存两个原目录的历史备份");
     var syncExtraFile = Path.Combine(syncRoot, "player_extra.lua");
     await File.WriteAllTextAsync(syncExtraFile, "local change for rollback");
     var repairSync = await syncService.SyncAllAsync(["地图"]);
@@ -1250,6 +1321,26 @@ script = "/maps/{folder}/{folder}_script.lua"
 """);
     }
     return output.ToArray();
+}
+
+byte[] CreatePreviewMapBytes()
+{
+    var bytes = new byte[34 + 128 + 16 + 4];
+    bytes[0] = (byte)'M'; bytes[1] = (byte)'a'; bytes[2] = (byte)'p'; bytes[3] = 0x1A;
+    BitConverter.GetBytes(2).CopyTo(bytes, 4);
+    BitConverter.GetBytes(128 + 16).CopyTo(bytes, 30);
+    bytes[34] = (byte)'D'; bytes[35] = (byte)'D'; bytes[36] = (byte)'S'; bytes[37] = (byte)' ';
+    BitConverter.GetBytes(124).CopyTo(bytes, 38);
+    BitConverter.GetBytes(2).CopyTo(bytes, 34 + 12);
+    BitConverter.GetBytes(2).CopyTo(bytes, 34 + 16);
+    BitConverter.GetBytes(32).CopyTo(bytes, 34 + 76);
+    BitConverter.GetBytes(32).CopyTo(bytes, 34 + 88);
+    BitConverter.GetBytes(0x00FF0000u).CopyTo(bytes, 34 + 92);
+    BitConverter.GetBytes(0x0000FF00u).CopyTo(bytes, 34 + 96);
+    BitConverter.GetBytes(0x000000FFu).CopyTo(bytes, 34 + 100);
+    BitConverter.GetBytes(0xFF000000u).CopyTo(bytes, 34 + 104);
+    for (var i = 0; i < 4; i++) new byte[] { 0, 0, 255, 255 }.CopyTo(bytes, 34 + 128 + i * 4);
+    return bytes;
 }
 
 byte[] CreateModPackage(string folder)

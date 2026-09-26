@@ -219,7 +219,7 @@ public sealed class CloudPageViewModel : ViewModelBase
             item.InstallPath = Path.Combine(root, string.IsNullOrWhiteSpace(item.FolderName) ? item.Id : item.FolderName);
         }
         catch { item.InstallPath = "尚未配置已有内容目录"; }
-        if (Kind == "地图" && local is { Valid: true })
+        if (Kind == "地图" && local is not null)
             item.MapPreview = await Task.Run(() => MapPreviewService.TryLoad(local.Root));
         item.PreviewSource = item.MapPreview is null ? FindExplicitPreview(local?.Root) ?? item.ThumbnailUrl : "";
         if (match.Ambiguous)
