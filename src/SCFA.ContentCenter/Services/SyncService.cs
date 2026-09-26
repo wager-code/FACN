@@ -75,38 +75,25 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                     }
                     if (match.Ambiguous)
                     {
-                        if (!string.IsNullOrWhiteSpace(entry.EffectiveContentHash))
+                        try
                         {
-                            var verifiedCopy = false;
-                            try
-                            {
-                                // 多个版本共享同一地图 ID 时，只要其中已有经过版本和整目录指纹
-                                // 双重确认的云端副本，就无需选择或覆盖任何一个玩家目录。
-                                foreach (var candidate in locals.Where(x =>
-                                    x.Valid && ContentIdentity.MatchScore(x, entry) == match.Score &&
-                                    ContentIdentity.VersionsEquivalent(x.Version, entry.EffectiveGameVersion)))
-                                {
-                                    status?.Report($"核对 {entry.Name} 的重复副本…");
-                                    var hash = await ContentHash.DirectorySha256Async(candidate.Root, ct);
-                                    if (!hash.Equals(entry.EffectiveContentHash.Trim(), StringComparison.OrdinalIgnoreCase)) continue;
-                                    verifiedCopy = true;
-                                    break;
-                                }
-                            }
-                            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-                            catch (Exception ex)
-                            {
-                                summary.Failed++;
-                                summary.Messages.Add($"{kind} {entry.Name}：重复副本校验失败 - {ex.Message}");
-                                log.Error("同步重复副本校验失败: " + entry.Name, ex);
-                                continue;
-                            }
-                            if (verifiedCopy)
+                            // 与云端页面共用同一套版本和整目录指纹核对规则。
+                            status?.Report($"核对 {entry.Name} 的重复副本…");
+                            var verifiedCopy = await ContentIdentity.FindVerifiedCopyAsync(locals, entry, match.Score, ct);
+                            if (verifiedCopy is not null)
                             {
                                 summary.Skipped++;
                                 summary.Messages.Add($"{kind} {entry.Name}：已有与云端完全一致的副本；其他本地副本保留，未重复覆盖");
                                 continue;
                             }
+                        }
+                        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                        catch (Exception ex)
+                        {
+                            summary.Failed++;
+                            summary.Messages.Add($"{kind} {entry.Name}：重复副本校验失败 - {ex.Message}");
+                            log.Error("同步重复副本校验失败: " + entry.Name, ex);
+                            continue;
                         }
                         summary.Failed++;
                         summary.Messages.Add($"{kind} {entry.Name}：存在多个同等匹配的本地目录，已阻止自动安装");

@@ -103,4 +103,19 @@ public static class ContentIdentity
     }
 
     public static LocalContentEntry? FindBest(LocalContentEntry[] locals, CloudContentEntry cloud) => FindBestResult(locals, cloud).Entry;
+
+    public static async Task<LocalContentEntry?> FindVerifiedCopyAsync(
+        LocalContentEntry[] locals, CloudContentEntry cloud, int matchScore, CancellationToken ct = default)
+    {
+        if (matchScore < MinimumAutomaticMatchScore || string.IsNullOrWhiteSpace(cloud.EffectiveContentHash)) return null;
+        foreach (var candidate in locals)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!candidate.Valid || MatchScore(candidate, cloud) != matchScore ||
+                !VersionsEquivalent(candidate.Version, cloud.EffectiveGameVersion)) continue;
+            var hash = await ContentHash.DirectorySha256Async(candidate.Root, ct);
+            if (hash.Equals(cloud.EffectiveContentHash.Trim(), StringComparison.OrdinalIgnoreCase)) return candidate;
+        }
+        return null;
+    }
 }

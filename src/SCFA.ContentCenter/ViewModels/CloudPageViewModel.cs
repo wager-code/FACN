@@ -162,7 +162,7 @@ public sealed class CloudPageViewModel : ViewModelBase
                 item.IsFavorite = App.Services.Config.Current.FavoriteContentKeys.Any(x => string.Equals(x, key, StringComparison.OrdinalIgnoreCase));
                 item.IsRecent = App.Services.Config.Current.RecentContentKeys.Any(x => string.Equals(x, key, StringComparison.OrdinalIgnoreCase));
                 item.IsSyncExcluded = await App.Services.SyncPreferences.IsExcludedAsync(item);
-                UpdateInstallState(item, locals);
+                await UpdateInstallStateAsync(item, locals);
                 item.PropertyChanged += ItemPropertyChanged;
                 Items.Add(item);
             }
@@ -188,16 +188,27 @@ public sealed class CloudPageViewModel : ViewModelBase
         CategoryFilter = CategoryFilters.Contains(previous) ? previous : "全部分类";
     }
 
-    private void UpdateInstallState(CloudContentEntry item, LocalContentEntry[] locals)
+    private async Task UpdateInstallStateAsync(CloudContentEntry item, LocalContentEntry[] locals)
     {
         var match = ContentIdentity.FindBestResult(locals, item);
+        var local = match.Entry;
         if (match.Ambiguous)
         {
-            item.InstallStateCode = "conflict";
-            item.InstallState = "本地匹配冲突";
-            return;
+            try { local = await ContentIdentity.FindVerifiedCopyAsync(locals, item, match.Score); }
+            catch (Exception ex)
+            {
+                App.Services.Log.Error("云端目录重复副本校验失败: " + item.Name, ex);
+                item.InstallStateCode = "conflict";
+                item.InstallState = "多个本地版本，指纹校验失败";
+                return;
+            }
+            if (local is null)
+            {
+                item.InstallStateCode = "conflict";
+                item.InstallState = "多个本地版本，无法确定安装目标";
+                return;
+            }
         }
-        var local = match.Entry;
         item.LocalRoot = local?.Root ?? "";
         try
         {
@@ -206,6 +217,12 @@ public sealed class CloudPageViewModel : ViewModelBase
         }
         catch { item.InstallPath = "尚未配置已有内容目录"; }
         item.PreviewSource = FindExplicitPreview(local?.Root) ?? item.ThumbnailUrl;
+        if (match.Ambiguous)
+        {
+            item.InstallStateCode = "current";
+            item.InstallState = "已安装 · 另有本地版本";
+            return;
+        }
         if (local is null)
         {
             item.InstallStateCode = "missing";
@@ -283,7 +300,19 @@ public sealed class CloudPageViewModel : ViewModelBase
             Status = $"正在安装 {item.Name}…";
             var locals = (await App.Services.Local.ScanAsync(Kind)).ToArray();
             var match = ContentIdentity.FindBestResult(locals, item);
-            if (match.Ambiguous) throw new InvalidOperationException("存在多个同等匹配的本地目录，请先处理重复内容后再安装。");
+            if (match.Ambiguous)
+            {
+                var verifiedCopy = await ContentIdentity.FindVerifiedCopyAsync(locals, item, match.Score);
+                if (verifiedCopy is not null)
+                {
+                    MessageBox.Show($"本机已有与云端版本和完整内容指纹一致的副本：\n{verifiedCopy.Root}\n\n其他本地版本保持不变，无需重复安装。", "已安装，无需重复覆盖", MessageBoxButton.OK, MessageBoxImage.Information);
+                    await RefreshAsync();
+                    Status = "已安装云端版本；其他本地版本已保留。";
+                    return;
+                }
+                var folders = string.Join("、", locals.Where(x => ContentIdentity.MatchScore(x, item) == match.Score).Select(x => x.Folder).Distinct(StringComparer.OrdinalIgnoreCase));
+                throw new InvalidOperationException($"找到多个可能对应的本地目录（{folders}），但没有一份能同时通过云端版本和内容指纹校验。请先到本地{Kind}页面检查，不会自动选择或覆盖其中任何一个。");
+            }
             var matched = match.Entry;
             if (matched is { Valid: true })
             {
@@ -451,7 +480,11 @@ public sealed class CloudPageViewModel : ViewModelBase
         if (await App.Services.SyncPreferences.IsExcludedAsync(item, ct)) return false;
         var locals = (await App.Services.Local.ScanAsync(Kind, ct)).ToArray();
         var match = ContentIdentity.FindBestResult(locals, item);
-        if (match.Ambiguous) throw new InvalidOperationException("存在多个同等匹配的本地目录");
+        if (match.Ambiguous)
+        {
+            if (await ContentIdentity.FindVerifiedCopyAsync(locals, item, match.Score, ct) is not null) return false;
+            throw new InvalidOperationException("存在多个同等匹配的本地目录，批量安装不会自动选择或覆盖");
+        }
         var matched = match.Entry;
         var decision = SyncService.Decide(matched, item);
         var shouldInstall = decision.ShouldInstall;
