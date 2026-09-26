@@ -23,7 +23,16 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         finally { _operationGate.Release(); }
     }
 
-    private async Task<bool> InstallCoreAsync(CloudContentEntry entry, string? existingRoot, CancellationToken ct, string? existingVersion, bool automatic)
+    public async Task<bool> ReplaceConflictsAsync(CloudContentEntry entry, IReadOnlyList<LocalContentEntry> candidates, CancellationToken ct = default)
+    {
+        if (candidates.Count < 2) throw new InvalidOperationException("清理冲突至少需要两个经过扫描的本地目录");
+        await _operationGate.WaitAsync(ct);
+        try { return await InstallCoreAsync(entry, null, ct, null, automatic: false, replaceCandidates: candidates); }
+        finally { _operationGate.Release(); }
+    }
+
+    private async Task<bool> InstallCoreAsync(CloudContentEntry entry, string? existingRoot, CancellationToken ct, string? existingVersion, bool automatic,
+        IReadOnlyList<LocalContentEntry>? replaceCandidates = null)
     {
         if (string.IsNullOrWhiteSpace(entry.File)) throw new InvalidOperationException("云端清单没有 ZIP 文件路径");
         if (entry.Size < 0 || entry.Size > CloudCatalogService.MaxPackageBytes) throw new InvalidDataException("云端包大小超出安全范围");
@@ -45,6 +54,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         using var operationCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var operationCt = operationCts.Token;
         task.ConfigureCancellation(operationCts.Cancel);
+        var preserveWorkRoot = false;
         try
         {
             task.Status = "运行中";
@@ -105,9 +115,12 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
                 return false;
             }
             task.Detail = "正在安装到游戏目录";
-            var result = string.IsNullOrWhiteSpace(existingRoot)
-                ? await InstallFreshAsync(source, installRoot, top, entry, operationCt)
-                : await InstallOverLocalAsync(source, installRoot, top, existingRoot, entry, existingVersion ?? "", operationCt);
+            var result = replaceCandidates is not null
+                ? await InstallReplacingConflictsAsync(source, installRoot, top, workRoot, replaceCandidates, entry, operationCt,
+                    () => preserveWorkRoot = true)
+                : string.IsNullOrWhiteSpace(existingRoot)
+                    ? await InstallFreshAsync(source, installRoot, top, entry, operationCt)
+                    : await InstallOverLocalAsync(source, installRoot, top, existingRoot, entry, existingVersion ?? "", operationCt);
 
             await RememberInstalledAsync(entry);
             task.Progress = 100;
@@ -120,7 +133,9 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         {
             task.Status = "已取消";
             task.Detail = "用户取消了安装";
-            task.ConfigureRetry(() => InstallAsync(entry, existingRoot, existingVersion: existingVersion, automatic: automatic));
+            task.ConfigureRetry(() => replaceCandidates is null
+                ? InstallAsync(entry, existingRoot, existingVersion: existingVersion, automatic: automatic)
+                : ReplaceConflictsAsync(entry, replaceCandidates));
             log.Info("安装已取消: " + entry.Name);
             throw;
         }
@@ -129,14 +144,16 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
             task.Status = "失败";
             task.Progress = 100;
             task.Detail = ex.Message;
-            task.ConfigureRetry(() => InstallAsync(entry, existingRoot, existingVersion: existingVersion, automatic: automatic));
+            task.ConfigureRetry(() => replaceCandidates is null
+                ? InstallAsync(entry, existingRoot, existingVersion: existingVersion, automatic: automatic)
+                : ReplaceConflictsAsync(entry, replaceCandidates));
             log.Error("安装失败: " + entry.Name, ex);
             throw;
         }
         finally
         {
             task.ConfigureCancellation(null);
-            try { if (Directory.Exists(workRoot)) Directory.Delete(workRoot, true); }
+            try { if (!preserveWorkRoot && Directory.Exists(workRoot)) Directory.Delete(workRoot, true); }
             catch (Exception ex) { log.Error("清理安装临时目录失败: " + workRoot, ex); }
         }
     }
@@ -232,6 +249,94 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         finally
         {
             task.ConfigureCancellation(null);
+        }
+    }
+
+    private async Task<(string Destination, bool Changed)> InstallReplacingConflictsAsync(
+        string source, string installRoot, string top, string workRoot, IReadOnlyList<LocalContentEntry> candidates,
+        CloudContentEntry entry, CancellationToken ct, Action preserveWorkRoot)
+    {
+        var roots = candidates.Select(x => Path.GetFullPath(x.Root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)).ToArray();
+        if (roots.Distinct(StringComparer.OrdinalIgnoreCase).Count() != roots.Length)
+            throw new InvalidOperationException("冲突清理目标包含重复目录");
+        var parent = installRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var destination = Path.Combine(parent, top);
+        if (Directory.Exists(destination) && !roots.Contains(destination, StringComparer.OrdinalIgnoreCase))
+            throw new IOException("云端目标目录已被其他内容占用，已取消冲突清理：" + destination);
+
+        var verifiedHashes = new string[roots.Length];
+        for (var i = 0; i < roots.Length; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var root = roots[i];
+            if (!Directory.Exists(root) || !string.Equals(Path.GetDirectoryName(root), parent, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("只允许清理玩家内容根目录下经过扫描的直接子文件夹：" + root);
+            if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("冲突目录是符号链接/重解析点，已取消：" + root);
+            var current = await local.AnalyzeDirectoryAsync(root, ct);
+            if (!string.Equals(current.Kind, entry.Kind, StringComparison.OrdinalIgnoreCase) ||
+                ContentIdentity.MatchScore(current, entry) < 76 ||
+                !ContentIdentity.VersionsEquivalent(current.Version, candidates[i].Version))
+                throw new InvalidOperationException("冲突目录的内容身份或版本在确认后发生变化，请重新扫描：" + root);
+            var backup = await backups.CreateAsync(root, current.Kind, current.Id, current.Name, current.Version,
+                "清理重复版本并安装云端内容前自动备份", ct);
+            var sourceHash = await ContentHash.DirectorySha256Async(root, ct);
+            if (!sourceHash.Equals(backup.ContentHash, StringComparison.OrdinalIgnoreCase))
+                throw new IOException("备份与本地目录内容不一致，已取消清理：" + root);
+            verifiedHashes[i] = sourceHash;
+        }
+        ct.ThrowIfCancellationRequested();
+
+        // 备份其他目录时，游戏或同步工具仍可能修改已验证的目录；移动前再次核对。
+        for (var i = 0; i < roots.Length; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!Directory.Exists(roots[i]) || (File.GetAttributes(roots[i]) & FileAttributes.ReparsePoint) != 0 ||
+                !string.Equals(await ContentHash.DirectorySha256Async(roots[i], ct), verifiedHashes[i], StringComparison.OrdinalIgnoreCase))
+                throw new IOException("备份后本地目录发生变化，已取消清理：" + roots[i]);
+        }
+
+        var retiredRoot = Path.Combine(workRoot, "retired");
+        Directory.CreateDirectory(retiredRoot);
+        var moved = new List<(string Original, string Retired)>();
+        var installed = false;
+        try
+        {
+            for (var i = 0; i < roots.Length; i++)
+            {
+                var retired = Path.Combine(retiredRoot, i.ToString("D4") + "_" + Path.GetFileName(roots[i]));
+                Directory.Move(roots[i], retired);
+                moved.Add((roots[i], retired));
+            }
+            Directory.Move(source, destination);
+            installed = true;
+            await VerifyInstalledAsync(destination, entry, ct);
+            return (destination, true);
+        }
+        catch (Exception installError)
+        {
+            var restoreErrors = new List<string>();
+            if (installed && Directory.Exists(destination))
+            {
+                try { Directory.Delete(destination, true); }
+                catch (Exception ex) { restoreErrors.Add("移除未完成的新目录失败：" + ex.Message); }
+            }
+            foreach (var (original, retired) in moved.AsEnumerable().Reverse())
+            {
+                try
+                {
+                    if (Directory.Exists(original)) throw new IOException("原目录已被其他程序占用：" + original);
+                    Directory.Move(retired, original);
+                }
+                catch (Exception ex) { restoreErrors.Add("恢复 " + original + " 失败：" + ex.Message); }
+            }
+            if (restoreErrors.Count > 0)
+            {
+                preserveWorkRoot();
+                throw new IOException("云端安装失败，部分原目录未能自动恢复；旧文件仍保留在 " + retiredRoot + "，且有独立备份。" +
+                    string.Join("；", restoreErrors), installError);
+            }
+            throw new IOException("云端安装失败，原有地图/MOD目录已恢复：" + installError.Message, installError);
         }
     }
 

@@ -302,16 +302,17 @@ public sealed class CloudPageViewModel : ViewModelBase
             var match = ContentIdentity.FindBestResult(locals, item);
             if (match.Ambiguous)
             {
-                var verifiedCopy = await ContentIdentity.FindVerifiedCopyAsync(locals, item, match.Score);
-                if (verifiedCopy is not null)
-                {
-                    MessageBox.Show($"本机已有与云端版本和完整内容指纹一致的副本：\n{verifiedCopy.Root}\n\n其他本地版本保持不变，无需重复安装。", "已安装，无需重复覆盖", MessageBoxButton.OK, MessageBoxImage.Information);
-                    await RefreshAsync();
-                    Status = "已安装云端版本；其他本地版本已保留。";
-                    return;
-                }
-                var folders = string.Join("、", locals.Where(x => ContentIdentity.MatchScore(x, item) == match.Score).Select(x => x.Folder).Distinct(StringComparer.OrdinalIgnoreCase));
-                throw new InvalidOperationException($"找到多个可能对应的本地目录（{folders}），但没有一份能同时通过云端版本和内容指纹校验。请先到本地{Kind}页面检查，不会自动选择或覆盖其中任何一个。");
+                var candidates = locals.Where(x => ContentIdentity.MatchScore(x, item) == match.Score).ToArray();
+                var folders = string.Join("\n", candidates.Select(x => $"• {x.Folder}（版本 {x.Version}）"));
+                var answer = MessageBox.Show(
+                    $"发现 {candidates.Length} 个与“{item.Name}”匹配的本地目录：\n{folders}\n\n确认后，软件会先下载并校验云端包，再逐一备份这些目录，最后清理重复目录并安装云端版本。若替换失败，会尝试恢复原目录；备份也会保留在历史回滚中。\n\n是否清理冲突并重装？",
+                    "确认清理本地冲突", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                if (answer != MessageBoxResult.Yes) { Status = "已取消清理，本地内容保持不变"; return; }
+                Status = $"正在备份冲突目录并安装 {item.Name}…";
+                await App.Services.Install.ReplaceConflictsAsync(item, candidates);
+                await RefreshAsync();
+                Status = "冲突已清理，云端版本安装完成；旧目录已备份到历史回滚。";
+                return;
             }
             var matched = match.Entry;
             if (matched is { Valid: true })
