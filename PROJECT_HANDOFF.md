@@ -10,7 +10,8 @@ Updated: 2026-09-26. This file is intentionally safe for the public source repos
 
 ## Confirmed state
 
-- The client source in this repository builds and has regression checks. The latest source milestone is dev43.
+- The client source in this repository builds and has regression checks. The latest source milestone is dev44.
+- Dev44 fixes a WPF crash when selecting a cloud map or MOD: the detail pane's read-only `VersionDisplay` Run explicitly uses OneWay binding. A real WPF selection regression check now verifies that binding mode.
 - The cloud map/MOD lists now let each signed-in account mark content as disliked. One-click sync and cloud batch installation skip marked entries before modifying game files; manual single-item installation remains available. A second click restores automatic sync. The preference is stored locally per account and server endpoint, with a separate offline scope. It does not roam between computers because no account preference API has been verified or implemented on the server.
 - Local map and MOD lists now have a per-row delete action. It targets the selected local game folder, creates a backup, and compares the source directory fingerprint with the backup before removal. A cloud item deleted locally can be installed again by a later full sync; this behavior is stated in the confirmation dialog.
 - Account sign-in and several authenticated client functions were exercised successfully during development.

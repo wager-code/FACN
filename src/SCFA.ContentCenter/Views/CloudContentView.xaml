@@ -129,10 +129,10 @@
                 <Grid Grid.Column="2" Margin="0,1,18,0">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="82"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-                    <TextBlock Text="版本 / 大小" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Column="1"><Run Text="{Binding SelectedItem.VersionDisplay, TargetNullValue=—}"/><Run Text="  ·  "/><Run Text="{Binding SelectedItem.SizeText, TargetNullValue=—}"/></TextBlock>
-                    <TextBlock Grid.Row="1" Text="作者 / 分类" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="1" Grid.Column="1"><Run Text="{Binding SelectedItem.AuthorText, TargetNullValue=—}"/><Run Text="  ·  "/><Run Text="{Binding SelectedItem.CategoryText, TargetNullValue=—}"/></TextBlock>
+                    <TextBlock Text="版本 / 大小" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Column="1"><Run Text="{Binding SelectedItem.VersionDisplay, Mode=OneWay, TargetNullValue=—}"/><Run Text="  ·  "/><Run Text="{Binding SelectedItem.SizeText, Mode=OneWay, TargetNullValue=—}"/></TextBlock>
+                    <TextBlock Grid.Row="1" Text="作者 / 分类" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="1" Grid.Column="1"><Run Text="{Binding SelectedItem.AuthorText, Mode=OneWay, TargetNullValue=—}"/><Run Text="  ·  "/><Run Text="{Binding SelectedItem.CategoryText, Mode=OneWay, TargetNullValue=—}"/></TextBlock>
                     <TextBlock Grid.Row="2" Text="安装路径" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.InstallPath, TargetNullValue=—}" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedItem.InstallPath}"/>
-                    <TextBlock Grid.Row="3" Text="标签" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.TagsText, TargetNullValue=—}" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedItem.TagsText}"/>
+                    <TextBlock Grid.Row="3" Text="标签" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.TagsText, Mode=OneWay, TargetNullValue=—}" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedItem.TagsText, Mode=OneWay}"/>
                 </Grid>
                 <StackPanel Grid.Column="3" VerticalAlignment="Center" MinWidth="138">
                     <Button Style="{StaticResource PrimaryButton}" Content="安装 / 修复所选" Command="{Binding InstallCommand}" Margin="0,0,0,7"/>

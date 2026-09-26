@@ -1154,12 +1154,18 @@ var selectionUiThread = new Thread(() =>
         cloudHost.UpdateLayout();
         var cloudGrid = VisualTreeProbe.Find<System.Windows.Controls.DataGrid>(cloudView);
         cloudGrid.ScrollIntoView(cloudProbe.Items[0]);
+        cloudGrid.SelectedItem = cloudProbe.Items[0];
         cloudHost.UpdateLayout();
         System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         var cloudButtons = VisualTreeProbe.FindAll<System.Windows.Controls.Button>(cloudView).ToArray();
         var skipButton = cloudButtons.SingleOrDefault(button => Equals(button.Content, "♡ 不喜欢")) ??
             throw new InvalidOperationException("未找到不喜欢按钮；实际按钮：" + string.Join("、", cloudButtons.Select(button => button.Content?.ToString())));
-        cloudSkipUiPassed = skipButton.IsEnabled && ReferenceEquals(skipButton.CommandParameter, cloudProbe.Items[0]);
+        var versionRun = VisualTreeProbe.FindAll<System.Windows.Controls.TextBlock>(cloudView)
+            .SelectMany(block => block.Inlines.OfType<System.Windows.Documents.Run>())
+            .Single(run => System.Windows.Data.BindingOperations.GetBinding(run, System.Windows.Documents.Run.TextProperty)?.Path?.Path == "SelectedItem.VersionDisplay");
+        cloudSkipUiPassed = skipButton.IsEnabled && ReferenceEquals(skipButton.CommandParameter, cloudProbe.Items[0]) &&
+                            ReferenceEquals(cloudProbe.SelectedItem, cloudProbe.Items[0]) &&
+                            System.Windows.Data.BindingOperations.GetBinding(versionRun, System.Windows.Documents.Run.TextProperty)?.Mode == System.Windows.Data.BindingMode.OneWay;
     }
     catch (Exception ex) { selectionCommandUiError = ex; }
     finally
@@ -1176,7 +1182,7 @@ selectionUiThread.Start();
 selectionUiThread.Join();
 if (selectionCommandUiError is not null) Console.Error.WriteLine("本地内容选择命令 UI 测试异常：" + selectionCommandUiError);
 Check(selectionCommandUiPassed, "真实 WPF 本地内容页面的逐行删除与选中项操作正确绑定目标目录");
-Check(cloudSkipUiPassed, "真实 WPF 云端列表的不喜欢按钮正确绑定当前地图");
+Check(cloudSkipUiPassed, "真实 WPF 云端列表选中地图后版本详情保持只读绑定且不喜欢按钮指向当前行");
 
 if (failures.Count > 0)
 {
@@ -1600,6 +1606,7 @@ sealed class CloudSkipBindingProbe
     public List<CloudContentEntry> Items { get; }
     public ICollectionView ItemsView { get; }
     public AsyncItemCommand<CloudContentEntry> ToggleSyncSkipCommand { get; }
+    public CloudContentEntry? SelectedItem { get; set; }
     public int TotalCount => Items.Count;
 }
 
