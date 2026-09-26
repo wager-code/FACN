@@ -22,13 +22,26 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
             <Border Style="{StaticResource CardBorder}" Padding="14">
                 <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                    <TextBlock Text="本地内容" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding LocalItems}" SelectedItem="{Binding SelectedLocal, Mode=TwoWay}" IsReadOnly="True" MinHeight="220">
+                    <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="本地内容" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <TextBlock Text="查找" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0"/>
+                            <TextBox Width="155" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="输入游戏名称、文件夹名、内容 ID 或版本搜索"/>
+                        </StackPanel>
+                    </Grid>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedLocal, Mode=TwoWay}" IsReadOnly="True" MinHeight="220">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="名称" Binding="{Binding Name, Mode=OneWay}" Width="*" MinWidth="130"/>
-                            <DataGridTextColumn Header="版本" Binding="{Binding Version, Mode=OneWay}" Width="78"/>
+                            <DataGridTemplateColumn Header="游戏名称 / 文件夹" Width="*" MinWidth="170">
+                                <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Margin="0,3,0,3">
+                                    <TextBlock Text="{Binding Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/>
+                                    <TextBlock Text="{Binding Folder, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Root}"/>
+                                </StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="版本" Binding="{Binding Version, Mode=OneWay}" Width="55"/>
                             <DataGridTextColumn Header="文件" Binding="{Binding Files, Mode=OneWay}" Width="55"/>
-                            <DataGridTextColumn Header="校验" Binding="{Binding Detail, Mode=OneWay}" Width="170"/>
+                            <DataGridTemplateColumn Header="校验" Width="110">
+                                <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding Detail, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

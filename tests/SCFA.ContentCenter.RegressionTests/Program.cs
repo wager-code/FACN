@@ -1050,7 +1050,25 @@ try
     await File.WriteAllTextAsync(Path.Combine(legacyMapRoot, "legacy_map_script.lua"), "function OnPopulate() end");
     await File.WriteAllTextAsync(Path.Combine(legacyMapRoot, "legacy_map_scenario.lua"), "name = \"Legacy Map\"\nversion = 3\nmap = \"/maps/legacy_map/legacy_map.scmap\"\nsave = \"/maps/legacy_map/legacy_map_save.lua\"\nscript = \"/maps/legacy_map/legacy_map_script.lua\"\n");
     var legacyMap = await localContent.AnalyzeDirectoryAsync(legacyMapRoot);
-    Check(legacyMap.Valid && legacyMap.Version == "3", "旧版标准地图 scenario.lua 的 version 字段可以正常识别");
+    Check(legacyMap.Valid && legacyMap.Version == "3" && legacyMap.Name == "Legacy Map", "旧版标准地图 scenario.lua 的名称和 version 字段可以正常识别");
+    var nestedNameRoot = Path.Combine(mapsRoot, "nested_name_map");
+    Directory.CreateDirectory(nestedNameRoot);
+    await File.WriteAllTextAsync(Path.Combine(nestedNameRoot, "nested_name_map.scmap"), "map-content");
+    await File.WriteAllTextAsync(Path.Combine(nestedNameRoot, "nested_name_map_save.lua"), "Scenario = {}");
+    await File.WriteAllTextAsync(Path.Combine(nestedNameRoot, "nested_name_map_script.lua"), "function OnPopulate() end");
+    await File.WriteAllTextAsync(Path.Combine(nestedNameRoot, "nested_name_map_scenario.lua"),
+        "ScenarioInfo = {\n  Configurations = { standard = { teams = {{ name = 'FFA' }} } },\n  -- name = 'Commented Out'\n" +
+        "  description = 'braces { in a string',\n  name = 'Real Game Map',\n  map_version = 10,\n" +
+        "  map = '/maps/nested_name_map/nested_name_map.scmap',\n" +
+        "  save = '/maps/nested_name_map/nested_name_map_save.lua',\n" +
+        "  script = '/maps/nested_name_map/nested_name_map_script.lua',\n}\n");
+    var nestedNameMap = await localContent.AnalyzeDirectoryAsync(nestedNameRoot);
+    Check(nestedNameMap.Valid && nestedNameMap.Name == "Real Game Map" && nestedNameMap.Version == "10",
+        "地图名称读取 ScenarioInfo 顶层 name，不误读嵌套战队名 FFA");
+    Check(SCFA.ContentCenter.ViewModels.PublicationPageViewModel.MatchesSearch(nestedNameMap, "nested_name_map") &&
+          SCFA.ContentCenter.ViewModels.PublicationPageViewModel.MatchesSearch(nestedNameMap, "real game") &&
+          !SCFA.ContentCenter.ViewModels.PublicationPageViewModel.MatchesSearch(nestedNameMap, "unrelated"),
+        "管理员发布页可按游戏名或文件夹名查找地图");
     var publishService = new PublicationPreparationService(localContent);
     var publishSource = await localContent.AnalyzeDirectoryAsync(Path.Combine(mapsRoot, "recent_map"));
     var publishMetadata = new PublicationMetadata("回归测试发布地图", publishSource.Version, "测试管理员", "隔离目录内的发布材料回归检查。", "地图", "测试,安全");
@@ -1475,6 +1493,8 @@ sealed class PublicationBindingProbe
         new() { Kind = "地图", Name = "北境回声", Id = "northern_echo", Folder = "northern_echo", Version = "3", Files = 12, Valid = true, Detail = "结构校验通过" },
         new() { Kind = "地图", Name = "海岸防线", Id = "coastal_defense", Folder = "coastal_defense", Version = "2", Files = 9, Valid = true, Detail = "结构校验通过" }
     ];
+    public System.ComponentModel.ICollectionView ItemsView => System.Windows.Data.CollectionViewSource.GetDefaultView(LocalItems);
+    public string SearchText { get; set; } = "";
     public LocalContentEntry? SelectedLocal { get; set; }
     public string Name { get; set; } = "北境回声";
     public string ReleaseVersion { get; set; } = "3";

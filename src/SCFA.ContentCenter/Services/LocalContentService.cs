@@ -142,7 +142,7 @@ public sealed class LocalContentService(GamePathService paths, LogService log)
         var scenarios = files.Where(x => string.Equals(x.DirectoryName, root, StringComparison.OrdinalIgnoreCase) && x.Name.EndsWith("_scenario.lua", StringComparison.OrdinalIgnoreCase)).ToArray();
         if (scenarios.Length != 1) throw new InvalidDataException($"地图目录必须且只能包含一个 *_scenario.lua，实际 {scenarios.Length} 个");
         var text = File.ReadAllText(scenarios[0].FullName);
-        var name = ParseQuoted(text, "name"); if (name == "") name = Path.GetFileName(root);
+        var name = ParseScenarioName(text); if (name == "") name = Path.GetFileName(root);
         var version = ParseVersion(text, "map_version");
         if (version == "") version = ParseVersion(text, "version");
         if (version == "") throw new InvalidDataException("scenario.lua 未找到 map_version 或 version");
@@ -183,6 +183,61 @@ public sealed class LocalContentService(GamePathService paths, LogService log)
     {
         var m = Regex.Match(text, "(?mi)^\\s*" + Regex.Escape(field) + "\\s*=\\s*[\"']([^\"']+)[\"']");
         return m.Success ? m.Groups[1].Value.Trim() : "";
+    }
+    private static string ParseScenarioName(string text)
+    {
+        var table = Regex.Match(text, @"(?mi)^\s*ScenarioInfo\s*=\s*\{");
+        if (!table.Success) return ParseQuoted(text, "name");
+        var depth = 0;
+        var quote = '\0';
+        var lineComment = false;
+        var blockComment = false;
+        for (var i = table.Index + table.Length - 1; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (lineComment) { if (ch == '\n') lineComment = false; continue; }
+            if (blockComment)
+            {
+                if (ch == ']' && i + 1 < text.Length && text[i + 1] == ']') { blockComment = false; i++; }
+                continue;
+            }
+            if (quote != '\0')
+            {
+                if (ch == '\\' && i + 1 < text.Length) { i++; continue; }
+                if (ch == quote) quote = '\0';
+                continue;
+            }
+            if (ch == '-' && i + 1 < text.Length && text[i + 1] == '-')
+            {
+                blockComment = i + 3 < text.Length && text[i + 2] == '[' && text[i + 3] == '[';
+                lineComment = !blockComment;
+                i += blockComment ? 3 : 1;
+                continue;
+            }
+            if (ch is '\'' or '"') { quote = ch; continue; }
+            if (ch == '{') { depth++; continue; }
+            if (ch == '}') { if (--depth == 0) break; continue; }
+            if (depth != 1 || !text.AsSpan(i).StartsWith("name", StringComparison.OrdinalIgnoreCase) ||
+                (i > 0 && (char.IsLetterOrDigit(text[i - 1]) || text[i - 1] == '_')))
+                continue;
+            var end = i + 4;
+            if (end < text.Length && (char.IsLetterOrDigit(text[end]) || text[end] == '_')) continue;
+            while (end < text.Length && char.IsWhiteSpace(text[end])) end++;
+            if (end >= text.Length || text[end] != '=') continue;
+            end++;
+            while (end < text.Length && char.IsWhiteSpace(text[end])) end++;
+            if (end >= text.Length || text[end] is not ('\'' or '"')) continue;
+            var nameQuote = text[end++];
+            var result = new StringBuilder();
+            while (end < text.Length)
+            {
+                if (text[end] == '\\' && end + 1 < text.Length) { result.Append(text[end + 1]); end += 2; continue; }
+                if (text[end] == nameQuote) return result.ToString().Trim();
+                result.Append(text[end++]);
+            }
+            return "";
+        }
+        return "";
     }
     private static string ParseVersion(string text, string field)
     {
