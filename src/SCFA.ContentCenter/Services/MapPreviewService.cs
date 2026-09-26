@@ -33,7 +33,7 @@ public static class MapPreviewService
         }
     }
 
-    private static string? FindReferencedScmap(string mapRoot)
+    internal static string? FindReferencedScmap(string mapRoot)
     {
         var scenarios = Directory.EnumerateFiles(mapRoot, "*_scenario.lua", SearchOption.TopDirectoryOnly).Take(2).ToArray();
         if (scenarios.Length != 1 || (File.GetAttributes(scenarios[0]) & FileAttributes.ReparsePoint) != 0) return null;

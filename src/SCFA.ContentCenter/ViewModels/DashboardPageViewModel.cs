@@ -58,16 +58,18 @@ public sealed class DashboardPageViewModel : ViewModelBase
             await Task.WhenAll(mapsTask, modsTask);
             var maps = mapsTask.Result;
             var mods = modsTask.Result;
-            MapCount = maps.Count(x => x.Valid);
+            MapCount = maps.Count(x => x.Valid || x.IsSharedMap);
             ModCount = mods.Count(x => x.Valid);
-            IssueCount = maps.Count(x => !x.Valid) + mods.Count(x => !x.Valid);
+            IssueCount = maps.Count(x => !x.Valid && !x.IsSharedMap) + mods.Count(x => !x.Valid);
+            var sharedMapCount = maps.Count(x => x.IsSharedMap);
+            var sharedMapSummary = sharedMapCount == 0 ? "" : $" · 共用地形 {sharedMapCount}";
             RefreshTaskStats();
             LastUpdated = "最后扫描 · " + DateTime.Now.ToString("HH:mm:ss");
             Status = IssueCount == 0
-                ? $"本地内容读取完成 · 地图 {MapCount} · MOD {ModCount} · 未发现结构问题"
-                : $"本地内容读取完成 · 地图 {MapCount} · MOD {ModCount} · {IssueCount} 项需要检查";
+                ? $"本地内容读取完成 · 地图 {MapCount}{sharedMapSummary} · MOD {ModCount} · 未发现结构问题"
+                : $"本地内容读取完成 · 地图 {MapCount}{sharedMapSummary} · MOD {ModCount} · {IssueCount} 项需要检查";
             _lastScanActivity = new DashboardActivityItem(DateTime.Now, "内容扫描完成",
-                IssueCount == 0 ? $"地图 {MapCount} · MOD {ModCount} · 未发现结构问题" : $"地图 {MapCount} · MOD {ModCount} · {IssueCount} 项需要检查", AccentBrush);
+                IssueCount == 0 ? $"地图 {MapCount}{sharedMapSummary} · MOD {ModCount} · 未发现结构问题" : $"地图 {MapCount}{sharedMapSummary} · MOD {ModCount} · {IssueCount} 项需要检查", AccentBrush);
             RefreshActivities();
             RefreshHealth();
         }

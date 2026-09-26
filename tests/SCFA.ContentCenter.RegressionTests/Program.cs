@@ -814,13 +814,25 @@ try
     Directory.CreateDirectory(scenarioOnlyMap);
     await File.WriteAllBytesAsync(Path.Combine(referencedMap, "shared_preview.scmap"), CreatePreviewMapBytes());
     await File.WriteAllTextAsync(Path.Combine(scenarioOnlyMap, "scenario_only_scenario.lua"),
-        "ScenarioInfo = { map = '/maps/shared_preview/shared_preview.scmap' }\nmap = '/maps/shared_preview/shared_preview.scmap'\n");
+        "version = 3\nScenarioInfo = {\n    name = 'Official Shared Terrain',\n    type = 'campaign',\n    map = '/maps/shared_preview/shared_preview.scmap',\n    save = '/maps/scenario_only/scenario_only_save.lua',\n    script = '/maps/scenario_only/scenario_only_script.lua',\n}\n");
+    await File.WriteAllTextAsync(Path.Combine(scenarioOnlyMap, "scenario_only_save.lua"), "save");
+    await File.WriteAllTextAsync(Path.Combine(scenarioOnlyMap, "scenario_only_script.lua"), "script");
     Check(MapPreviewService.TryLoad(scenarioOnlyMap) is { PixelWidth: 2, PixelHeight: 2 },
         "无 .scmap 的场景可从同一地图库中被引用的地图读取游戏预览");
-    Check((await localContent.ScanAsync("地图")).Any(x => x.Folder == "scenario_only" && !x.Valid),
-        "引用其他 .scmap 的场景仍出现在本地列表，但不会被误判为可发布地图包");
-    Directory.Delete(scenarioOnlyMap, recursive: true);
+    var sharedMapEntry = (await localContent.ScanAsync("地图")).Single(x => x.Folder == "scenario_only");
+    Check(sharedMapEntry.IsSharedMap && !sharedMapEntry.Valid && sharedMapEntry.Name == "Official Shared Terrain" &&
+          sharedMapEntry.Version == "3" && sharedMapEntry.Files == 3 && sharedMapEntry.Bytes > 0 &&
+          sharedMapEntry.Detail.Contains("shared_preview", StringComparison.Ordinal),
+        "共用地形战役地图会显示名称、版本和自身文件大小，不会被误判为异常或独立发布包");
+    var sharedMapPackageRejected = false;
+    try { await localContent.AnalyzeDirectoryAsync(scenarioOnlyMap); }
+    catch (InvalidDataException) { sharedMapPackageRejected = true; }
+    Check(sharedMapPackageRejected, "共用地形场景不能作为独立地图包上传或安装");
     Directory.Delete(referencedMap, recursive: true);
+    var missingSharedMap = (await localContent.ScanAsync("地图")).Single(x => x.Folder == "scenario_only");
+    Check(!missingSharedMap.IsSharedMap && !missingSharedMap.Valid,
+        "共用的 .scmap 消失后，场景会重新标记为真正需要检查");
+    Directory.Delete(scenarioOnlyMap, recursive: true);
     var installer = new InstallService(packageCloud, pathService, localContent, backups, tasks, log, config);
     await installer.InstallAsync(new CloudContentEntry
     {

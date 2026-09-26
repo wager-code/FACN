@@ -130,6 +130,7 @@ public sealed class LocalContentEntry : INotifyPropertyChanged
     public int Files { get; set; }
     public long Bytes { get; set; }
     public bool Valid { get; set; }
+    public bool IsSharedMap { get; set; }
     public string Detail { get; set; } = "";
     public string CloudState { get; set; } = "未核对";
     [JsonIgnore] public BitmapSource? Preview

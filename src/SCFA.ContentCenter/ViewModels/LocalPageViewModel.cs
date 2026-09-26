@@ -28,8 +28,9 @@ public sealed class LocalPageViewModel : ViewModelBase
     public int TotalCount => Items.Count;
     public int VisibleCount => ItemsView.Cast<object>().Count();
     public int ValidCount => Items.Count(x => x.Valid);
-    public int IssueCount => Items.Count(x => !x.Valid);
-    public string SelectedState => SelectedItem is null ? "尚未选择内容" : SelectedItem.Valid ? "结构校验通过" : "需要检查";
+    public int SharedCount => Items.Count(x => x.IsSharedMap);
+    public int IssueCount => Items.Count(x => !x.Valid && !x.IsSharedMap);
+    public string SelectedState => SelectedItem is null ? "尚未选择内容" : SelectedItem.IsSharedMap ? "共用地形 · 游戏可读取" : SelectedItem.Valid ? "结构校验通过" : "需要检查";
     public BitmapSource? SelectedPreview { get => _selectedPreview; private set { if (Set(ref _selectedPreview, value)) OnPropertyChanged(nameof(PreviewStateText)); } }
     public string PreviewStateText => SelectedPreview is not null ? "游戏地图预览" : SelectedItem is null ? "选择地图查看预览" : "该地图暂无可用预览图";
     public LocalContentEntry? SelectedItem
@@ -136,7 +137,7 @@ public sealed class LocalPageViewModel : ViewModelBase
             SelectedItem = null; Items.Clear(); foreach (var x in items) Items.Add(x);
             ItemsView.Refresh();
             UpdateSummaries();
-            Status = $"扫描完成 · 有效 {Items.Count(x => x.Valid)} · 异常 {Items.Count(x => !x.Valid)}";
+            Status = $"扫描完成 · 独立 {ValidCount} · 共用地形 {SharedCount} · 异常 {IssueCount}";
         }
         catch (Exception ex) { Status = "扫描失败：" + ex.Message; }
     }
@@ -146,6 +147,7 @@ public sealed class LocalPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(TotalCount));
         OnPropertyChanged(nameof(VisibleCount));
         OnPropertyChanged(nameof(ValidCount));
+        OnPropertyChanged(nameof(SharedCount));
         OnPropertyChanged(nameof(IssueCount));
     }
 }

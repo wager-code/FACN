@@ -13,7 +13,8 @@
             </StackPanel>
             <WrapPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="18,0,0,0">
                 <Border Style="{StaticResource PillBorder}"><StackPanel Orientation="Horizontal"><TextBlock Text="共 "/><TextBlock Text="{Binding TotalCount}" FontWeight="SemiBold"/></StackPanel></Border>
-                <Border Style="{StaticResource PillBorder}"><StackPanel Orientation="Horizontal"><TextBlock Text="有效 "/><TextBlock Text="{Binding ValidCount}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/></StackPanel></Border>
+                <Border Style="{StaticResource PillBorder}"><StackPanel Orientation="Horizontal"><TextBlock Text="独立 "/><TextBlock Text="{Binding ValidCount}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/></StackPanel></Border>
+                <Border Style="{StaticResource PillBorder}" Visibility="{Binding MapPreviewVisibility}"><StackPanel Orientation="Horizontal"><TextBlock Text="共用地形 "/><TextBlock Text="{Binding SharedCount}" FontWeight="SemiBold" Foreground="#9BCBFF"/></StackPanel></Border>
                 <Border Style="{StaticResource PillBorder}"><StackPanel Orientation="Horizontal"><TextBlock Text="异常 "/><TextBlock Text="{Binding IssueCount}" FontWeight="SemiBold" Foreground="{StaticResource WarningBrush}"/></StackPanel></Border>
             </WrapPanel>
         </Grid>
@@ -43,7 +44,10 @@
                                     <Border x:Name="HealthBadge" Background="#43292C" BorderBrush="#734149" BorderThickness="1" CornerRadius="9" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Center">
                                         <TextBlock x:Name="HealthText" Text="需检查" Foreground="#FFC4C8" FontSize="11"/>
                                     </Border>
-                                    <DataTemplate.Triggers><DataTrigger Binding="{Binding Valid}" Value="True"><Setter TargetName="HealthBadge" Property="Background" Value="#173A38"/><Setter TargetName="HealthBadge" Property="BorderBrush" Value="#27645D"/><Setter TargetName="HealthText" Property="Text" Value="正常"/><Setter TargetName="HealthText" Property="Foreground" Value="#A8E9DF"/></DataTrigger></DataTemplate.Triggers>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Valid}" Value="True"><Setter TargetName="HealthBadge" Property="Background" Value="#173A38"/><Setter TargetName="HealthBadge" Property="BorderBrush" Value="#27645D"/><Setter TargetName="HealthText" Property="Text" Value="正常"/><Setter TargetName="HealthText" Property="Foreground" Value="#A8E9DF"/></DataTrigger>
+                                        <DataTrigger Binding="{Binding IsSharedMap}" Value="True"><Setter TargetName="HealthBadge" Property="Background" Value="#183350"/><Setter TargetName="HealthBadge" Property="BorderBrush" Value="#386B99"/><Setter TargetName="HealthText" Property="Text" Value="共用地形"/><Setter TargetName="HealthText" Property="Foreground" Value="#B9DDFF"/></DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

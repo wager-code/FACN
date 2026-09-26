@@ -136,8 +136,9 @@ public sealed class LocalContentService(GamePathService paths, LogService log)
         var files = EnumerateContentFiles(root, ct);
         var scmaps = files.Where(x => string.Equals(x.DirectoryName, root, StringComparison.OrdinalIgnoreCase) && x.Extension.Equals(".scmap", StringComparison.OrdinalIgnoreCase)).ToArray();
         var allScmaps = files.Where(x => x.Extension.Equals(".scmap", StringComparison.OrdinalIgnoreCase)).ToArray();
-        if (allScmaps.Length != 1) throw new InvalidDataException($"地图目录必须且只能包含一个 .scmap，实际 {allScmaps.Length} 个");
-        if (scmaps.Length != 1) throw new InvalidDataException(".scmap 必须直接位于地图文件夹根目录");
+        var sharedMap = allScmaps.Length == 0;
+        if (allScmaps.Length > 1) throw new InvalidDataException($"地图目录必须且只能包含一个 .scmap，实际 {allScmaps.Length} 个");
+        if (!sharedMap && scmaps.Length != 1) throw new InvalidDataException(".scmap 必须直接位于地图文件夹根目录");
         var scenarios = files.Where(x => string.Equals(x.DirectoryName, root, StringComparison.OrdinalIgnoreCase) && x.Name.EndsWith("_scenario.lua", StringComparison.OrdinalIgnoreCase)).ToArray();
         if (scenarios.Length != 1) throw new InvalidDataException($"地图目录必须且只能包含一个 *_scenario.lua，实际 {scenarios.Length} 个");
         var text = File.ReadAllText(scenarios[0].FullName);
@@ -146,11 +147,25 @@ public sealed class LocalContentService(GamePathService paths, LogService log)
         if (version == "") version = ParseVersion(text, "version");
         if (version == "") throw new InvalidDataException("scenario.lua 未找到 map_version 或 version");
         if (!IsVersionValid(version)) throw new InvalidDataException("地图版本格式无效：" + version);
-        ValidateReference(root, text, "map", ".scmap");
+        string? referencedScmap = null;
+        if (sharedMap)
+        {
+            referencedScmap = MapPreviewService.FindReferencedScmap(root);
+            if (referencedScmap is null || (File.GetAttributes(referencedScmap) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("地图目录缺少 .scmap，且未找到安全的同级共用地形文件");
+        }
+        else ValidateReference(root, text, "map", ".scmap");
         ValidateReference(root, text, "save", "_save.lua");
         ValidateReference(root, text, "script", "_script.lua");
         var id = SanitizeId(StripVersion(Path.GetFileName(root))); if (id == "") id = "map_" + ShortHash(root);
-        return new LocalContentEntry { Kind = "地图", Root = root, Folder = Path.GetFileName(root), Name = name, Id = id, Version = version, Files = files.Count, Bytes = files.Sum(x => x.Length), Valid = true, Detail = "scenario.lua 归属与版本校验通过" };
+        return new LocalContentEntry
+        {
+            Kind = "地图", Root = root, Folder = Path.GetFileName(root), Name = name, Id = id, Version = version,
+            Files = files.Count, Bytes = files.Sum(x => x.Length), Valid = !sharedMap, IsSharedMap = sharedMap,
+            Detail = sharedMap
+                ? $"共用地形地图：引用 {Path.GetFileName(Path.GetDirectoryName(referencedScmap))} 的 .scmap；游戏可读取，不能作为独立地图包发布"
+                : "scenario.lua 归属与版本校验通过"
+        };
     }
 
     private static void ValidateReference(string root, string text, string field, string suffix)
