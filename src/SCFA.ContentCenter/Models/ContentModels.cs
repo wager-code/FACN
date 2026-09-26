@@ -117,8 +117,10 @@ public sealed class ModManifest
     [JsonPropertyName("updated_at")] public string UpdatedAt { get; set; } = "";
 }
 
-public sealed class LocalContentEntry
+public sealed class LocalContentEntry : INotifyPropertyChanged
 {
+    private BitmapSource? _preview;
+    public event PropertyChangedEventHandler? PropertyChanged;
     public string Kind { get; set; } = "";
     public string Root { get; set; } = "";
     public string Folder { get; set; } = "";
@@ -130,7 +132,16 @@ public sealed class LocalContentEntry
     public bool Valid { get; set; }
     public string Detail { get; set; } = "";
     public string CloudState { get; set; } = "未核对";
-    [JsonIgnore] public BitmapSource? Preview { get; set; }
+    [JsonIgnore] public BitmapSource? Preview
+    {
+        get => _preview;
+        set
+        {
+            if (ReferenceEquals(_preview, value)) return;
+            _preview = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Preview)));
+        }
+    }
     public string SizeText => Bytes < 1024 * 1024 ? $"{Bytes / 1024d:F1} KB" : $"{Bytes / 1024d / 1024d:F1} MB";
 }
 

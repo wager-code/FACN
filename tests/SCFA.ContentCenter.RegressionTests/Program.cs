@@ -777,6 +777,15 @@ try
     Check(gamePreview is { PixelWidth: 2, PixelHeight: 2, IsFrozen: true } &&
           previewPixels.Take(4).SequenceEqual(new byte[] { 0, 0, 255, 255 }),
         "可从 .scmap 内嵌 DDS 读取与游戏地图选择界面一致的预览，并可跨线程显示");
+    var localPreviewEntry = new LocalContentEntry();
+    var localPreviewChanges = 0;
+    localPreviewEntry.PropertyChanged += (_, args) =>
+    {
+        if (args.PropertyName == nameof(LocalContentEntry.Preview)) localPreviewChanges++;
+    };
+    localPreviewEntry.Preview = gamePreview;
+    localPreviewEntry.Preview = gamePreview;
+    Check(localPreviewChanges == 1, "选中地图后补读预览时会通知本地列表更新缩略图");
     var truncatedPreview = (await File.ReadAllBytesAsync(embeddedPreviewPath))[..100];
     await File.WriteAllBytesAsync(embeddedPreviewPath, truncatedPreview);
     Check(MapPreviewService.TryLoad(previewRoot) is null, "不完整的地图预览不会令目录扫描或页面崩溃");
