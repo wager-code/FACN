@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using System.Windows.Media.Imaging;
 
 namespace SCFA.ContentCenter.Models;
 
@@ -13,9 +14,12 @@ public sealed class CloudContentEntry : INotifyPropertyChanged
     private bool _isSyncExcluded;
     private bool _isRecent;
     private string _previewSource = "";
+    private string _gameName = "";
+    private BitmapSource? _mapPreview;
 
     [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("game_name")] public string GameName { get => _gameName; set { Set(ref _gameName, value ?? ""); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DisplayName))); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NameContextText))); } }
     [JsonPropertyName("version")] public string Version { get; set; } = "";
     [JsonPropertyName("game_version")] public string GameVersion { get; set; } = "";
     [JsonPropertyName("sha256")] public string Sha256 { get; set; } = "";
@@ -33,6 +37,10 @@ public sealed class CloudContentEntry : INotifyPropertyChanged
     [JsonPropertyName("tags")] public List<string> Tags { get; set; } = [];
     [JsonIgnore] public string Kind { get; set; } = "";
     [JsonIgnore] public string EffectiveContentHash => string.IsNullOrWhiteSpace(ContentSha256) ? LegacyContentHash : ContentSha256;
+    [JsonIgnore] public string DisplayName => string.IsNullOrWhiteSpace(GameName) ? Name : GameName.Trim();
+    [JsonIgnore] public string NameContextText => string.Equals(DisplayName, Name, StringComparison.CurrentCultureIgnoreCase)
+        ? $"目录：{(string.IsNullOrWhiteSpace(FolderName) ? Id : FolderName)}"
+        : $"云端标题：{Name} · 目录：{(string.IsNullOrWhiteSpace(FolderName) ? Id : FolderName)}";
     [JsonIgnore] public string EffectiveGameVersion => string.IsNullOrWhiteSpace(GameVersion) ? Version : GameVersion;
     [JsonIgnore] public string VersionDisplay => string.IsNullOrWhiteSpace(GameVersion) ||
         string.Equals(GameVersion.Trim(), Version.Trim(), StringComparison.OrdinalIgnoreCase)
@@ -59,9 +67,11 @@ public sealed class CloudContentEntry : INotifyPropertyChanged
     [JsonIgnore] public string ThumbnailUrl { get; set; } = "";
     [JsonIgnore] public string LocalRoot { get; set; } = "";
     [JsonIgnore] public string InstallPath { get; set; } = "";
-    [JsonIgnore] public string PreviewSource { get => _previewSource; set { Set(ref _previewSource, value); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasPreview))); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewStateText))); } }
-    [JsonIgnore] public bool HasPreview => !string.IsNullOrWhiteSpace(PreviewSource);
-    [JsonIgnore] public string PreviewStateText => HasPreview ? "内容预览" : Kind == "地图" ? "该地图暂无预览图" : "该 MOD 暂无预览图";
+    [JsonIgnore] public string PreviewSource { get => _previewSource; set { Set(ref _previewSource, value); NotifyPreviewChanged(); } }
+    [JsonIgnore] public BitmapSource? MapPreview { get => _mapPreview; set { Set(ref _mapPreview, value); NotifyPreviewChanged(); } }
+    [JsonIgnore] public object? DisplayPreviewSource => (object?)MapPreview ?? (string.IsNullOrWhiteSpace(PreviewSource) ? null : PreviewSource);
+    [JsonIgnore] public bool HasPreview => MapPreview is not null || !string.IsNullOrWhiteSpace(PreviewSource);
+    [JsonIgnore] public string PreviewStateText => HasPreview ? MapPreview is not null ? "游戏地图预览" : "内容预览" : Kind == "地图" ? "该地图暂无预览图" : "该 MOD 暂无预览图";
     [JsonIgnore] public string HistoryState { get; set; } = "";
     [JsonIgnore] public string AuthorText => string.IsNullOrWhiteSpace(Author) ? "未提供" : Author.Trim();
     [JsonIgnore] public string CategoryText => string.IsNullOrWhiteSpace(Category) ? "未分类" : Category.Trim();
@@ -79,6 +89,12 @@ public sealed class CloudContentEntry : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    private void NotifyPreviewChanged()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DisplayPreviewSource)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasPreview)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewStateText)));
+    }
     private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return;

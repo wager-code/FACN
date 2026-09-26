@@ -47,7 +47,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="2*" MinWidth="190"/>
+                        <DataGridTextColumn Header="游戏名称 / 名称" Binding="{Binding Name}" Width="2*" MinWidth="190"/>
                         <DataGridTextColumn Header="版本" Binding="{Binding Version}" Width="90"/>
                         <DataGridTextColumn Header="内容 ID" Binding="{Binding Id}" Width="165"/>
                         <DataGridTextColumn Header="目录" Binding="{Binding Folder}" Width="150"/>
@@ -74,21 +74,29 @@
 
         <Border Grid.Row="3" Style="{StaticResource CardBorder}" Margin="0,12,0,0" Padding="16">
             <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="1.5*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <StackPanel Margin="0,0,18,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="1.5*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Border Width="112" Height="96" CornerRadius="9" Background="#0A1727" BorderBrush="#29415D" BorderThickness="1" ClipToBounds="True" Margin="0,0,16,0" Visibility="{Binding MapPreviewVisibility}">
+                    <Grid>
+                        <Image Source="{Binding SelectedPreview, Mode=OneWay}" Stretch="Uniform"/>
+                        <TextBlock Text="{Binding PreviewStateText}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="90">
+                            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding SelectedPreview}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="0,0,18,0">
                     <TextBlock Text="LOCAL SELECTION" Style="{StaticResource EyebrowText}"/>
                     <TextBlock Text="{Binding SelectedItem.Name, TargetNullValue=请选择本地内容, FallbackValue=请选择本地内容}" FontSize="18" FontWeight="SemiBold" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding SelectedItem.Root, TargetNullValue=选择后可查看实际目录并执行安全操作, FallbackValue=选择后可查看实际目录并执行安全操作}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedItem.Root}"/>
                     <TextBlock Text="{Binding SelectedItem.Detail}" Foreground="{StaticResource TextMutedBrush}" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
-                <Grid Grid.Column="1" Margin="0,1,18,0">
+                <Grid Grid.Column="2" Margin="0,1,18,0">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                     <TextBlock Text="结构状态" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Column="1" Text="{Binding SelectedState}" Foreground="{StaticResource AccentBrush}"/>
                     <TextBlock Grid.Row="1" Text="版本 / ID" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="1" Grid.Column="1"><Run Text="{Binding SelectedItem.Version, TargetNullValue=—}"/><Run Text="  ·  "/><Run Text="{Binding SelectedItem.Id, TargetNullValue=—}"/></TextBlock>
                     <TextBlock Grid.Row="2" Text="文件 / 大小" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="2" Grid.Column="1"><Run Text="{Binding SelectedItem.Files, TargetNullValue=—}"/><Run Text=" 个  ·  "/><Run Text="{Binding SelectedItem.SizeText, TargetNullValue=—}"/></TextBlock>
                 </Grid>
-                <StackPanel Grid.Column="2" VerticalAlignment="Center" MinWidth="138">
+                <StackPanel Grid.Column="3" VerticalAlignment="Center" MinWidth="138">
                     <Button Style="{StaticResource SecondaryButton}" Content="打开所在文件夹" Command="{Binding OpenFolderCommand}" Margin="0,0,0,8"/>
                     <Button Style="{StaticResource DangerButton}" Content="删除所选（保留备份）" Command="{Binding UninstallCommand}"/>
                 </StackPanel>

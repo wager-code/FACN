@@ -91,7 +91,8 @@ public sealed class CloudPageViewModel : ViewModelBase
         if (value is not CloudContentEntry item || !MatchesStatusFilter(item) || !MatchesCategoryFilter(item) || !MatchesLibraryFilter(item)) return false;
         if (string.IsNullOrWhiteSpace(SearchText)) return true;
         var query = SearchText.Trim();
-        return item.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+        return item.DisplayName.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+               item.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                item.Id.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                item.Version.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                item.InstallState.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
@@ -144,7 +145,7 @@ public sealed class CloudPageViewModel : ViewModelBase
                 ItemsView.SortDescriptions.Add(new SortDescription(nameof(CloudContentEntry.InstallStateCode), ListSortDirection.Ascending));
                 break;
         }
-        ItemsView.SortDescriptions.Add(new SortDescription(nameof(CloudContentEntry.Name), ListSortDirection.Ascending));
+        ItemsView.SortDescriptions.Add(new SortDescription(nameof(CloudContentEntry.DisplayName), ListSortDirection.Ascending));
     }
 
     private async Task RefreshAsync()
@@ -210,13 +211,17 @@ public sealed class CloudPageViewModel : ViewModelBase
             }
         }
         item.LocalRoot = local?.Root ?? "";
+        if (Kind == "地图" && local is { Valid: true } && !string.IsNullOrWhiteSpace(local.Name))
+            item.GameName = local.Name;
         try
         {
             var root = App.Services.Paths.GetContentDirectory(Kind);
             item.InstallPath = Path.Combine(root, string.IsNullOrWhiteSpace(item.FolderName) ? item.Id : item.FolderName);
         }
         catch { item.InstallPath = "尚未配置已有内容目录"; }
-        item.PreviewSource = FindExplicitPreview(local?.Root) ?? item.ThumbnailUrl;
+        if (Kind == "地图" && local is { Valid: true })
+            item.MapPreview = await Task.Run(() => MapPreviewService.TryLoad(local.Root));
+        item.PreviewSource = item.MapPreview is null ? FindExplicitPreview(local?.Root) ?? item.ThumbnailUrl : "";
         if (match.Ambiguous)
         {
             item.InstallStateCode = "current";

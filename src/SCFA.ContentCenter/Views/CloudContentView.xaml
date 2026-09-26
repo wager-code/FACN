@@ -82,7 +82,16 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="名称" Binding="{Binding Name, Mode=OneWay}" Width="2*" MinWidth="180"/>
+                        <DataGridTemplateColumn Header="游戏名称 / 名称" Width="2*" MinWidth="190">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center" ToolTip="{Binding NameContextText}">
+                                        <TextBlock Text="{Binding DisplayName, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding NameContextText, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontSize="10" Foreground="{StaticResource TextMutedBrush}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTextColumn Header="版本" Binding="{Binding VersionDisplay, Mode=OneWay}" Width="150"/>
                         <DataGridTemplateColumn Header="本地状态" Width="180">
                             <DataGridTemplateColumn.CellTemplate>
@@ -117,12 +126,13 @@
         <Border Grid.Row="3" Style="{StaticResource CardBorder}" Margin="0,12,0,0" Padding="16">
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="176"/><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="1.45*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <Border Width="160" Height="96" CornerRadius="9" Background="#0A1727" BorderBrush="#29415D" BorderThickness="1" ClipToBounds="True" Margin="0,0,16,0">
-                    <Grid><Image Source="{Binding SelectedItem.PreviewSource}" Stretch="UniformToFill"><Image.Style><Style TargetType="Image"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding SelectedItem.HasPreview}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Image.Style></Image><StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"><StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding SelectedItem.HasPreview}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style><Border Width="28" Height="28" Background="{StaticResource TextMutedBrush}" Opacity="0.7"><Border.OpacityMask><ImageBrush ImageSource="/SCFA内容中心;component/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border><TextBlock Text="{Binding SelectedItem.PreviewStateText, TargetNullValue=选择内容查看预览}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,7,0,0"/></StackPanel></Grid>
+                <Border Width="160" Height="112" CornerRadius="9" Background="#0A1727" BorderBrush="#29415D" BorderThickness="1" ClipToBounds="True" Margin="0,0,16,0">
+                    <Grid><Image Source="{Binding SelectedItem.DisplayPreviewSource, Mode=OneWay}" Stretch="Uniform"><Image.Style><Style TargetType="Image"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding SelectedItem.HasPreview}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Image.Style></Image><StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"><StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding SelectedItem.HasPreview}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style><Border Width="28" Height="28" Background="{StaticResource TextMutedBrush}" Opacity="0.7"><Border.OpacityMask><ImageBrush ImageSource="/SCFA内容中心;component/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border><TextBlock Text="{Binding SelectedItem.PreviewStateText, TargetNullValue=选择内容查看预览}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,7,0,0"/></StackPanel></Grid>
                 </Border>
                 <StackPanel Grid.Column="1" Margin="0,0,18,0">
                     <TextBlock Text="SELECTED CONTENT" Style="{StaticResource EyebrowText}"/>
-                    <TextBlock Text="{Binding SelectedItem.Name, TargetNullValue=请选择一项内容, FallbackValue=请选择一项内容}" FontSize="18" FontWeight="SemiBold" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding SelectedItem.DisplayName, Mode=OneWay, TargetNullValue=请选择一项内容, FallbackValue=请选择一项内容}" FontSize="18" FontWeight="SemiBold" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding SelectedItem.NameContextText, Mode=OneWay}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding SelectedItem.DescriptionText, TargetNullValue=从目录中选择内容后查看说明与版本信息, FallbackValue=从目录中选择内容后查看说明与版本信息}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" MaxHeight="42" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding SelectedItem.InstallState}" Foreground="{StaticResource AccentBrush}" Margin="0,6,0,0"/>
                 </StackPanel>

@@ -3,8 +3,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media.Imaging;
 using SCFA.ContentCenter.Commands;
 using SCFA.ContentCenter.Models;
+using SCFA.ContentCenter.Services;
 
 namespace SCFA.ContentCenter.ViewModels;
 
@@ -13,10 +15,12 @@ public sealed class LocalPageViewModel : ViewModelBase
     private string _status = "等待扫描";
     private string _searchText = "";
     private LocalContentEntry? _selected;
+    private BitmapSource? _selectedPreview;
     public string Kind { get; }
     public string Title => Kind == "地图" ? "本地地图" : "本地 MOD";
     public string Subtitle => Kind == "地图" ? "管理本机地图；可在列表中直接删除，删除前自动备份。" : "管理本机 MOD；可在列表中直接删除，删除前自动备份。";
     public string LibraryLabel => Kind == "地图" ? "LOCAL MAPS" : "LOCAL MODS";
+    public Visibility MapPreviewVisibility => Kind == "地图" ? Visibility.Visible : Visibility.Collapsed;
     public ObservableCollection<LocalContentEntry> Items { get; } = [];
     public ICollectionView ItemsView { get; }
     public string Status { get => _status; set => Set(ref _status, value); }
@@ -26,6 +30,8 @@ public sealed class LocalPageViewModel : ViewModelBase
     public int ValidCount => Items.Count(x => x.Valid);
     public int IssueCount => Items.Count(x => !x.Valid);
     public string SelectedState => SelectedItem is null ? "尚未选择内容" : SelectedItem.Valid ? "结构校验通过" : "需要检查";
+    public BitmapSource? SelectedPreview { get => _selectedPreview; private set { if (Set(ref _selectedPreview, value)) OnPropertyChanged(nameof(PreviewStateText)); } }
+    public string PreviewStateText => SelectedPreview is not null ? "游戏地图预览" : SelectedItem is null ? "选择地图查看预览" : "该地图暂无可用预览图";
     public LocalContentEntry? SelectedItem
     {
         get => _selected;
@@ -33,6 +39,9 @@ public sealed class LocalPageViewModel : ViewModelBase
         {
             if (!Set(ref _selected, value)) return;
             OnPropertyChanged(nameof(SelectedState));
+            SelectedPreview = null;
+            OnPropertyChanged(nameof(PreviewStateText));
+            if (Kind == "地图" && value is { Valid: true }) _ = LoadPreviewAsync(value);
             OpenFolderCommand.RaiseCanExecuteChanged();
             UninstallCommand.RaiseCanExecuteChanged();
         }
@@ -69,6 +78,16 @@ public sealed class LocalPageViewModel : ViewModelBase
     {
         if (SelectedItem is null || !Directory.Exists(SelectedItem.Root)) return;
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{SelectedItem.Root}\"") { UseShellExecute = true });
+    }
+
+    private async Task LoadPreviewAsync(LocalContentEntry item)
+    {
+        try
+        {
+            var image = await Task.Run(() => MapPreviewService.TryLoad(item.Root));
+            if (ReferenceEquals(SelectedItem, item)) SelectedPreview = image;
+        }
+        catch (Exception ex) { App.Services.Log.Error("本地地图预览读取失败: " + item.Root, ex); }
     }
 
     private async Task UninstallAsync()
@@ -109,7 +128,7 @@ public sealed class LocalPageViewModel : ViewModelBase
     {
         try
         {
-            Status = "正在扫描真实游戏目录…"; var items = await App.Services.Local.ScanAsync(Kind); Items.Clear(); foreach (var x in items) Items.Add(x);
+            Status = "正在扫描真实游戏目录…"; var items = await App.Services.Local.ScanAsync(Kind); SelectedItem = null; Items.Clear(); foreach (var x in items) Items.Add(x);
             ItemsView.Refresh();
             UpdateSummaries();
             Status = $"扫描完成 · 有效 {Items.Count(x => x.Valid)} · 异常 {Items.Count(x => !x.Valid)}";
