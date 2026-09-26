@@ -24,8 +24,6 @@ public sealed class MainViewModel : ViewModelBase
     private readonly Lazy<SettingsPageViewModel> _settingsPage;
     private readonly Lazy<DiagnosticsPageViewModel> _diagnosticsPage;
     private readonly Lazy<UpdatesPageViewModel> _updatesPage;
-    private readonly Lazy<SubmissionsPageViewModel> _submissionsPage;
-    private readonly Lazy<ReviewPageViewModel> _reviewPage;
     private readonly Lazy<UsersPageViewModel> _usersPage;
     private readonly Lazy<OperationsPageViewModel> _operationsPage;
     private object _currentPage;
@@ -78,13 +76,10 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand SettingsCommand { get; }
     public ICommand DiagnosticsCommand { get; }
     public ICommand UpdatesCommand { get; }
-    public ICommand SubmissionsCommand { get; }
-    public ICommand ReviewCommand { get; }
     public ICommand UsersCommand { get; }
     public ICommand OperationsCommand { get; }
     public ICommand LogoutCommand { get; }
     public ICommand EditProfileCommand { get; }
-    public Visibility AccountToolsVisibility => !App.Services.OfflineMode && !string.IsNullOrWhiteSpace(App.Services.Auth.Token) ? Visibility.Visible : Visibility.Collapsed;
     public Visibility AdminToolsVisibility => IsAdminUser() ? Visibility.Visible : Visibility.Collapsed;
 
     public MainViewModel()
@@ -100,8 +95,6 @@ public sealed class MainViewModel : ViewModelBase
         _settingsPage = new(() => new SettingsPageViewModel());
         _diagnosticsPage = new(() => new DiagnosticsPageViewModel());
         _updatesPage = new(() => new UpdatesPageViewModel());
-        _submissionsPage = new(() => new SubmissionsPageViewModel());
-        _reviewPage = new(() => new ReviewPageViewModel());
         _usersPage = new(() => new UsersPageViewModel());
         _operationsPage = new(() => new OperationsPageViewModel());
 
@@ -121,8 +114,6 @@ public sealed class MainViewModel : ViewModelBase
         SettingsCommand = new RelayCommand(() => Navigate(_settingsPage.Value, "软件设置", "目录、启动与软件数据"));
         DiagnosticsCommand = new RelayCommand(() => Navigate(_diagnosticsPage.Value, "诊断中心", "检查环境、网络与配置健康"));
         UpdatesCommand = new RelayCommand(() => Navigate(_updatesPage.Value, "客户端更新", "检查并安全应用新版本"));
-        SubmissionsCommand = new RelayCommand(() => Navigate(_submissionsPage.Value, "我的投稿", "准备内容并跟踪审核状态"));
-        ReviewCommand = new RelayCommand(() => Navigate(_reviewPage.Value, "投稿审核", "审核并发布玩家内容"));
         UsersCommand = new RelayCommand(() => Navigate(_usersPage.Value, "用户管理", "管理角色、状态与登录会话"));
         OperationsCommand = new RelayCommand(() => Navigate(_operationsPage.Value, "服务器审计", "服务健康、权限与审计记录"));
         LogoutCommand = new AsyncRelayCommand(LogoutAsync);

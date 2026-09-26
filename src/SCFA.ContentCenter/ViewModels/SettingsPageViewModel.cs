@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using System.Windows;
 using Microsoft.Win32;
 using SCFA.ContentCenter.Commands;
@@ -54,8 +53,6 @@ public sealed class SettingsPageViewModel : ViewModelBase
     public bool AutoCheckUpdates { get => _draft.AutoCheckUpdates; set => SetDraft(value, () => _draft.AutoCheckUpdates, x => _draft.AutoCheckUpdates = x); }
     public bool AutoLayout { get => _draft.AutoLayout; set => SetDraft(value, () => _draft.AutoLayout, x => _draft.AutoLayout = x); }
     public bool OfflineAllowed { get => _draft.OfflineAllowed; set => SetDraft(value, () => _draft.OfflineAllowed, x => _draft.OfflineAllowed = x); }
-    public string SubmissionApiPath { get => _draft.SubmissionApiPath; set => SetDraft(value, () => _draft.SubmissionApiPath, x => _draft.SubmissionApiPath = x); }
-    public string SubmissionAdminPath { get => _draft.SubmissionAdminPath; set => SetDraft(value, () => _draft.SubmissionAdminPath, x => _draft.SubmissionAdminPath = x); }
     public string AdminUsersPath { get => _draft.AdminUsersPath; set => SetDraft(value, () => _draft.AdminUsersPath, x => _draft.AdminUsersPath = x); }
     public string AuditApiPath { get => _draft.AuditApiPath; set => SetDraft(value, () => _draft.AuditApiPath, x => _draft.AuditApiPath = x); }
     public string ContentHistoryApiPath { get => _draft.ContentHistoryApiPath; set => SetDraft(value, () => _draft.ContentHistoryApiPath, x => _draft.ContentHistoryApiPath = x); }
@@ -88,8 +85,7 @@ public sealed class SettingsPageViewModel : ViewModelBase
                     !string.IsNullOrWhiteSpace(ApiPin),
                     !string.IsNullOrWhiteSpace(Bucket),
                     !string.IsNullOrWhiteSpace(Region),
-                    !string.IsNullOrWhiteSpace(Root),
-                    !string.IsNullOrWhiteSpace(SubmissionApiPath)
+                    !string.IsNullOrWhiteSpace(Root)
                 ]);
             }
             return fields.Count(x => x) * 100 / fields.Count;
@@ -236,8 +232,6 @@ public sealed class SettingsPageViewModel : ViewModelBase
         restored.AutoCheckUpdates = defaults.AutoCheckUpdates;
         restored.AutoLayout = defaults.AutoLayout;
         restored.OfflineAllowed = defaults.OfflineAllowed;
-        restored.SubmissionApiPath = defaults.SubmissionApiPath;
-        restored.SubmissionAdminPath = defaults.SubmissionAdminPath;
         restored.AdminUsersPath = defaults.AdminUsersPath;
         restored.AuditApiPath = defaults.AuditApiPath;
         restored.ContentHistoryApiPath = defaults.ContentHistoryApiPath;
@@ -312,25 +306,13 @@ public sealed class SettingsPageViewModel : ViewModelBase
     private async Task TestServerFeaturesCoreAsync()
     {
         var apiSettings = SettingsValidator.ValidateApiSettings(_draft);
-        var submissionPath = SettingsValidator.NormalizeApiPath(_draft.SubmissionApiPath, "普通投稿 API");
-        _ = SettingsValidator.NormalizeApiPath(_draft.SubmissionAdminPath, "投稿审核 API");
         _ = SettingsValidator.NormalizeApiPath(_draft.AdminUsersPath, "用户管理 API");
         _ = SettingsValidator.NormalizeApiPath(_draft.AuditApiPath, "审计日志 API");
         _ = SettingsValidator.NormalizeApiPath(_draft.ContentHistoryApiPath, "内容历史 API");
         using var api = new AuthApiClient(apiSettings.Endpoint, apiSettings.Fingerprint);
         var health = await api.HealthAsync();
         if (!health.Ok) throw new InvalidDataException("服务器健康检查返回异常");
-        var mine = "我的投稿路由未登录检测";
-        var sameAuthenticatedServer = !App.Services.OfflineMode && !string.IsNullOrWhiteSpace(App.Services.Auth.Token) &&
-            string.Equals(api.BaseUrl, App.Services.Auth.BaseUrl, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(api.PinnedCertSha256, App.Services.Auth.PinnedCertSha256, StringComparison.OrdinalIgnoreCase);
-        if (sameAuthenticatedServer)
-        {
-            api.SetToken(App.Services.Auth.Token);
-            _ = await api.GetJsonAsync<JsonElement>(submissionPath + "/mine");
-            mine = "我的投稿路由可读";
-        }
-        ServerStatus = $"只读检测通过 · 投稿{(health.SubmissionReady ? "已就绪" : "未就绪")} · 更新{(health.UpdaterReady ? "已就绪" : "未就绪")} · {mine}";
+        ServerStatus = $"只读检测通过 · 账号 API 正常 · 更新{(health.UpdaterReady ? "已就绪" : "未就绪")}";
     }
 
     private async Task RunSingleTestAsync(Func<Task> test, Action<Exception> onError)
@@ -379,7 +361,7 @@ public sealed class SettingsPageViewModel : ViewModelBase
         {
             nameof(GameRoot), nameof(MapsDir), nameof(ModsDir), nameof(ApiUrl), nameof(ApiPin), nameof(Bucket), nameof(Region), nameof(Root),
             nameof(UpdateChannel), nameof(UpdateManifestUrl), nameof(AutoCheckUpdates), nameof(AutoLayout), nameof(OfflineAllowed),
-            nameof(SubmissionApiPath), nameof(SubmissionAdminPath), nameof(AdminUsersPath), nameof(AuditApiPath), nameof(ContentHistoryApiPath)
+            nameof(AdminUsersPath), nameof(AuditApiPath), nameof(ContentHistoryApiPath)
         }) OnPropertyChanged(name);
         OnPropertyChanged(nameof(ConfigurationScore));
     }

@@ -17,8 +17,6 @@ public static partial class SettingsValidator
         (result.Bucket, result.Region, result.Root) = ValidateCosSettings(result);
         (result.UpdateChannel, result.UpdateManifestUrl) = ValidateUpdateSettings(result);
 
-        result.SubmissionApiPath = NormalizeApiPath(result.SubmissionApiPath, "普通投稿 API");
-        result.SubmissionAdminPath = NormalizeApiPath(result.SubmissionAdminPath, "投稿审核 API");
         result.AdminUsersPath = NormalizeApiPath(result.AdminUsersPath, "用户管理 API");
         result.AuditApiPath = NormalizeApiPath(result.AuditApiPath, "审计日志 API");
         result.ContentHistoryApiPath = NormalizeApiPath(result.ContentHistoryApiPath, "内容历史 API");

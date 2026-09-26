@@ -14,7 +14,6 @@ public sealed class HealthResponse
     [JsonPropertyName("service")] public string Service { get; set; } = "";
     [JsonPropertyName("version")] public string Version { get; set; } = "";
     [JsonPropertyName("time")] public string Time { get; set; } = "";
-    [JsonPropertyName("submission_ready")] public bool SubmissionReady { get; set; }
     [JsonPropertyName("updater_ready")] public bool UpdaterReady { get; set; }
     [JsonPropertyName("updater_version")] public string UpdaterVersion { get; set; } = "";
     [JsonPropertyName("updater_url")] public string UpdaterUrl { get; set; } = "";

@@ -2,45 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace SCFA.ContentCenter.Models;
 
-public sealed class SubmissionRecord
-{
-    [JsonPropertyName("id")] public string Id { get; set; } = "";
-    [JsonPropertyName("kind")] public string Kind { get; set; } = "";
-    [JsonPropertyName("content_id")] public string ContentId { get; set; } = "";
-    [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("version")] public string Version { get; set; } = "";
-    [JsonPropertyName("status")] public string Status { get; set; } = "";
-    [JsonPropertyName("submitter")] public string Submitter { get; set; } = "";
-    [JsonPropertyName("reviewer")] public string Reviewer { get; set; } = "";
-    [JsonPropertyName("review_message")] public string ReviewMessage { get; set; } = "";
-    [JsonPropertyName("created_at")] public string CreatedAt { get; set; } = "";
-    [JsonPropertyName("updated_at")] public string UpdatedAt { get; set; } = "";
-    [JsonPropertyName("size")] public long Size { get; set; }
-    [JsonPropertyName("sha256")] public string Sha256 { get; set; } = "";
-    [JsonPropertyName("content_sha256")] public string ContentSha256 { get; set; } = "";
-    [JsonPropertyName("author")] public string Author { get; set; } = "";
-    [JsonPropertyName("description")] public string Description { get; set; } = "";
-    [JsonPropertyName("category")] public string Category { get; set; } = "";
-    [JsonPropertyName("tags")] public List<string> Tags { get; set; } = [];
-    [JsonPropertyName("preview_url")] public string PreviewUrl { get; set; } = "";
-    [JsonPropertyName("files")] public int Files { get; set; }
-    public string SizeText => Size < 1024 * 1024 ? $"{Size / 1024d:F1} KB" : $"{Size / 1024d / 1024d:F1} MB";
-    public string TagsText => Tags.Count == 0 ? "无" : string.Join("、", Tags);
-}
-
-public sealed class SubmissionDraft
-{
-    [JsonPropertyName("content_key")] public string ContentKey { get; set; } = "";
-    [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("version")] public string Version { get; set; } = "";
-    [JsonPropertyName("author")] public string Author { get; set; } = "";
-    [JsonPropertyName("description")] public string Description { get; set; } = "";
-    [JsonPropertyName("category")] public string Category { get; set; } = "";
-    [JsonPropertyName("tags_text")] public string TagsText { get; set; } = "";
-    [JsonPropertyName("preview_path")] public string PreviewPath { get; set; } = "";
-    [JsonPropertyName("saved_at")] public DateTimeOffset SavedAt { get; set; }
-}
-
 public sealed class AdminUserRecord
 {
     [JsonPropertyName("id")] public string Id { get; set; } = "";

@@ -136,86 +136,6 @@ if (args.Contains("--profile-ui-smoke", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
-if (args.Contains("--submission-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
-{
-    Exception? bindingError = null;
-    var uiThread = new Thread(() =>
-    {
-        try
-        {
-            var application = new SCFA.ContentCenter.App();
-            application.InitializeComponent();
-            var view = new SCFA.ContentCenter.Views.SubmissionsView { DataContext = new ReadOnlySubmissionBindingProbe() };
-            var host = new System.Windows.Window
-            {
-                Content = view,
-                Width = 900,
-                Height = 700,
-                ShowInTaskbar = false,
-                WindowStyle = System.Windows.WindowStyle.None,
-                Opacity = 0
-            };
-            host.Show();
-            host.UpdateLayout();
-            Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
-            host.Close();
-            application.Shutdown();
-        }
-        catch (Exception ex) { bindingError = ex; }
-    });
-    uiThread.SetApartmentState(ApartmentState.STA);
-    uiThread.Start();
-    uiThread.Join();
-    if (bindingError is null) Console.WriteLine("PASS  投稿页面运行时可绑定只读内容版本而不弹出异常");
-    else Console.Error.WriteLine("FAIL  投稿页面运行时绑定异常：" + bindingError);
-    Environment.Exit(bindingError is null ? 0 : 1);
-    return;
-}
-
-if (args.Contains("--submission-ui-preview", StringComparer.OrdinalIgnoreCase))
-{
-    var width = args.Length > 1 && double.TryParse(args[^2], out var parsedWidth) ? parsedWidth : 1200;
-    var height = args.Length > 0 && double.TryParse(args[^1], out var parsedHeight) ? parsedHeight : 800;
-    var uiThread = new Thread(() =>
-    {
-        var application = new SCFA.ContentCenter.App();
-        application.InitializeComponent();
-        var view = new SCFA.ContentCenter.Views.SubmissionsView { DataContext = new ReadOnlySubmissionBindingProbe() };
-        var root = new System.Windows.Controls.Border
-        {
-            Background = (System.Windows.Media.Brush)application.Resources["AppBackgroundBrush"],
-            Padding = new System.Windows.Thickness(26),
-            Child = view
-        };
-        var host = new System.Windows.Window
-        {
-            Title = "SCFA Dev19 投稿视觉预览",
-            Content = root,
-            Width = width,
-            Height = height,
-            MinWidth = 900,
-            MinHeight = 640,
-            WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen
-        };
-        application.MainWindow = host;
-        host.Show();
-        host.UpdateLayout();
-        Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
-        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(root.ActualWidth), (int)Math.Ceiling(root.ActualHeight), 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(root);
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        var output = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "ui-dev19", $"submissions-{(int)width}x{(int)height}.png");
-        using (var stream = File.Create(output)) encoder.Save(stream);
-        host.Close();
-        application.Shutdown();
-    });
-    uiThread.SetApartmentState(ApartmentState.STA);
-    uiThread.Start();
-    uiThread.Join();
-    return;
-}
-
 if (args.Contains("--admin-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
 {
     Exception? bindingError = null;
@@ -227,7 +147,6 @@ if (args.Contains("--admin-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
             application.InitializeComponent();
             var previews = new (System.Windows.Controls.UserControl View, object Probe)[]
             {
-                (new SCFA.ContentCenter.Views.ReviewView(), new ReviewBindingProbe()),
                 (new SCFA.ContentCenter.Views.UsersView(), new UsersBindingProbe()),
                 (new SCFA.ContentCenter.Views.OperationsView(), new OperationsBindingProbe())
             };
@@ -247,7 +166,7 @@ if (args.Contains("--admin-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
     uiThread.SetApartmentState(ApartmentState.STA);
     uiThread.Start();
     uiThread.Join();
-    if (bindingError is null) Console.WriteLine("PASS  三个管理员页面可在真实 WPF 布局中完成绑定");
+    if (bindingError is null) Console.WriteLine("PASS  用户与审计页面可在真实 WPF 布局中完成绑定");
     else Console.Error.WriteLine("FAIL  管理员页面运行时绑定异常：" + bindingError);
     Environment.Exit(bindingError is null ? 0 : 1);
     return;
@@ -256,7 +175,7 @@ if (args.Contains("--admin-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
 if (args.Contains("--admin-ui-preview", StringComparer.OrdinalIgnoreCase))
 {
     var flagIndex = Array.FindIndex(args, value => value.Equals("--admin-ui-preview", StringComparison.OrdinalIgnoreCase));
-    var page = flagIndex >= 0 && flagIndex + 1 < args.Length ? args[flagIndex + 1].ToLowerInvariant() : "review";
+    var page = flagIndex >= 0 && flagIndex + 1 < args.Length ? args[flagIndex + 1].ToLowerInvariant() : "users";
     var width = args.Length > 1 && double.TryParse(args[^2], out var parsedWidth) ? parsedWidth : 1200;
     var height = args.Length > 0 && double.TryParse(args[^1], out var parsedHeight) ? parsedHeight : 800;
     var uiThread = new Thread(() =>
@@ -267,7 +186,7 @@ if (args.Contains("--admin-ui-preview", StringComparer.OrdinalIgnoreCase))
         {
             "users" => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.UsersView(), (object)new UsersBindingProbe()),
             "operations" => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.OperationsView(), (object)new OperationsBindingProbe()),
-            _ => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.ReviewView(), (object)new ReviewBindingProbe())
+            _ => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.UsersView(), (object)new UsersBindingProbe())
         };
         view.DataContext = probe;
         var root = new System.Windows.Controls.Border
@@ -458,31 +377,25 @@ Check(InstallService.ContentKey("地图", " test-map ") == "地图:test-map", "�
 var protectedLoginPassword = LoginCredentialProtector.Protect("Regression-Password-123!");
 Check(LoginCredentialProtector.TryUnprotect(protectedLoginPassword, out var unprotectedLoginPassword) && unprotectedLoginPassword == "Regression-Password-123!", "记住密码使用 Windows 当前用户加密并可安全恢复");
 Check(!LoginCredentialProtector.TryUnprotect("not-valid-base64", out _), "损坏或伪造的已保存密码不会被使用");
-var reviewReader = new UserInfo { RoleKey = "reviewer", Permissions = ["review.read"] };
-var reviewApprover = new UserInfo { RoleKey = "reviewer", Permissions = ["review.approve"] };
 var userManager = new UserInfo { RoleKey = "manager", Permissions = ["users.manage"] };
 var misleadingRole = new UserInfo { RoleKey = "not_admin", Permissions = [] };
-Check(AccessPolicy.CanReadReviews(reviewReader) && !AccessPolicy.CanApproveReviews(reviewReader),
-    "服务器审核只读权限可读取队列但不能提交审核决定");
-Check(AccessPolicy.CanReadReviews(reviewApprover) && AccessPolicy.CanApproveReviews(reviewApprover),
-    "服务器审核批准权限可读取队列并提交审核决定");
 Check(AccessPolicy.CanReadUsers(userManager) && AccessPolicy.CanManageUsers(userManager) && AccessPolicy.CanRevokeSessions(userManager),
     "服务器用户管理权限可读取、修改和撤销会话");
-Check(!AccessPolicy.CanReadAudit(misleadingRole) && !AccessPolicy.CanUnpublish(misleadingRole) &&
-      !AccessPolicy.CanApproveReviews(misleadingRole), "非管理员角色名不能因为含有 admin 字样获得管理操作入口");
-Check(AccessPolicy.CanOpenAdminWorkspace(reviewReader) && !AccessPolicy.CanManageSettings(reviewReader),
-    "审核只读账号可进入审核工作区但不能调整服务器连接设置");
+Check(!AccessPolicy.CanReadAudit(misleadingRole) && !AccessPolicy.CanUnpublish(misleadingRole),
+    "非管理员角色名不能因为含有 admin 字样获得管理操作入口");
+Check(AccessPolicy.CanOpenAdminWorkspace(userManager) && !AccessPolicy.CanManageSettings(userManager),
+    "用户管理员可进入管理工作区但不能调整服务器连接设置");
 var settingsManager = new UserInfo { RoleKey = "configurator", Permissions = ["settings.cloud"] };
 Check(AccessPolicy.CanManageSettings(settingsManager) && !AccessPolicy.CanOpenAdminWorkspace(settingsManager),
     "服务器设置权限只开放高级设置，不扩大到其他管理页面");
 Check(!AccessPolicy.CanOpenAdminWorkspace(misleadingRole) && !AccessPolicy.CanManageSettings(misleadingRole),
     "伪装管理员角色名不会显示管理导航或高级设置");
 var auditEnvelope = JsonSerializer.Deserialize<AuditFetchResult>("""
-{"records":[{"id":"audit-1","time":"2026-09-25T01:00:00Z","actor_name":"reviewer","action":"review.approve","target_name":"map-one","result":"success","detail":"approved","remote_ip":"127.0.0.1"}],"integrity_ok":true,"integrity_message":"ok","total":1}
+{"records":[{"id":"audit-1","time":"2026-09-25T01:00:00Z","actor_name":"admin","action":"user.update","target_name":"player-one","result":"success","detail":"updated","remote_ip":"127.0.0.1"}],"integrity_ok":true,"integrity_message":"ok","total":1}
 """)!;
 Check(auditEnvelope.Records.Count == 1 && auditEnvelope.IntegrityOk == true && auditEnvelope.Total == 1,
     "生产审计 records 包装结构与完整性字段可读取");
-Check(auditEnvelope.Records[0].EffectiveActor == "reviewer" && auditEnvelope.Records[0].EffectiveTarget == "map-one" &&
+Check(auditEnvelope.Records[0].EffectiveActor == "admin" && auditEnvelope.Records[0].EffectiveTarget == "player-one" &&
       auditEnvelope.Records[0].EffectiveIp == "127.0.0.1", "生产审计操作者、目标和来源 IP 字段可显示");
 
 var damaged = Local("damaged-map", "damaged-map", valid: false);
@@ -558,7 +471,7 @@ var readOnlyEditorBindings = xamlFiles.SelectMany(path => System.Text.RegularExp
         "<TextBox[^>]*Text=\"\\{Binding (?<binding>[^\"]+)\"[^>]*IsReadOnly=\"True\"|<TextBox[^>]*IsReadOnly=\"True\"[^>]*Text=\"\\{Binding (?<binding>[^\"]+)\"")
     .Select(match => match.Groups["binding"].Value))
     .ToArray();
-Check(readOnlyEditorBindings.Length >= 3 && readOnlyEditorBindings.All(binding => binding.Contains("Mode=OneWay", StringComparison.Ordinal)), "只读文本框不会向只读视图模型属性回写");
+Check(readOnlyEditorBindings.Length >= 1 && readOnlyEditorBindings.All(binding => binding.Contains("Mode=OneWay", StringComparison.Ordinal)), "只读文本框不会向只读视图模型属性回写");
 var dev18Pages = new[] { "CloudContentView.xaml", "LocalContentView.xaml", "SyncView.xaml", "DownloadsView.xaml" }
     .Select(name => File.ReadAllText(Path.Combine(uiRoot, "Views", name))).ToArray();
 Check(dev18Pages[0].Contains("InstallStateCode", StringComparison.Ordinal) && dev18Pages[0].Contains("AttentionCount", StringComparison.Ordinal) &&
@@ -607,23 +520,21 @@ Check(syncServiceSource.Contains("_syncGate.WaitAsync(0, ct)", StringComparison.
       installServiceSource.Contains("_operationGate.WaitAsync(ct)", StringComparison.Ordinal),
       "同步、安装与卸载具备进程内并发保护");
 Check(new[] { "WorkflowStepBorder", "StatusBadgeBorder", "PreviewFrame" }.All(appXaml.Contains),
-      "投稿与维护工作区具备统一流程、状态和预览组件");
-var dev19Pages = new[] { "SubmissionsView.xaml", "BackupsView.xaml", "CloudHistoryView.xaml", "DiagnosticsView.xaml", "UpdatesView.xaml" }
+      "维护工作区具备统一流程、状态和预览组件");
+var dev19Pages = new[] { "BackupsView.xaml", "CloudHistoryView.xaml", "DiagnosticsView.xaml", "UpdatesView.xaml" }
     .Select(name => File.ReadAllText(Path.Combine(uiRoot, "Views", name))).ToArray();
-Check(dev19Pages[0].Contains("DraftCompletion", StringComparison.Ordinal) && dev19Pages[0].Contains("SubmissionCount", StringComparison.Ordinal) &&
-      dev19Pages[1].Contains("SelectedIntegrity", StringComparison.Ordinal) && dev19Pages[1].Contains("TotalSizeText", StringComparison.Ordinal) &&
-      dev19Pages[2].Contains("SelectedVersionLabel", StringComparison.Ordinal) && dev19Pages[2].Contains("VersionCount", StringComparison.Ordinal) &&
-      dev19Pages[3].Contains("HealthLabel", StringComparison.Ordinal) && dev19Pages[3].Contains("ProblemCount", StringComparison.Ordinal) &&
-      dev19Pages[4].Contains("SecurityStateLabel", StringComparison.Ordinal) && dev19Pages[4].Contains("StageStateLabel", StringComparison.Ordinal),
-      "投稿、备份、云历史、诊断和更新页面均使用真实状态与统计绑定");
-Check(dev19Pages[2].Contains("SearchText", StringComparison.Ordinal) && dev19Pages[2].Contains("FilteredContentCount", StringComparison.Ordinal), "云端历史提供实时搜索、清除与结果计数");
-Check(dev19Pages[2].Contains("ContentCount, Mode=OneWay", StringComparison.Ordinal) && dev19Pages[2].Contains("FilteredContentCount, Mode=OneWay", StringComparison.Ordinal) && dev19Pages[2].Contains("VersionCount, Mode=OneWay", StringComparison.Ordinal), "云端历史只读统计使用单向绑定");
-var dev20Pages = new[] { "ReviewView.xaml", "UsersView.xaml", "OperationsView.xaml" }
+Check(dev19Pages[0].Contains("SelectedIntegrity", StringComparison.Ordinal) && dev19Pages[0].Contains("TotalSizeText", StringComparison.Ordinal) &&
+      dev19Pages[1].Contains("SelectedVersionLabel", StringComparison.Ordinal) && dev19Pages[1].Contains("VersionCount", StringComparison.Ordinal) &&
+      dev19Pages[2].Contains("HealthLabel", StringComparison.Ordinal) && dev19Pages[2].Contains("ProblemCount", StringComparison.Ordinal) &&
+      dev19Pages[3].Contains("SecurityStateLabel", StringComparison.Ordinal) && dev19Pages[3].Contains("StageStateLabel", StringComparison.Ordinal),
+      "备份、云历史、诊断和更新页面均使用真实状态与统计绑定");
+Check(dev19Pages[1].Contains("SearchText", StringComparison.Ordinal) && dev19Pages[1].Contains("FilteredContentCount", StringComparison.Ordinal), "云端历史提供实时搜索、清除与结果计数");
+Check(dev19Pages[1].Contains("ContentCount, Mode=OneWay", StringComparison.Ordinal) && dev19Pages[1].Contains("FilteredContentCount, Mode=OneWay", StringComparison.Ordinal) && dev19Pages[1].Contains("VersionCount, Mode=OneWay", StringComparison.Ordinal), "云端历史只读统计使用单向绑定");
+var dev20Pages = new[] { "UsersView.xaml", "OperationsView.xaml" }
     .Select(name => File.ReadAllText(Path.Combine(uiRoot, "Views", name))).ToArray();
-Check(dev20Pages[0].Contains("QueueCount", StringComparison.Ordinal) && dev20Pages[0].Contains("SelectedPackage", StringComparison.Ordinal) &&
-      dev20Pages[1].Contains("RestrictedCount", StringComparison.Ordinal) && dev20Pages[1].Contains("SelectedPermissionSummary", StringComparison.Ordinal) &&
-      dev20Pages[2].Contains("AuditView", StringComparison.Ordinal) && dev20Pages[2].Contains("SelectedAuditDetail", StringComparison.Ordinal),
-      "审核、用户和审计页面均使用真实队列、身份与审计状态绑定");
+Check(dev20Pages[0].Contains("RestrictedCount", StringComparison.Ordinal) && dev20Pages[0].Contains("SelectedPermissionSummary", StringComparison.Ordinal) &&
+      dev20Pages[1].Contains("AuditView", StringComparison.Ordinal) && dev20Pages[1].Contains("SelectedAuditDetail", StringComparison.Ordinal),
+      "用户和审计页面均使用真实身份与审计状态绑定");
 var dev21Pages = new[] { "SetupView.xaml", "SettingsView.xaml" }
     .Select(name => File.ReadAllText(Path.Combine(uiRoot, "Views", name))).ToArray();
 Check(dev21Pages[0].Contains("SetupProgress", StringComparison.Ordinal) && dev21Pages[0].Contains("ContentStateLabel", StringComparison.Ordinal) &&
@@ -633,10 +544,9 @@ Check(dev21Pages[0].Contains("SetupProgress", StringComparison.Ordinal) && dev21
       "首次设置与软件设置页面使用真实进度、草稿、健康状态和分组配置绑定");
 Check(dev21Pages[1].Contains("Header=\"启动与更新\"", StringComparison.Ordinal) &&
       dev21Pages[1].Contains("Header=\"存储与数据\"", StringComparison.Ordinal) &&
-      dev19Pages[0].Contains("资料完整度", StringComparison.Ordinal) &&
-      dev19Pages[2].Contains("刷新内容列表", StringComparison.Ordinal) &&
-      dev19Pages[2].Contains("查询历史版本", StringComparison.Ordinal),
-      "客户界面使用清晰的设置、投稿完整度和云端历史操作文案");
+       dev19Pages[1].Contains("刷新内容列表", StringComparison.Ordinal) &&
+       dev19Pages[1].Contains("查询历史版本", StringComparison.Ordinal),
+       "客户界面使用清晰的设置和云端历史操作文案");
 
 var previousConfigDirectory = Environment.GetEnvironmentVariable("SCFA_CONTENT_HUB_CONFIG_DIR");
 var previousDataDirectory = Environment.GetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR");
@@ -710,7 +620,7 @@ try
     settingsDraft.ModsDir = settingsMods;
     settingsDraft.Root = "/scfa/";
     settingsDraft.UpdateChannel = "dev";
-    settingsDraft.SubmissionApiPath = "/v1/submissions/";
+    settingsDraft.AdminUsersPath = "/v1/admin/users/";
     CheckDirectoryThrows(() => SettingsValidator.ValidateDirectories(settingsDraft, pathService, createDirectories: false), "设置拒绝不存在的玩家内容根目录且不会自动创建");
     Check(!Directory.Exists(settingsMaps) && !Directory.Exists(settingsMods), "目录验证失败后仍不会创建目录或写盘");
     Directory.CreateDirectory(settingsMaps);
@@ -719,7 +629,7 @@ try
     Check(checkedDirectories.GameRoot == settingsGameRoot, "设置接受用户选择的已有 Maps/Mods 目录");
     var normalizedSettings = SettingsValidator.ValidateAndNormalize(settingsDraft, pathService, createDirectories: true);
     Check(Directory.Exists(settingsMaps) && Directory.Exists(settingsMods), "保存设置只使用已有玩家目录，不另建默认路径");
-    Check(normalizedSettings.Root == "scfa" && normalizedSettings.UpdateChannel == "developer" && normalizedSettings.SubmissionApiPath == "/v1/submissions", "设置保存前统一规范化 COS、更新通道和服务器路径");
+    Check(normalizedSettings.Root == "scfa" && normalizedSettings.UpdateChannel == "developer" && normalizedSettings.AdminUsersPath == "/v1/admin/users", "设置保存前统一规范化 COS、更新通道和服务器路径");
     Check(settingsDraft.Root == "/scfa/" && settingsDraft.UpdateChannel == "dev", "设置校验不会反向修改编辑草稿");
     var nestedSettings = ConfigService.Clone(settingsDraft);
     nestedSettings.ModsDir = Path.Combine(settingsMaps, "NestedMods");
@@ -727,8 +637,8 @@ try
     var invalidCosSettings = ConfigService.Clone(settingsDraft);
     invalidCosSettings.Bucket = "INVALID_BUCKET";
     CheckArgumentThrows(() => SettingsValidator.ValidateCosSettings(invalidCosSettings), "设置拒绝不安全的 COS Bucket");
-    CheckArgumentThrows(() => SettingsValidator.NormalizeApiPath("https://outside.example/submissions", "投稿 API"), "设置拒绝跨主机服务器功能路径");
-    CheckArgumentThrows(() => SettingsValidator.NormalizeApiPath("/v1/submissions?redirect=outside", "投稿 API"), "设置拒绝服务器功能路径携带查询或跳转参数");
+    CheckArgumentThrows(() => SettingsValidator.NormalizeApiPath("https://outside.example/admin/users", "用户 API"), "设置拒绝跨主机服务器功能路径");
+    CheckArgumentThrows(() => SettingsValidator.NormalizeApiPath("/v1/admin/users?redirect=outside", "用户 API"), "设置拒绝服务器功能路径携带查询或跳转参数");
     var renamedGameRoot = Path.Combine(configDirectory, "renamed-game");
     var renamedGameBin = Path.Combine(renamedGameRoot, "bin");
     Directory.CreateDirectory(renamedGameBin);
@@ -1095,7 +1005,6 @@ try
             "MOD 历史备份可恢复为有效内容");
     }
 
-    var submissionEntry = await localContent.AnalyzeDirectoryAsync(Path.Combine(mapsRoot, "recent_map"));
     var legacyMapRoot = Path.Combine(mapsRoot, "legacy_map");
     Directory.CreateDirectory(legacyMapRoot);
     await File.WriteAllTextAsync(Path.Combine(legacyMapRoot, "legacy_map.scmap"), "legacy-map");
@@ -1104,54 +1013,13 @@ try
     await File.WriteAllTextAsync(Path.Combine(legacyMapRoot, "legacy_map_scenario.lua"), "name = \"Legacy Map\"\nversion = 3\nmap = \"/maps/legacy_map/legacy_map.scmap\"\nsave = \"/maps/legacy_map/legacy_map_save.lua\"\nscript = \"/maps/legacy_map/legacy_map_script.lua\"\n");
     var legacyMap = await localContent.AnalyzeDirectoryAsync(legacyMapRoot);
     Check(legacyMap.Valid && legacyMap.Version == "3", "旧版标准地图 scenario.lua 的 version 字段可以正常识别");
-    var validDraft = new SubmissionDraft
-    {
-        Name = "回归测试地图",
-        Version = submissionEntry.Version,
-        Author = "Regression Mapper",
-        Description = "这是一段满足长度要求的投稿说明，用于验证投稿表单。",
-        Category = "竞技",
-        TagsText = "2v2，平衡; 2V2"
-    };
-    var validatedDraft = SubmissionValidator.Validate(validDraft, submissionEntry);
-    Check(validatedDraft.Tags.SequenceEqual(["2v2", "平衡"]), "投稿标签支持多种分隔符并忽略重复项");
-    var mismatchedDraft = CloneDraft(validDraft);
-    mismatchedDraft.Version = "999";
-    CheckThrows(() => SubmissionValidator.Validate(mismatchedDraft, submissionEntry), "投稿版本必须与实际内容版本一致");
-    var shortDescriptionDraft = CloneDraft(validDraft);
-    shortDescriptionDraft.Description = "太短";
-    CheckThrows(() => SubmissionValidator.Validate(shortDescriptionDraft, submissionEntry), "投稿说明拒绝低于最小长度");
-    var tooManyTagsDraft = CloneDraft(validDraft);
-    tooManyTagsDraft.TagsText = string.Join(',', Enumerable.Range(1, 11).Select(i => "tag" + i));
-    CheckThrows(() => SubmissionValidator.Validate(tooManyTagsDraft, submissionEntry), "投稿标签数量有安全上限");
-
-    var progressValues = new List<int>();
-    var uploadPayload = Enumerable.Range(0, 384 * 1024).Select(i => (byte)(i % 239)).ToArray();
-    using (var progressContent = new ProgressStreamContent(new MemoryStream(uploadPayload, writable: false), uploadPayload.Length, new InlineProgress(progressValues.Add)))
-    using (var uploaded = new MemoryStream())
-    {
-        await progressContent.CopyToAsync(uploaded);
-        Check(uploaded.ToArray().SequenceEqual(uploadPayload), "投稿上传进度流不会改变包内容");
-        Check(progressValues.Count > 1 && progressValues[0] == 0 && progressValues[^1] == 100, "投稿上传进度从 0 准确推进到 100");
-    }
-
-    var previewPath = Path.Combine(configDirectory, "submission-preview.png");
+    var previewPath = Path.Combine(configDirectory, "cloud-preview.png");
     CreatePreviewPng(previewPath, 320, 180);
-    var dimensions = SubmissionService.ValidatePreviewImage(previewPath);
-    Check(dimensions == (320, 180), "投稿预览图验证真实格式和最低尺寸");
+    var dimensions = PreviewImageValidator.Validate(previewPath);
+    Check(dimensions == (320, 180), "云端预览图验证真实格式和最低尺寸");
     var fakeJpegPath = Path.Combine(configDirectory, "fake-preview.jpg");
     File.Copy(previewPath, fakeJpegPath);
-    CheckThrows(() => SubmissionService.ValidatePreviewImage(fakeJpegPath), "投稿预览图拒绝扩展名与真实格式不一致");
-
-    using var submissionAuth = new AuthApiClient("http://localhost:18080", "");
-    var submissions = new SubmissionService(config, submissionAuth, pathService, localContent, tasks, log);
-    validDraft.PreviewPath = previewPath;
-    await submissions.SaveDraftAsync(submissionEntry, validDraft);
-    var loadedDraft = await submissions.LoadDraftAsync(submissionEntry);
-    Check(loadedDraft.Author == validDraft.Author && loadedDraft.Description == validDraft.Description && loadedDraft.PreviewPath == previewPath, "投稿草稿可安全持久化并恢复元数据与预览图");
-    await submissions.DeleteDraftAsync(submissionEntry);
-    var clearedDraft = await submissions.LoadDraftAsync(submissionEntry, "默认作者");
-    Check(clearedDraft.Description.Length == 0 && clearedDraft.Author == "默认作者", "清除投稿草稿后恢复内容默认值");
+    CheckThrows(() => PreviewImageValidator.Validate(fakeJpegPath), "云端预览图拒绝扩展名与真实格式不一致");
 
     var removableRoot = Path.Combine(mapsRoot, "map_to_remove");
     var removablePackagePath = Path.Combine(configDirectory, "removable-map.zip");
@@ -1386,19 +1254,6 @@ void AddText(ZipArchive archive, string path, string content)
     writer.Write(content);
 }
 
-SubmissionDraft CloneDraft(SubmissionDraft value) => new()
-{
-    ContentKey = value.ContentKey,
-    Name = value.Name,
-    Version = value.Version,
-    Author = value.Author,
-    Description = value.Description,
-    Category = value.Category,
-    TagsText = value.TagsText,
-    PreviewPath = value.PreviewPath,
-    SavedAt = value.SavedAt
-};
-
 void CreatePreviewPng(string path, int width, int height)
 {
     var pixels = new byte[width * height * 4];
@@ -1497,35 +1352,6 @@ sealed class InlineProgress(Action<int> report) : IProgress<int>
     public void Report(int value) => report(value);
 }
 
-sealed class ReadOnlySubmissionBindingProbe
-{
-    public string DraftVersion => "1";
-    public string DraftName { get; set; } = "示例地图：北境回声";
-    public string DraftAuthor { get; set; } = "玩家作者";
-    public string DraftCategory { get; set; } = "竞技";
-    public string DraftTags { get; set; } = "2v2, 平衡";
-    public string DraftDescription { get; set; } = "为双人对战设计的对称地图，包含清晰的资源分布与多条进攻路线。";
-    public int DraftCompletion => 100;
-    public int DraftCompletedCount => 6;
-    public string DraftRequirementHint => "资料已完整，可以校验并投稿";
-    public int DescriptionCount => DraftDescription.Length;
-    public int TagCount => 2;
-    public int LocalCount => LocalItems.Count;
-    public int SubmissionCount => 2;
-    public string SelectedContentLabel => "地图 · 北境回声 · 1";
-    public string PreviewSummary => "未选择预览图（可选，PNG/JPEG，最大5MB）";
-    public string Status => "草稿仅保存在本机，提交前会执行完整安全校验。";
-    public IReadOnlyList<string> Categories { get; } = ["地图", "MOD", "竞技", "合作", "AI", "其他"];
-    public List<LocalContentEntry> LocalItems { get; } =
-    [
-        new() { Kind = "地图", Name = "北境回声", Version = "1", Bytes = 18 * 1024 * 1024, Valid = true },
-        new() { Kind = "MOD", Name = "战术标记增强", Version = "2.4", Bytes = 3 * 1024 * 1024, Valid = true }
-    ];
-    public LocalContentEntry? SelectedLocal { get; set; }
-    public List<SubmissionRecord> MyItems { get; } = [];
-    public SubmissionRecord? SelectedSubmission { get; set; }
-}
-
 sealed class SetupBindingProbe
 {
     public int DetectedCount => DetectedRoots.Count;
@@ -1556,7 +1382,7 @@ sealed class SettingsBindingProbe
     public string DirectoryStatus => "游戏目录和玩家内容目录有效";
     public string ApiStatus => "连接成功 · 46 ms";
     public string CosStatus => "Bucket 与区域配置可用";
-    public string ServerStatus => "投稿、用户与审计路径均可访问";
+    public string ServerStatus => "账号 API 可访问";
     public string GameRoot { get; set; } = @"C:\Games\Supreme Commander Forged Alliance";
     public string MapsDir { get; set; } = @"C:\SCFA Content\Maps";
     public string ModsDir { get; set; } = @"C:\SCFA Content\Mods";
@@ -1570,35 +1396,11 @@ sealed class SettingsBindingProbe
     public bool AutoCheckUpdates { get; set; } = true;
     public bool AutoLayout { get; set; } = true;
     public bool OfflineAllowed { get; set; } = true;
-    public string SubmissionApiPath { get; set; } = "/api/submissions";
-    public string SubmissionAdminPath { get; set; } = "/api/admin/submissions";
     public string AdminUsersPath { get; set; } = "/api/admin/users";
     public string AuditApiPath { get; set; } = "/api/admin/audit";
     public string ContentHistoryApiPath { get; set; } = "/api/content/history";
     public string ConfigPath => @"C:\Users\Commander\AppData\Local\SCFA.ContentCenter\config.json";
     public string DataDirectory => @"C:\Users\Commander\AppData\Local\SCFA.ContentCenter";
-}
-
-sealed class ReviewBindingProbe
-{
-    public ReviewBindingProbe() => SelectedItem = Items[0];
-    public List<SubmissionRecord> Items { get; } =
-    [
-        new() { Id = "sub-1008", Kind = "地图", ContentId = "northern-echo", Name = "北境回声", Version = "1.2", Submitter = "MapperOne", Author = "MapperOne", Category = "竞技", Tags = ["2v2", "平衡"], Description = "对称资源分布与多路线进攻设计，已完成本地结构和双哈希校验。", Files = 28, Size = 18 * 1024 * 1024, CreatedAt = "2026-08-22 01:42", Sha256 = new string('A', 64), ContentSha256 = new string('B', 64) },
-        new() { Id = "sub-1007", Kind = "MOD", ContentId = "tactical-markers", Name = "战术标记增强", Version = "2.4", Submitter = "ModPilot", Author = "ModPilot", Category = "界面", Files = 11, Size = 3 * 1024 * 1024, CreatedAt = "2026-08-22 01:18" }
-    ];
-    public SubmissionRecord? SelectedItem { get; set; }
-    public string ReviewMessage { get; set; } = "内容结构与说明完整，等待最终决定。";
-    public string Status => "审核队列已读取 · 2 项";
-    public string PermissionLabel => "审核权限已验证";
-    public int QueueCount => 2;
-    public int MapCount => 1;
-    public int ModCount => 1;
-    public string TotalSizeText => "21.0 MB";
-    public int ReviewMessageCount => ReviewMessage.Length;
-    public string SelectedTitle => SelectedItem?.Name ?? "请选择一条投稿";
-    public string SelectedMetadata => "地图 · 1.2 · 投稿人 MapperOne";
-    public string SelectedPackage => "28 个文件 · 18.0 MB";
 }
 
 sealed class UsersBindingProbe
@@ -1611,7 +1413,7 @@ sealed class UsersBindingProbe
     public List<AdminUserRecord> Items { get; } =
     [
         new() { Id = "usr-admin-01", Username = "Commander", DisplayName = "内容管理员", Email = "commander@example.com", RoleKey = "admin", RoleLabel = "管理员", Status = "active", ActiveSessions = 2, LastLoginAt = "2026-08-22 01:46", CreatedAt = "2026-06-01", Permissions = ["users.read", "users.write", "audit.read"] },
-        new() { Id = "usr-review-08", Username = "Reviewer08", DisplayName = "审核员 08", Email = "reviewer08@example.com", RoleKey = "reviewer", RoleLabel = "审核员", Status = "active", ActiveSessions = 1, LastLoginAt = "2026-08-21 22:31", CreatedAt = "2026-07-10", Permissions = ["submissions.review"] },
+        new() { Id = "usr-publisher-08", Username = "Publisher08", DisplayName = "发布员 08", Email = "publisher08@example.com", RoleKey = "publisher", RoleLabel = "发布员", Status = "active", ActiveSessions = 1, LastLoginAt = "2026-08-21 22:31", CreatedAt = "2026-07-10", Permissions = [] },
         new() { Id = "usr-player-42", Username = "Player42", Email = "player42@example.com", RoleKey = "user", RoleLabel = "玩家", Status = "suspended", ActiveSessions = 0, LastLoginAt = "2026-08-18 19:20", CreatedAt = "2026-08-01" }
     ];
     public System.ComponentModel.ICollectionView ItemsView { get; }
@@ -1620,7 +1422,7 @@ sealed class UsersBindingProbe
     public string SelectedRole { get; set; } = "admin";
     public string SelectedStatus { get; set; } = "active";
     public string Status => "真实用户列表已读取 · 3 人";
-    public string[] Roles { get; } = ["user", "reviewer", "publisher", "admin", "super_admin"];
+    public string[] Roles { get; } = ["user", "publisher", "admin", "super_admin"];
     public string[] UserStatuses { get; } = ["active", "disabled", "suspended"];
     public int TotalCount => 3;
     public int VisibleCount => 3;
@@ -1642,7 +1444,7 @@ sealed class OperationsBindingProbe
     }
     public List<AuditRecord> AuditItems { get; } =
     [
-        new() { Id = "audit-901", Time = "2026-08-22 01:45", Actor = "Commander", Action = "submission.approve", Target = "北境回声 1.2", Result = "成功", Detail = "投稿已通过审核并进入服务器发布队列。", Ip = "10.24.8.16" },
+        new() { Id = "audit-901", Time = "2026-08-22 01:45", Actor = "Commander", Action = "user.update", Target = "Player42", Result = "成功", Detail = "账号资料已更新。", Ip = "10.24.8.16" },
         new() { Id = "audit-900", Time = "2026-08-22 01:31", Actor = "SecurityBot", Action = "session.revoke", Target = "Player42", Result = "成功", Detail = "撤销 2 个活动会话。", Ip = "10.24.8.10" },
         new() { Id = "audit-899", Time = "2026-08-22 01:12", Actor = "Reviewer08", Action = "user.update", Target = "Player42", Result = "拒绝", Detail = "当前角色缺少 users.write 权限。", Ip = "10.24.8.28" }
     ];
@@ -1651,16 +1453,15 @@ sealed class OperationsBindingProbe
     public string AuditSearch { get; set; } = "";
     public string Status => "服务状态与真实审计日志已读取 · 3 条";
     public string ApiStatus => "正常 · API 8";
-    public string SubmissionStatus => "已就绪";
     public string UpdaterStatus => "已就绪 · 4.0.0-dev21.1";
     public string DirectStatus => "wss://direct.example.com";
     public string HealthLabel => "全部服务就绪";
     public string AuditAccessLabel => "审计读取权限已验证";
     public int VisibleAuditCount => 3;
     public int FailedAuditCount => 1;
-    public string SelectedAuditTitle => "submission.approve · 成功";
-    public string SelectedAuditMetadata => "Commander → 北境回声 1.2 · 2026-08-22 01:45";
-    public string SelectedAuditDetail => "投稿已通过审核并进入服务器发布队列。";
+    public string SelectedAuditTitle => "user.update · 成功";
+    public string SelectedAuditMetadata => "Commander → Player42 · 2026-08-22 01:45";
+    public string SelectedAuditDetail => "账号资料已更新。";
     public string LastRefresh => "2026-08-22 01:47:00";
 }
 

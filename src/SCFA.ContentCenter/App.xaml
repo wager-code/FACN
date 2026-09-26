@@ -213,8 +213,6 @@
         <DataTemplate DataType="{x:Type vm:DiagnosticsPageViewModel}"><views:DiagnosticsView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:BackupsPageViewModel}"><views:BackupsView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:UpdatesPageViewModel}"><views:UpdatesView/></DataTemplate>
-        <DataTemplate DataType="{x:Type vm:SubmissionsPageViewModel}"><views:SubmissionsView/></DataTemplate>
-        <DataTemplate DataType="{x:Type vm:ReviewPageViewModel}"><views:ReviewView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:UsersPageViewModel}"><views:UsersView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:OperationsPageViewModel}"><views:OperationsView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:CloudHistoryPageViewModel}"><views:CloudHistoryView/></DataTemplate>

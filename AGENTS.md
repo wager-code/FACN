@@ -1,6 +1,6 @@
 # SCFA Content Center: agent guidance
 
-This repository contains the Windows .NET 8 WPF client for SCFA Content Center. Read `PROJECT_HANDOFF.md` when working on submissions, reviews, releases, or project continuity.
+This repository contains the Windows .NET 8 WPF client for SCFA Content Center. Read `PROJECT_HANDOFF.md` when working on administrator publishing, releases, or project continuity. Player submissions and review were removed in dev52.
 
 ## Working agreements
 

@@ -290,7 +290,7 @@ public sealed class CloudPageViewModel : ViewModelBase
     {
         try
         {
-            var dimensions = SubmissionService.ValidatePreviewImage(path);
+            var dimensions = PreviewImageValidator.Validate(path);
             return dimensions.Width >= 320 && dimensions.Height >= 180;
         }
         catch { return false; }

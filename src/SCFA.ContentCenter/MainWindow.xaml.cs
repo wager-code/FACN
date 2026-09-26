@@ -15,8 +15,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         var viewModel = new MainViewModel();
         DataContext = viewModel;
-        _navButtons = [HomeButton, CloudMapsButton, CloudModsButton, LocalMapsButton, LocalModsButton, SyncButton, DownloadsButton, BackupsButton, CloudHistoryButton, SubmissionsButton, ReviewButton, UsersButton, OperationsButton, DiagnosticsButton, UpdatesButton, SettingsButton];
-        _navLabels = [HomeLabel, CloudMapsLabel, CloudModsLabel, LocalMapsLabel, LocalModsLabel, SyncLabel, DownloadsLabel, BackupsLabel, CloudHistoryLabel, SubmissionsLabel, ReviewLabel, UsersLabel, OperationsLabel, DiagnosticsLabel, UpdatesLabel, SettingsLabel];
+        _navButtons = [HomeButton, CloudMapsButton, CloudModsButton, LocalMapsButton, LocalModsButton, SyncButton, DownloadsButton, BackupsButton, CloudHistoryButton, UsersButton, OperationsButton, DiagnosticsButton, UpdatesButton, SettingsButton];
+        _navLabels = [HomeLabel, CloudMapsLabel, CloudModsLabel, LocalMapsLabel, LocalModsLabel, SyncLabel, DownloadsLabel, BackupsLabel, CloudHistoryLabel, UsersLabel, OperationsLabel, DiagnosticsLabel, UpdatesLabel, SettingsLabel];
         if (viewModel.CurrentPage is not SetupPageViewModel) HomeButton.IsChecked = true;
         SizeChanged += (_, _) => UpdateResponsiveNavigation();
         Loaded += (_, _) => UpdateResponsiveNavigation();
@@ -30,7 +30,6 @@ public partial class MainWindow : Window
         BrandTextPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         CloudGroupLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         LocalGroupLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        AccountGroupLabel.Visibility = compact ? Visibility.Collapsed : ((MainViewModel)DataContext).AccountToolsVisibility;
         AdminGroupLabel.Visibility = compact ? Visibility.Collapsed : ((MainViewModel)DataContext).AdminToolsVisibility;
         SystemGroupLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         UserIdentityPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;

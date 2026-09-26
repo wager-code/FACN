@@ -9,7 +9,7 @@
             <StackPanel>
                 <TextBlock Text="OPERATIONS &amp; AUDIT" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="Bold"/>
                 <TextBlock Text="服务器与审计" FontSize="30" FontWeight="SemiBold" Margin="0,3,0,0"/>
-                <TextBlock Text="查看账号 API、投稿、Updater、直连服务健康状态，以及服务器返回的平台审计记录。"
+                <TextBlock Text="查看账号 API、Updater、直连服务健康状态，以及服务器返回的平台审计记录。"
                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="16,4,0,0">
@@ -19,11 +19,10 @@
         </Grid>
 
         <Grid Grid.Row="1" Margin="0,0,0,14">
-            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
             <Border Style="{StaticResource CardBorder}" Padding="14" Margin="0,0,8,0"><StackPanel><TextBlock Text="账号 API" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding ApiStatus}" FontSize="16" FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/><TextBlock Text="身份与权限服务" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,4,0,0"/></StackPanel></Border>
-            <Border Grid.Column="1" Style="{StaticResource CardBorder}" Padding="14" Margin="0,0,8,0"><StackPanel><TextBlock Text="投稿服务" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding SubmissionStatus}" FontSize="16" FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/><TextBlock Text="上传与审核入口" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,4,0,0"/></StackPanel></Border>
-            <Border Grid.Column="2" Style="{StaticResource CardBorder}" Padding="14" Margin="0,0,8,0"><StackPanel><TextBlock Text="Updater" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding UpdaterStatus}" FontSize="16" FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding UpdaterStatus}"/><TextBlock Text="客户端发布通道" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,4,0,0"/></StackPanel></Border>
-            <Border Grid.Column="3" Style="{StaticResource CardBorder}" Padding="14"><StackPanel><TextBlock Text="直连服务" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding DirectStatus}" FontSize="16" FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding DirectStatus}"/><TextBlock Text="实时连接端点" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,4,0,0"/></StackPanel></Border>
+            <Border Grid.Column="1" Style="{StaticResource CardBorder}" Padding="14" Margin="0,0,8,0"><StackPanel><TextBlock Text="Updater" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding UpdaterStatus}" FontSize="16" FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding UpdaterStatus}"/><TextBlock Text="客户端发布通道" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,4,0,0"/></StackPanel></Border>
+            <Border Grid.Column="2" Style="{StaticResource CardBorder}" Padding="14"><StackPanel><TextBlock Text="直连服务" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding DirectStatus}" FontSize="16" FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding DirectStatus}"/><TextBlock Text="实时连接端点" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,4,0,0"/></StackPanel></Border>
         </Grid>
 
         <Border Grid.Row="2" Style="{StaticResource ToolbarBorder}" Margin="0,0,0,14">

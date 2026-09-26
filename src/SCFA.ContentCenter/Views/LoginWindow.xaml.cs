@@ -122,7 +122,7 @@ public partial class LoginWindow : Window
     private void ApplyMode()
     {
         ModeTitle.Text = _registerMode ? "注册 SCFA 账号" : "登录 SCFA 内容中心";
-        ModeSubtitle.Text = _registerMode ? "创建账号后即可使用在线内容服务" : "继续管理地图、模组与投稿内容";
+        ModeSubtitle.Text = _registerMode ? "创建账号后即可使用在线内容服务" : "继续管理地图与模组";
         SubmitButton.Content = _registerMode ? "注册" : "登录";
         AccountPrompt.Text = _registerMode ? "已经有账号？" : "还没有账号？";
         SwitchButton.Content = _registerMode ? "返回登录" : "立即注册";

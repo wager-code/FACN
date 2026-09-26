@@ -113,7 +113,7 @@
                     <StackPanel Grid.Row="1" VerticalAlignment="Center" MaxWidth="500" HorizontalAlignment="Left">
                         <TextBlock Text="内容管理平台" Foreground="{StaticResource AccentBrush}" FontSize="13" FontWeight="SemiBold"/>
                         <TextBlock Text="战场内容，尽在掌控" FontSize="36" FontWeight="SemiBold" Margin="0,12,0,0"/>
-                        <TextBlock Text="同步地图与模组，安全管理版本、备份和玩家投稿。" Foreground="{StaticResource TextSecondaryBrush}" FontSize="14" LineHeight="24" Margin="0,14,0,24"/>
+                        <TextBlock Text="同步地图与模组，安全管理版本和本地备份。" Foreground="{StaticResource TextSecondaryBrush}" FontSize="14" LineHeight="24" Margin="0,14,0,24"/>
 
                         <StackPanel>
                             <Grid Margin="0,0,0,14">
@@ -148,8 +148,8 @@
                                     </Border>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="玩家投稿与版本管理" FontSize="13" FontWeight="SemiBold"/>
-                                    <TextBlock Text="便捷管理玩家投稿与版本发布流程" Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,4,0,0"/>
+                                    <TextBlock Text="地图与模组版本管理" FontSize="13" FontWeight="SemiBold"/>
+                                    <TextBlock Text="查看云端内容并安全同步到游戏目录" Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,4,0,0"/>
                                 </StackPanel>
                             </Grid>
                         </StackPanel>
@@ -170,7 +170,7 @@
                         <StackPanel KeyboardNavigation.TabNavigation="Continue">
                             <TextBlock Text="欢迎回来" Foreground="{StaticResource PrimaryBrightBrush}" FontSize="13" FontWeight="SemiBold"/>
                             <TextBlock x:Name="ModeTitle" Text="登录 SCFA 内容中心" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,4"/>
-                            <TextBlock x:Name="ModeSubtitle" Text="继续管理地图、模组与投稿内容" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,14"/>
+                            <TextBlock x:Name="ModeSubtitle" Text="继续管理地图与模组" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,14"/>
 
                             <TextBlock Text="账号或邮箱地址" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,7"/>
                             <ComboBox x:Name="AccountBox" Height="44" FontSize="14" IsEditable="True" IsTextSearchEnabled="True" StaysOpenOnEdit="True" TabIndex="0"

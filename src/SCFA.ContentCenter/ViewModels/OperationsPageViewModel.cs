@@ -11,7 +11,6 @@ public sealed class OperationsPageViewModel : ViewModelBase
 {
     private string _status = "等待刷新";
     private string _apiStatus = "—";
-    private string _submissionStatus = "—";
     private string _updaterStatus = "—";
     private string _directStatus = "—";
     private string _auditSearch = "";
@@ -32,7 +31,6 @@ public sealed class OperationsPageViewModel : ViewModelBase
     public ICollectionView AuditView { get; }
     public string Status { get => _status; set => Set(ref _status, value); }
     public string ApiStatus { get => _apiStatus; set => Set(ref _apiStatus, value); }
-    public string SubmissionStatus { get => _submissionStatus; set => Set(ref _submissionStatus, value); }
     public string UpdaterStatus { get => _updaterStatus; set => Set(ref _updaterStatus, value); }
     public string DirectStatus { get => _directStatus; set => Set(ref _directStatus, value); }
     public string AuditSearch { get => _auditSearch; set { if (Set(ref _auditSearch, value)) { AuditView.Refresh(); OnPropertyChanged(nameof(VisibleAuditCount)); } } }
@@ -52,7 +50,7 @@ public sealed class OperationsPageViewModel : ViewModelBase
     public int AuditCount => AuditItems.Count;
     public int VisibleAuditCount => AuditView.Cast<AuditRecord>().Count();
     public int FailedAuditCount => AuditItems.Count(x => x.Result.Contains("fail", StringComparison.OrdinalIgnoreCase) || x.Result.Contains("失败", StringComparison.CurrentCultureIgnoreCase) || x.Result.Contains("拒绝", StringComparison.CurrentCultureIgnoreCase));
-    public string HealthLabel => ReadyServices == 4 ? "全部服务就绪" : $"{ReadyServices}/4 项服务就绪";
+    public string HealthLabel => ReadyServices == 3 ? "全部服务就绪" : $"{ReadyServices}/3 项服务就绪";
     public string AuditAccessLabel => !CanReadAudit() ? "当前账号无审计读取权限" : _auditIntegrity == false ? "审计完整性异常" : _auditIntegrity == true ? "审计完整性已验证" : "审计读取权限已验证";
     public string SelectedAuditTitle => SelectedAudit is null ? "请选择一条审计记录" : $"{SelectedAudit.Action} · {SelectedAudit.Result}";
     public string SelectedAuditMetadata => SelectedAudit is null ? "选择后查看操作者、目标、IP 和详细结果" : $"{SelectedAudit.EffectiveActor} → {SelectedAudit.EffectiveTarget} · {SelectedAudit.EffectiveTime}";
@@ -73,10 +71,9 @@ public sealed class OperationsPageViewModel : ViewModelBase
             Status = "正在读取服务器运行状态…";
             var health = await App.Services.Auth.HealthAsync();
             ApiStatus = health.Ok ? $"正常 · API {health.Version}" : "异常";
-            SubmissionStatus = health.SubmissionReady ? "已就绪" : "未就绪";
             UpdaterStatus = health.UpdaterReady ? string.IsNullOrWhiteSpace(health.UpdaterVersion) ? "已就绪 · 暂无发布版本" : "已就绪 · " + health.UpdaterVersion : "未就绪";
             DirectStatus = health.DirectReady ? health.DirectUrl : "未就绪";
-            ReadyServices = new[] { health.Ok, health.SubmissionReady, health.UpdaterReady, health.DirectReady }.Count(x => x);
+            ReadyServices = new[] { health.Ok, health.UpdaterReady, health.DirectReady }.Count(x => x);
             OnPropertyChanged(nameof(HealthLabel));
             AuditItems.Clear();
             _auditIntegrity = null;

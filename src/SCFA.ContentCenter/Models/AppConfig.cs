@@ -49,8 +49,6 @@ public sealed class AppConfig
     [JsonPropertyName("update_channel")] public string UpdateChannel { get; set; } = "stable";
     [JsonPropertyName("update_manifest_url")] public string UpdateManifestUrl { get; set; } = "";
     [JsonPropertyName("auto_check_updates")] public bool AutoCheckUpdates { get; set; } = true;
-    [JsonPropertyName("submission_api_path")] public string SubmissionApiPath { get; set; } = "/v1/submissions";
-    [JsonPropertyName("submission_admin_path")] public string SubmissionAdminPath { get; set; } = "/v1/admin/submissions";
     [JsonPropertyName("admin_users_path")] public string AdminUsersPath { get; set; } = "/v1/admin/users";
     [JsonPropertyName("admin_content_path")] public string AdminContentPath { get; set; } = "/v1/admin/content";
     [JsonPropertyName("audit_api_path")] public string AuditApiPath { get; set; } = "/v1/admin/audit";

@@ -33,7 +33,6 @@ public sealed class UsersPageViewModel : ViewModelBase
     public AdminChoice[] Roles { get; } =
     [
         new("user", "普通用户"),
-        new("reviewer", "内容审核员"),
         new("publisher", "内容发布员"),
         new("admin", "管理员"),
         new("super_admin", "超级管理员")

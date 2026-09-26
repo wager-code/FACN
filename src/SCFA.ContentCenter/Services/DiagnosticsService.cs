@@ -46,7 +46,6 @@ public sealed class DiagnosticsService(
                 AuthApiClient.ValidateConfiguration(auth.BaseUrl, auth.PinnedCertSha256);
                 var health = await auth.HealthAsync(ct);
                 Add(items, "网络", "登录服务", health.Ok, health.Ok ? $"连接正常 · 服务版本 {health.Version}" : "连接异常");
-                Add(items, "网络", "投稿服务", health.SubmissionReady, health.SubmissionReady ? "服务端已就绪" : "服务端未就绪");
                 Add(items, "网络", "更新服务", health.UpdaterReady, health.UpdaterReady ? $"服务端已就绪 {health.UpdaterVersion}".Trim() : "服务端未就绪");
             }
             catch (Exception ex)

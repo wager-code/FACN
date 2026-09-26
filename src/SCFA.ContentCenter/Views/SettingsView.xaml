@@ -119,15 +119,13 @@
                             <StackPanel>
                                 <TextBlock Text="服务器功能相对路径" FontSize="18" FontWeight="SemiBold"/>
                                 <TextBlock Text="仅接受同一账号服务器下以单个 / 开头的安全相对路径。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,14"/>
-                                <TextBlock Text="普通投稿" Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding SubmissionApiPath, UpdateSourceTrigger=PropertyChanged}"/>
-                                <TextBlock Text="投稿审核" Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/><TextBox Text="{Binding SubmissionAdminPath, UpdateSourceTrigger=PropertyChanged}"/>
-                                <TextBlock Text="用户管理" Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/><TextBox Text="{Binding AdminUsersPath, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="用户管理" Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding AdminUsersPath, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBlock Text="审计日志" Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/><TextBox Text="{Binding AuditApiPath, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBlock Text="内容历史" Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/><TextBox Text="{Binding ContentHistoryApiPath, UpdateSourceTrigger=PropertyChanged}"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="只读连接检测" FontSize="18" FontWeight="SemiBold"/>
-                                <TextBlock Text="不会提交投稿、修改用户或写入审计。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,14" TextWrapping="Wrap"/>
+                                <TextBlock Text="只读取服务器健康状态，不会修改用户或写入审计。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,14" TextWrapping="Wrap"/>
                                 <Button Style="{StaticResource PrimaryButton}" Content="检测服务器功能" Command="{Binding TestServerFeaturesCommand}"/>
                                 <Border Style="{StaticResource InsetBorder}" Margin="0,14,0,0" MinHeight="110"><TextBlock Text="{Binding ServerStatus}" TextWrapping="Wrap"/></Border>
                             </StackPanel>
@@ -141,7 +139,7 @@
                     <Border Style="{StaticResource CardBorder}" Margin="0,0,7,0">
                         <StackPanel>
                             <TextBlock Text="软件数据" FontSize="18" FontWeight="SemiBold"/>
-                            <TextBlock Text="这里保存软件设置、同步记录、投稿草稿和运行日志，不是游戏地图或 MOD 目录。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,16" TextWrapping="Wrap"/>
+                            <TextBlock Text="这里保存软件设置、同步记录和运行日志，不是游戏地图或 MOD 目录。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,16" TextWrapping="Wrap"/>
                             <TextBlock Text="软件数据目录" Style="{StaticResource FieldLabel}"/>
                             <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox Text="{Binding DataDirectory, Mode=OneWay}" IsReadOnly="True"/><Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Content="打开数据目录" Command="{Binding OpenDataFolderCommand}" Margin="8,0,0,0"/></Grid>
                             <StackPanel Visibility="{Binding AdvancedSettingsVisibility}" Margin="0,13,0,0">

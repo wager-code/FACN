@@ -31,7 +31,7 @@ public sealed class AuthApiClient : IDisposable
         {
             handler.ServerCertificateCustomValidationCallback = (_, cert, _, _) => ValidatePinnedCertificate(cert, normalizedFingerprint);
         }
-        // 普通 JSON API 使用每次请求的短超时；投稿上传依靠任务取消，不受 12 秒全局超时限制。
+        // 普通 JSON API 使用每次请求的短超时；大文件传输依靠任务取消，不受 12 秒全局超时限制。
         var replacement = new HttpClient(handler) { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
         var previous = _http;
         BaseUrl = normalizedBaseUrl;
