@@ -27,6 +27,12 @@ void Check(bool condition, string name)
     }
 }
 
+async Task CheckThrowsAsync<TException>(Func<Task> action, string name) where TException : Exception
+{
+    try { await action(); Check(false, name); }
+    catch (TException) { Check(true, name); }
+}
+
 if (args.Contains("--login-ui-preview", StringComparer.OrdinalIgnoreCase))
 {
     var width = args.Length > 1 && double.TryParse(args[^2], out var parsedWidth) ? parsedWidth : 1040;
@@ -147,6 +153,7 @@ if (args.Contains("--admin-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
             application.InitializeComponent();
             var previews = new (System.Windows.Controls.UserControl View, object Probe)[]
             {
+                (new SCFA.ContentCenter.Views.PublicationView(), new PublicationBindingProbe()),
                 (new SCFA.ContentCenter.Views.UsersView(), new UsersBindingProbe()),
                 (new SCFA.ContentCenter.Views.OperationsView(), new OperationsBindingProbe())
             };
@@ -166,7 +173,7 @@ if (args.Contains("--admin-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
     uiThread.SetApartmentState(ApartmentState.STA);
     uiThread.Start();
     uiThread.Join();
-    if (bindingError is null) Console.WriteLine("PASS  用户与审计页面可在真实 WPF 布局中完成绑定");
+    if (bindingError is null) Console.WriteLine("PASS  发布、用户与审计页面可在真实 WPF 布局中完成绑定");
     else Console.Error.WriteLine("FAIL  管理员页面运行时绑定异常：" + bindingError);
     Environment.Exit(bindingError is null ? 0 : 1);
     return;
@@ -184,6 +191,7 @@ if (args.Contains("--admin-ui-preview", StringComparer.OrdinalIgnoreCase))
         application.InitializeComponent();
         var (view, probe) = page switch
         {
+            "publication" => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.PublicationView(), (object)new PublicationBindingProbe()),
             "users" => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.UsersView(), (object)new UsersBindingProbe()),
             "operations" => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.OperationsView(), (object)new OperationsBindingProbe()),
             _ => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.UsersView(), (object)new UsersBindingProbe())
@@ -390,6 +398,11 @@ Check(AccessPolicy.CanManageSettings(settingsManager) && !AccessPolicy.CanOpenAd
     "服务器设置权限只开放高级设置，不扩大到其他管理页面");
 Check(!AccessPolicy.CanOpenAdminWorkspace(misleadingRole) && !AccessPolicy.CanManageSettings(misleadingRole),
     "伪装管理员角色名不会显示管理导航或高级设置");
+Check(AccessPolicy.CanPublishContent(new UserInfo { RoleKey = "admin" }) &&
+      AccessPolicy.CanPublishContent(new UserInfo { RoleKey = "super_admin" }) &&
+      !AccessPolicy.CanPublishContent(new UserInfo { RoleKey = "publisher", Permissions = ["content.publish"] }) &&
+      !AccessPolicy.CanPublishContent(new UserInfo { RoleKey = "user" }),
+      "发布材料仅允许明确的管理员角色准备");
 var auditEnvelope = JsonSerializer.Deserialize<AuditFetchResult>("""
 {"records":[{"id":"audit-1","time":"2026-09-25T01:00:00Z","actor_name":"admin","action":"user.update","target_name":"player-one","result":"success","detail":"updated","remote_ip":"127.0.0.1"}],"integrity_ok":true,"integrity_message":"ok","total":1}
 """)!;
@@ -555,6 +568,11 @@ var dev20Pages = new[] { "UsersView.xaml", "OperationsView.xaml" }
 Check(dev20Pages[0].Contains("RestrictedCount", StringComparison.Ordinal) && dev20Pages[0].Contains("SelectedPermissionSummary", StringComparison.Ordinal) &&
       dev20Pages[1].Contains("AuditView", StringComparison.Ordinal) && dev20Pages[1].Contains("SelectedAuditDetail", StringComparison.Ordinal),
       "用户和审计页面均使用真实身份与审计状态绑定");
+var publicationViewSource = File.ReadAllText(Path.Combine(uiRoot, "Views", "PublicationView.xaml"));
+Check(mainWindowXaml.Contains("PublicationVisibility", StringComparison.Ordinal) &&
+      publicationViewSource.Contains("不会上传到 COS", StringComparison.Ordinal) &&
+      publicationViewSource.Contains("PrepareCommand", StringComparison.Ordinal),
+      "管理员发布入口与待上传状态有明确界面提示");
 var dev21Pages = new[] { "SetupView.xaml", "SettingsView.xaml" }
     .Select(name => File.ReadAllText(Path.Combine(uiRoot, "Views", name))).ToArray();
 Check(dev21Pages[0].Contains("SetupProgress", StringComparison.Ordinal) && dev21Pages[0].Contains("ContentStateLabel", StringComparison.Ordinal) &&
@@ -1033,6 +1051,31 @@ try
     await File.WriteAllTextAsync(Path.Combine(legacyMapRoot, "legacy_map_scenario.lua"), "name = \"Legacy Map\"\nversion = 3\nmap = \"/maps/legacy_map/legacy_map.scmap\"\nsave = \"/maps/legacy_map/legacy_map_save.lua\"\nscript = \"/maps/legacy_map/legacy_map_script.lua\"\n");
     var legacyMap = await localContent.AnalyzeDirectoryAsync(legacyMapRoot);
     Check(legacyMap.Valid && legacyMap.Version == "3", "旧版标准地图 scenario.lua 的 version 字段可以正常识别");
+    var publishService = new PublicationPreparationService(localContent);
+    var publishSource = await localContent.AnalyzeDirectoryAsync(Path.Combine(mapsRoot, "recent_map"));
+    var publishMetadata = new PublicationMetadata("回归测试发布地图", publishSource.Version, "测试管理员", "隔离目录内的发布材料回归检查。", "地图", "测试,安全");
+    const string emptyMapManifest = """{"manifest_version":1,"updated_at":"2026-01-01T00:00:00Z","maps":[],"preserved_field":{"enabled":true}}""";
+    var publishBundle = await publishService.PrepareAsync(publishSource, publishMetadata, emptyMapManifest,
+        Path.Combine(configDirectory, "publish-staging"), config.Current, new UserInfo { RoleKey = "admin" });
+    using (var preparedZip = ZipFile.OpenRead(publishBundle.PackagePath))
+        Check(preparedZip.Entries.Count == publishSource.Files && preparedZip.Entries.All(x => x.FullName.StartsWith(publishSource.Folder + "/", StringComparison.Ordinal)),
+            "管理员发布包只包含目标地图顶层目录且文件数量一致");
+    var preparedManifest = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(publishBundle.ManifestPath))!;
+    Check(preparedManifest["preserved_field"]?["enabled"]?.GetValue<bool>() == true &&
+          preparedManifest["maps"]?[0]?["game_version"]?.GetValue<string>() == publishSource.Version &&
+          preparedManifest["maps"]?[0]?["sha256"]?.GetValue<string>() == publishBundle.PackageSha256 &&
+          publishBundle.PackageKey.StartsWith(config.Current.Root.Trim('/') + "/maps/", StringComparison.Ordinal),
+          "待上传清单保留线上未知字段并记录真实游戏版本、对象键和 ZIP 哈希");
+    Check(publishBundle.ContentSha256 == await ContentHash.DirectorySha256Async(publishSource.Root) &&
+          publishBundle.PackageSha256 == await ContentHash.FileSha256Async(publishBundle.PackagePath),
+          "发布材料中的目录与 ZIP 双哈希均可重新核对");
+    var sameVersionManifest = $$"""{"manifest_version":1,"maps":[{"id":"{{publishSource.Id}}","name":"已发布","version":"{{publishSource.Version}}","folder_name":"{{publishSource.Folder}}","file":"scfa/maps/old.zip"}]}""";
+    await CheckThrowsAsync<InvalidDataException>(() => publishService.PrepareAsync(publishSource, publishMetadata, sameVersionManifest,
+        Path.Combine(configDirectory, "publish-staging"), config.Current, new UserInfo { RoleKey = "admin" }),
+        "同 ID 同发布版本不能覆盖已有云端记录");
+    await CheckThrowsAsync<UnauthorizedAccessException>(() => publishService.PrepareAsync(publishSource, publishMetadata, emptyMapManifest,
+        Path.Combine(configDirectory, "publish-staging"), config.Current, new UserInfo { RoleKey = "user" }),
+        "普通用户不能生成发布材料");
     var previewPath = Path.Combine(configDirectory, "cloud-preview.png");
     CreatePreviewPng(previewPath, 320, 180);
     var dimensions = PreviewImageValidator.Validate(previewPath);
@@ -1421,6 +1464,27 @@ sealed class SettingsBindingProbe
     public string ContentHistoryApiPath { get; set; } = "/api/content/history";
     public string ConfigPath => @"C:\Users\Commander\AppData\Local\SCFA.ContentCenter\config.json";
     public string DataDirectory => @"C:\Users\Commander\AppData\Local\SCFA.ContentCenter";
+}
+
+sealed class PublicationBindingProbe
+{
+    public string[] Kinds { get; } = ["地图", "MOD"];
+    public string SelectedKind { get; set; } = "地图";
+    public List<LocalContentEntry> LocalItems { get; } =
+    [
+        new() { Kind = "地图", Name = "北境回声", Id = "northern_echo", Folder = "northern_echo", Version = "3", Files = 12, Valid = true, Detail = "结构校验通过" },
+        new() { Kind = "地图", Name = "海岸防线", Id = "coastal_defense", Folder = "coastal_defense", Version = "2", Files = 9, Valid = true, Detail = "结构校验通过" }
+    ];
+    public LocalContentEntry? SelectedLocal { get; set; }
+    public string Name { get; set; } = "北境回声";
+    public string ReleaseVersion { get; set; } = "3";
+    public string Author { get; set; } = "地图作者";
+    public string Description { get; set; } = "适用于 Steam 版本的双人对战地图。";
+    public string Category { get; set; } = "地图";
+    public string TagsText { get; set; } = "2v2, 竞技";
+    public string Status => "本地地图 2 项，其中 2 项可准备发布";
+    public string SelectedSummary => "北境回声 · ID northern_echo · 游戏版本 3 · 12 个文件";
+    public string OutputDirectory => "";
 }
 
 sealed class UsersBindingProbe

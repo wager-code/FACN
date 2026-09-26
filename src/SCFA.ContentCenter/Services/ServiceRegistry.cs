@@ -20,6 +20,7 @@ public sealed class ServiceRegistry
     public DiagnosticsService Diagnostics { get; private init; } = null!;
     public UpdateService Updates { get; private init; } = null!;
     public ManagementService Management { get; private init; } = null!;
+    public PublicationPreparationService Publication { get; private init; } = null!;
     public CloudHistoryService CloudHistory { get; private init; } = null!;
     public UserInfo CurrentUser { get; set; } = new();
     public bool OfflineMode { get; set; }
@@ -51,8 +52,9 @@ public sealed class ServiceRegistry
         var diagnostics = new DiagnosticsService(config, paths, cloud, auth, session, log);
         var updates = new UpdateService(config, auth, tasks, log);
         var management = new ManagementService(config, auth, log);
+        var publication = new PublicationPreparationService(local);
         var cloudHistory = new CloudHistoryService(config, auth, cloud, log);
-        registry = new ServiceRegistry { Config = config, Log = log, Auth = auth, Cloud = cloud, Paths = paths, Local = local, Tasks = tasks, Backups = backups, Install = install, Sync = sync, SyncPreferences = preferences, SyncHistory = syncHistory, Session = session, Diagnostics = diagnostics, Updates = updates, Management = management, CloudHistory = cloudHistory };
+        registry = new ServiceRegistry { Config = config, Log = log, Auth = auth, Cloud = cloud, Paths = paths, Local = local, Tasks = tasks, Backups = backups, Install = install, Sync = sync, SyncPreferences = preferences, SyncHistory = syncHistory, Session = session, Diagnostics = diagnostics, Updates = updates, Management = management, Publication = publication, CloudHistory = cloudHistory };
         return registry;
     }
 

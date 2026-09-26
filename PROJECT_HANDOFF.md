@@ -6,13 +6,15 @@ Updated: 2026-09-26. This file is intentionally safe for the public source repos
 
 - A Windows .NET 8 WPF client lets players discover, install, and update SCFA maps and MODs.
 - Tencent Cloud COS stores published game content. A separate account service handles player sign-in and related API calls.
-- The owner decided to retire player submissions and review. Content publication is administrator-only; an in-app administrator publishing workflow is planned, while current publication uses the COS console and manifests.
+- The owner decided to retire player submissions and review. Content publication is administrator-only. Dev53 adds an in-app local publication-preparation page; the actual COS upload and manifest update still use the console.
 
 ## Confirmed state
 
+- Dev53 adds an administrator-only publication-preparation page to the Windows client. It reads the selected self-contained local map/MOD and fresh public manifest, rejects repeated release versions and conflicting destination folders, creates and verifies a single-folder ZIP, records package/content SHA-256, optional map preview, original and proposed manifests, and COS console upload instructions. These materials are local to `PublicationStaging`; the button does not upload or edit COS. The page does not claim automated Steam-versus-FAF compatibility validation. The server source and verified administrator publish API are still absent, so authenticated one-click cloud publication remains future work. Build, full regression suite, and WPF binding smoke passed on 2026-09-26; the full suite's DPAPI check requires a normal loaded Windows user profile and fails inside the restricted sandbox.
+- The dev53 source was backed up before modification under `_源码备份/pre_dev53_publish_center_20260926`. The published single-file client and GitHub sync are recorded in `BUILD_VALIDATION.md` when complete.
 - Dev52 removes player submission and review client screens, services, models, configuration paths, status checks, and associated tests. Login, user management, catalog, installation, sync, and local delete remain. The account server and COS were not changed; old server submission routes may still exist. See `ADMIN_PUBLISH_PLAN.md` for the future in-app administrator publishing workflow.
 - The dev52 regression executable now locates the source tree relative to either its working directory or its own binary location. An older build crashed with DirectoryNotFoundException when launched from a different working directory; the fixed build passed the full suite from that same location. This affected the test executable, not the published client.
-- The client source in this repository builds and has regression checks. The current source milestone is dev52.
+- The client source in this repository builds and has regression checks. The current source milestone is dev53.
 - Dev51 recognizes a scenario-only map that safely references an existing sibling `.scmap` and contains its own scenario, save, and script files as a shared-terrain map. It displays the real name, version, own file count and size, and a separate "shared terrain" status rather than reporting it as a damaged independent package. Such a folder remains ineligible as an independent upload/install package. A read-only scan of the current `E:\SCFA\maps` found 61 folders, including `X1CA_TUT` with version 3, four own files, and a valid reference to `SCMP_019.scmap`. The owner screenshot confirmed its preview image in dev50. The full regression suite and synthetic missing-reference checks passed; the dev51 GUI still needs an owner check.
 - Dev50 notifies the local map list when a selected map's preview is loaded after the initial scan, so the detail image and row thumbnail update together. The packaged `artifacts/win-x64/SCFA内容中心.exe` was rebuilt after the full regression suite passed.
 - Dev49 makes the local map/MOD table read-only while preserving its delete buttons, fixing the WPF `LocalContentEntry.SizeText` TwoWay binding error when a user clicks the size cell. Selecting a local map with a missing cached preview retries the embedded game preview read.
@@ -46,7 +48,7 @@ Updated: 2026-09-26. This file is intentionally safe for the public source repos
 
 - The previously considered third-party player review site or service remains unidentified. This is historical context; player submissions are no longer in product scope.
 - The source and exact build process for the deployed account-service executable are not yet available. Local source and GitHub inventory found no backend source. The supplied archive was inspected and contains only an old executable and deployment examples. The current binary was obtained and audited offline, but its source, actual COS submission-index schema, and private server configuration have not been obtained or verified.
-- No in-app administrator publication action has been validated. Do not treat a permission name as proof of a working server workflow.
+- No authenticated in-app COS publication action has been validated. Dev53 only prepares local materials; do not treat its admin-only button as proof of a working server publication workflow.
 
 ## Recommended next milestone
 

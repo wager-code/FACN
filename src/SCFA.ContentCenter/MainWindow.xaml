@@ -67,6 +67,9 @@
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="CloudHistoryLabel" Grid.Column="1" Text="云端历史" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
                             <TextBlock x:Name="AdminGroupLabel" Text="管理" Visibility="{Binding AdminToolsVisibility}" Margin="24,18,0,6" Foreground="{StaticResource TextMutedBrush}" FontSize="10" FontWeight="SemiBold"/>
+                            <RadioButton x:Name="PublicationButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding PublicationVisibility}" Command="{Binding PublicationCommand}" ToolTip="管理员发布中心">
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="PublicationLabel" Grid.Column="1" Text="管理员发布" VerticalAlignment="Center"/></Grid>
+                            </RadioButton>
                             <RadioButton x:Name="UsersButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding AdminToolsVisibility}" Command="{Binding UsersCommand}" ToolTip="用户管理">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/people_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="UsersLabel" Grid.Column="1" Text="用户管理" VerticalAlignment="Center"/></Grid>
                             </RadioButton>

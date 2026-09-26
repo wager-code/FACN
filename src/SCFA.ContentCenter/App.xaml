@@ -215,6 +215,7 @@
         <DataTemplate DataType="{x:Type vm:UpdatesPageViewModel}"><views:UpdatesView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:UsersPageViewModel}"><views:UsersView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:OperationsPageViewModel}"><views:OperationsView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PublicationPageViewModel}"><views:PublicationView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:CloudHistoryPageViewModel}"><views:CloudHistoryView/></DataTemplate>
     </Application.Resources>
 </Application>

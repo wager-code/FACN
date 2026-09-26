@@ -26,6 +26,7 @@ public sealed class MainViewModel : ViewModelBase
     private readonly Lazy<UpdatesPageViewModel> _updatesPage;
     private readonly Lazy<UsersPageViewModel> _usersPage;
     private readonly Lazy<OperationsPageViewModel> _operationsPage;
+    private readonly Lazy<PublicationPageViewModel> _publicationPage;
     private object _currentPage;
     private string _currentPageTitle;
     private string _currentPageSubtitle;
@@ -78,9 +79,11 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand UpdatesCommand { get; }
     public ICommand UsersCommand { get; }
     public ICommand OperationsCommand { get; }
+    public ICommand PublicationCommand { get; }
     public ICommand LogoutCommand { get; }
     public ICommand EditProfileCommand { get; }
     public Visibility AdminToolsVisibility => IsAdminUser() ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility PublicationVisibility => !App.Services.OfflineMode && AccessPolicy.CanPublishContent(App.Services.CurrentUser) ? Visibility.Visible : Visibility.Collapsed;
 
     public MainViewModel()
     {
@@ -97,6 +100,7 @@ public sealed class MainViewModel : ViewModelBase
         _updatesPage = new(() => new UpdatesPageViewModel());
         _usersPage = new(() => new UsersPageViewModel());
         _operationsPage = new(() => new OperationsPageViewModel());
+        _publicationPage = new(() => new PublicationPageViewModel());
 
         var needsSetup = SetupPageViewModel.NeedsSetup();
         _currentPage = needsSetup ? new SetupPageViewModel() : _dashboardPage.Value;
@@ -116,6 +120,8 @@ public sealed class MainViewModel : ViewModelBase
         UpdatesCommand = new RelayCommand(() => Navigate(_updatesPage.Value, "客户端更新", "检查并安全应用新版本"));
         UsersCommand = new RelayCommand(() => Navigate(_usersPage.Value, "用户管理", "管理角色、状态与登录会话"));
         OperationsCommand = new RelayCommand(() => Navigate(_operationsPage.Value, "服务器审计", "服务健康、权限与审计记录"));
+        PublicationCommand = new RelayCommand(() => Navigate(_publicationPage.Value, "管理员发布中心", "校验内容并生成待上传材料"),
+            () => PublicationVisibility == Visibility.Visible);
         LogoutCommand = new AsyncRelayCommand(LogoutAsync);
         EditProfileCommand = new RelayCommand(EditProfile);
         _syncPage.PropertyChanged += SyncPagePropertyChanged;

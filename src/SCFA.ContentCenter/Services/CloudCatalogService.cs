@@ -74,6 +74,28 @@ public sealed class CloudCatalogService
         }
     }
 
+    public async Task<string> FetchManifestTextAsync(string kind, CancellationToken ct = default)
+    {
+        if (kind is not ("地图" or "MOD")) throw new ArgumentException("未知内容类型：" + kind, nameof(kind));
+        var root = _getConfig().Root.Trim('/');
+        var key = $"{root}/manifest/{(kind == "地图" ? "latest.json" : "mods.json")}";
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(ManifestTimeout);
+        using var request = new HttpRequestMessage(HttpMethod.Get, PublicUrl(key) + "?t=" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
+        try
+        {
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            response.EnsureSuccessStatusCode();
+            var bytes = await ReadLimitedAsync(response.Content, MaxManifestBytes, timeout.Token);
+            return System.Text.Encoding.UTF8.GetString(bytes);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested && timeout.IsCancellationRequested)
+        {
+            throw new TimeoutException($"获取{kind}发布清单超过 {ManifestTimeout.TotalSeconds:F0} 秒");
+        }
+    }
+
     private void Prepare(CloudContentEntry item, string kind)
     {
         item.Kind = kind;
