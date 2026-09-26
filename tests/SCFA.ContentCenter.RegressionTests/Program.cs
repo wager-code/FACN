@@ -1202,10 +1202,14 @@ var selectionUiThread = new Thread(() =>
         var openButton = buttons.Single(button => Equals(button.Content, "打开所在文件夹"));
         var uninstallButton = buttons.Single(button => Equals(button.Content, "删除所选（保留备份）"));
         var rowDeleteButton = buttons.Single(button => Equals(button.Content, "删除本地"));
+        var sizeColumn = grid.Columns.OfType<System.Windows.Controls.DataGridTextColumn>()
+            .Single(column => Equals(column.Header, "占用空间"));
         grid.SelectedItem = probe.Items[0];
         System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         host.UpdateLayout();
-        selectionCommandUiPassed = ReferenceEquals(probe.SelectedItem, probe.Items[0]) &&
+        selectionCommandUiPassed = grid.IsReadOnly &&
+                                   (sizeColumn.Binding as System.Windows.Data.Binding)?.Mode == System.Windows.Data.BindingMode.OneWay &&
+                                   ReferenceEquals(probe.SelectedItem, probe.Items[0]) &&
                                    probe.SelectedState == "结构校验通过" &&
                                    openButton.IsEnabled && uninstallButton.IsEnabled &&
                                    rowDeleteButton.IsEnabled && ReferenceEquals(rowDeleteButton.CommandParameter, probe.Items[0]);

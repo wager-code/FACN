@@ -40,6 +40,8 @@ public sealed class LocalPageViewModel : ViewModelBase
             if (!Set(ref _selected, value)) return;
             OnPropertyChanged(nameof(SelectedState));
             SelectedPreview = value?.Preview;
+            if (Kind == "地图" && value is not null && value.Preview is null)
+                _ = LoadSelectedPreviewAsync(value);
             OnPropertyChanged(nameof(PreviewStateText));
             OpenFolderCommand.RaiseCanExecuteChanged();
             UninstallCommand.RaiseCanExecuteChanged();
@@ -77,6 +79,14 @@ public sealed class LocalPageViewModel : ViewModelBase
     {
         if (SelectedItem is null || !Directory.Exists(SelectedItem.Root)) return;
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{SelectedItem.Root}\"") { UseShellExecute = true });
+    }
+
+    private async Task LoadSelectedPreviewAsync(LocalContentEntry item)
+    {
+        var preview = await Task.Run(() => MapPreviewService.TryLoad(item.Root));
+        if (!ReferenceEquals(SelectedItem, item)) return;
+        item.Preview = preview;
+        SelectedPreview = preview;
     }
 
     private async Task UninstallAsync()

@@ -35,7 +35,7 @@
 
         <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True">
             <Grid>
-                <DataGrid ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AlternationCount="2" RowHeight="56" ColumnHeaderHeight="38">
+                <DataGrid ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AlternationCount="2" RowHeight="56" ColumnHeaderHeight="38" IsReadOnly="True">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Header="状态" Width="88">
                             <DataGridTemplateColumn.CellTemplate>
@@ -64,7 +64,7 @@
                         <DataGridTextColumn Header="内容 ID" Binding="{Binding Id}" Width="165"/>
                         <DataGridTextColumn Header="目录" Binding="{Binding Folder}" Width="150"/>
                         <DataGridTextColumn Header="文件" Binding="{Binding Files}" Width="68"/>
-                        <DataGridTextColumn Header="占用空间" Binding="{Binding SizeText}" Width="92"/>
+                        <DataGridTextColumn Header="占用空间" Binding="{Binding SizeText, Mode=OneWay}" Width="92"/>
                         <DataGridTextColumn Header="扫描说明" Binding="{Binding Detail}" Width="2.2*" MinWidth="180"/>
                         <DataGridTemplateColumn Header="操作" Width="96">
                             <DataGridTemplateColumn.CellTemplate>
@@ -106,7 +106,7 @@
                     <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                     <TextBlock Text="结构状态" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Column="1" Text="{Binding SelectedState}" Foreground="{StaticResource AccentBrush}"/>
                     <TextBlock Grid.Row="1" Text="版本 / ID" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="1" Grid.Column="1"><Run Text="{Binding SelectedItem.Version, TargetNullValue=—}"/><Run Text="  ·  "/><Run Text="{Binding SelectedItem.Id, TargetNullValue=—}"/></TextBlock>
-                    <TextBlock Grid.Row="2" Text="文件 / 大小" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="2" Grid.Column="1"><Run Text="{Binding SelectedItem.Files, TargetNullValue=—}"/><Run Text=" 个  ·  "/><Run Text="{Binding SelectedItem.SizeText, TargetNullValue=—}"/></TextBlock>
+                    <TextBlock Grid.Row="2" Text="文件 / 大小" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="2" Grid.Column="1"><Run Text="{Binding SelectedItem.Files, TargetNullValue=—}"/><Run Text=" 个  ·  "/><Run Text="{Binding SelectedItem.SizeText, Mode=OneWay, TargetNullValue=—}"/></TextBlock>
                 </Grid>
                 <StackPanel Grid.Column="3" VerticalAlignment="Center" MinWidth="138">
                     <Button Style="{StaticResource SecondaryButton}" Content="打开所在文件夹" Command="{Binding OpenFolderCommand}" Margin="0,0,0,8"/>
