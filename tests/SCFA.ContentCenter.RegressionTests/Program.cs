@@ -428,7 +428,27 @@ CheckThrows(() => SafeArchive.ValidateRelativePath("map/CON.txt"), "拒绝 Windo
 CheckThrows(() => SafeArchive.ValidateRelativePath("map/file. "), "拒绝危险尾部字符");
 CheckArgumentThrows(() => GamePathService.ValidateContentDirectoryPair(@"C:\SCFA\Maps", @"C:\SCFA\Maps\Mods"), "拒绝地图与 MOD 目录互相嵌套");
 
-var uiRoot = Path.Combine(Directory.GetCurrentDirectory(), "src", "SCFA.ContentCenter");
+string? FindSourceRoot()
+{
+    foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+    {
+        for (var directory = new DirectoryInfo(start); directory is not null; directory = directory.Parent)
+        {
+            var candidate = Path.Combine(directory.FullName, "src", "SCFA.ContentCenter");
+            if (File.Exists(Path.Combine(candidate, "App.xaml"))) return candidate;
+        }
+    }
+
+    return null;
+}
+
+var uiRoot = FindSourceRoot();
+if (uiRoot is null)
+{
+    Console.Error.WriteLine("找不到项目源码。请从包含 src/SCFA.ContentCenter 的项目目录运行回归测试，或使用项目中的 run-regression-tests.ps1。");
+    Environment.ExitCode = 2;
+    return;
+}
 var xamlFiles = Directory.GetFiles(uiRoot, "*.xaml", SearchOption.AllDirectories);
 var parsedXaml = new List<XDocument>();
 try { parsedXaml.AddRange(xamlFiles.Select(XDocument.Load)); Check(xamlFiles.Length >= 18, "全部 WPF 页面与全局资源均为有效 XML"); }
