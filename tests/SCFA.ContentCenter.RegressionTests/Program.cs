@@ -1040,6 +1040,7 @@ try
     await File.WriteAllBytesAsync(removablePackagePath, CreateMapPackage("map_to_remove"));
     ZipFile.ExtractToDirectory(removablePackagePath, mapsRoot);
     await File.WriteAllTextAsync(Path.Combine(removableRoot, "marker.txt"), "original content");
+    var removableHash = await ContentHash.DirectorySha256Async(removableRoot);
     await installer.UninstallAsync(new LocalContentEntry
     {
         Kind = "地图",
@@ -1053,7 +1054,10 @@ try
     var uninstallBackups = await backups.ListAsync();
     Check(!Directory.Exists(removableRoot), "卸载会从玩家内容目录移除目标文件夹");
     var uninstallBackup = uninstallBackups.FirstOrDefault(x => x.Name == "卸载测试地图");
-    Check(uninstallBackup is not null && File.Exists(Path.Combine(uninstallBackup.ContentRoot, "marker.txt")), "卸载前会留下可恢复的完整备份");
+    Check(uninstallBackup is not null && File.Exists(Path.Combine(uninstallBackup.ContentRoot, "marker.txt")) &&
+          uninstallBackup.ContentHash.Equals(removableHash, StringComparison.OrdinalIgnoreCase) &&
+          (await ContentHash.DirectorySha256Async(uninstallBackup.ContentRoot)).Equals(removableHash, StringComparison.OrdinalIgnoreCase),
+        "本地删除前会留下与原目录完整内容指纹一致的备份");
     if (uninstallBackup is not null)
     {
         await backups.RestoreAsync(uninstallBackup);
@@ -1097,13 +1101,15 @@ var selectionUiThread = new Thread(() =>
         var grid = VisualTreeProbe.Find<System.Windows.Controls.DataGrid>(view);
         var buttons = VisualTreeProbe.FindAll<System.Windows.Controls.Button>(view).ToArray();
         var openButton = buttons.Single(button => Equals(button.Content, "打开所在文件夹"));
-        var uninstallButton = buttons.Single(button => Equals(button.Content, "卸载并自动备份"));
+        var uninstallButton = buttons.Single(button => Equals(button.Content, "删除所选（保留备份）"));
+        var rowDeleteButton = buttons.Single(button => Equals(button.Content, "删除本地"));
         grid.SelectedItem = probe.Items[0];
         System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         host.UpdateLayout();
         selectionCommandUiPassed = ReferenceEquals(probe.SelectedItem, probe.Items[0]) &&
                                    probe.SelectedState == "结构校验通过" &&
-                                   openButton.IsEnabled && uninstallButton.IsEnabled;
+                                   openButton.IsEnabled && uninstallButton.IsEnabled &&
+                                   rowDeleteButton.IsEnabled && ReferenceEquals(rowDeleteButton.CommandParameter, probe.Items[0]);
     }
     catch (Exception ex) { selectionCommandUiError = ex; }
     finally
@@ -1118,7 +1124,7 @@ selectionUiThread.SetApartmentState(ApartmentState.STA);
 selectionUiThread.Start();
 selectionUiThread.Join();
 if (selectionCommandUiError is not null) Console.Error.WriteLine("本地内容选择命令 UI 测试异常：" + selectionCommandUiError);
-Check(selectionCommandUiPassed, "真实 WPF 本地内容页面选中一行后打开与卸载按钮立即可用");
+Check(selectionCommandUiPassed, "真实 WPF 本地内容页面的逐行删除与选中项操作正确绑定目标目录");
 
 if (failures.Count > 0)
 {
@@ -1494,6 +1500,7 @@ sealed class SelectionCommandBindingProbe : INotifyPropertyChanged
         ItemsView = CollectionViewSource.GetDefaultView(Items);
         OpenFolderCommand = new RelayCommand(() => { }, () => SelectedItem is not null && Directory.Exists(SelectedItem.Root));
         UninstallCommand = new AsyncRelayCommand(() => Task.CompletedTask, () => SelectedItem is not null && Directory.Exists(SelectedItem.Root));
+        DeleteItemCommand = new AsyncItemCommand<LocalContentEntry>(_ => Task.CompletedTask, item => Directory.Exists(item.Root));
         RefreshCommand = new AsyncRelayCommand(() => Task.CompletedTask);
     }
 
@@ -1503,6 +1510,7 @@ sealed class SelectionCommandBindingProbe : INotifyPropertyChanged
     public AsyncRelayCommand RefreshCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
     public AsyncRelayCommand UninstallCommand { get; }
+    public AsyncItemCommand<LocalContentEntry> DeleteItemCommand { get; }
     public string Title => "本地地图";
     public string Subtitle => "选择状态运行时测试";
     public string LibraryLabel => "LOCAL MAPS";

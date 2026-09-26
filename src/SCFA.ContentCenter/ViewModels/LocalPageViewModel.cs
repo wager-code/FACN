@@ -15,7 +15,7 @@ public sealed class LocalPageViewModel : ViewModelBase
     private LocalContentEntry? _selected;
     public string Kind { get; }
     public string Title => Kind == "地图" ? "本地地图" : "本地 MOD";
-    public string Subtitle => Kind == "地图" ? "检查玩家地图目录、结构完整性与占用空间。" : "检查玩家模组目录、版本信息与结构完整性。";
+    public string Subtitle => Kind == "地图" ? "管理本机地图；可在列表中直接删除，删除前自动备份。" : "管理本机 MOD；可在列表中直接删除，删除前自动备份。";
     public string LibraryLabel => Kind == "地图" ? "LOCAL MAPS" : "LOCAL MODS";
     public ObservableCollection<LocalContentEntry> Items { get; } = [];
     public ICollectionView ItemsView { get; }
@@ -40,6 +40,7 @@ public sealed class LocalPageViewModel : ViewModelBase
     public AsyncRelayCommand RefreshCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
     public AsyncRelayCommand UninstallCommand { get; }
+    public AsyncItemCommand<LocalContentEntry> DeleteItemCommand { get; }
 
     public LocalPageViewModel(string kind)
     {
@@ -49,6 +50,7 @@ public sealed class LocalPageViewModel : ViewModelBase
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         OpenFolderCommand = new RelayCommand(OpenFolder, () => SelectedItem is not null && Directory.Exists(SelectedItem.Root));
         UninstallCommand = new AsyncRelayCommand(UninstallAsync, () => SelectedItem is not null && Directory.Exists(SelectedItem.Root));
+        DeleteItemCommand = new AsyncItemCommand<LocalContentEntry>(DeleteAsync, item => Directory.Exists(item.Root));
         _ = RefreshAsync();
     }
 
@@ -72,29 +74,34 @@ public sealed class LocalPageViewModel : ViewModelBase
     private async Task UninstallAsync()
     {
         var item = SelectedItem;
-        if (item is null || !Directory.Exists(item.Root)) return;
+        if (item is not null) await DeleteAsync(item);
+    }
+
+    private async Task DeleteAsync(LocalContentEntry item)
+    {
+        if (!Directory.Exists(item.Root)) return;
         var answer = MessageBox.Show(
-            $"确定卸载{item.Kind}“{item.Name}”吗？\n\n删除前会自动创建完整备份，可在“历史备份”页面恢复。",
-            "确认卸载",
+            $"确定从本机删除{item.Kind}“{item.Name}”吗？\n\n目录：{item.Root}\n\n删除前会自动备份，可在“历史备份”页面恢复。云端已有的内容以后运行一键同步时可能再次安装。",
+            "确认删除本地内容",
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
         if (answer != MessageBoxResult.Yes) return;
         try
         {
-            Status = $"正在备份并卸载 {item.Name}…";
+            Status = $"正在备份并删除 {item.Name}…";
             await App.Services.Install.UninstallAsync(item);
-            SelectedItem = null;
+            if (ReferenceEquals(SelectedItem, item)) SelectedItem = null;
             await RefreshAsync();
-            Status = "卸载完成；安全备份已保留。";
+            Status = "本地内容已删除；安全备份已保留。";
         }
         catch (OperationCanceledException)
         {
-            Status = "卸载已取消，原内容保持不变。";
+            Status = "删除已取消，原内容保持不变。";
         }
         catch (Exception ex)
         {
-            Status = "卸载失败：" + ex.Message;
-            MessageBox.Show(ex.Message, "卸载失败", MessageBoxButton.OK, MessageBoxImage.Error);
+            Status = "删除失败：" + ex.Message;
+            MessageBox.Show(ex.Message, "删除失败", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

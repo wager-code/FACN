@@ -54,6 +54,15 @@
                         <DataGridTextColumn Header="文件" Binding="{Binding Files}" Width="68"/>
                         <DataGridTextColumn Header="占用空间" Binding="{Binding SizeText}" Width="92"/>
                         <DataGridTextColumn Header="扫描说明" Binding="{Binding Detail}" Width="2.2*" MinWidth="180"/>
+                        <DataGridTemplateColumn Header="操作" Width="96">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource CompactButton}" Content="删除本地" Foreground="#FFDDE0" ToolTip="先备份，再删除此地图或 MOD 的本机文件夹"
+                                            Command="{Binding DataContext.DeleteItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
                 <Border Background="#E607101C">
@@ -81,7 +90,7 @@
                 </Grid>
                 <StackPanel Grid.Column="2" VerticalAlignment="Center" MinWidth="138">
                     <Button Style="{StaticResource SecondaryButton}" Content="打开所在文件夹" Command="{Binding OpenFolderCommand}" Margin="0,0,0,8"/>
-                    <Button Style="{StaticResource DangerButton}" Content="卸载并自动备份" Command="{Binding UninstallCommand}"/>
+                    <Button Style="{StaticResource DangerButton}" Content="删除所选（保留备份）" Command="{Binding UninstallCommand}"/>
                 </StackPanel>
             </Grid>
         </Border>

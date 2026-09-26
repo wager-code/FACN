@@ -1,6 +1,6 @@
 # SCFA Content Center project handoff
 
-Updated: 2026-09-25. This file is intentionally safe for the public source repository. It is a project record, not a copy of private server configuration.
+Updated: 2026-09-26. This file is intentionally safe for the public source repository. It is a project record, not a copy of private server configuration.
 
 ## What the system does
 
@@ -10,7 +10,8 @@ Updated: 2026-09-25. This file is intentionally safe for the public source repos
 
 ## Confirmed state
 
-- The client source in this repository builds and has regression checks. The latest source milestone is dev41.
+- The client source in this repository builds and has regression checks. The latest source milestone is dev42.
+- Local map and MOD lists now have a per-row delete action. It targets the selected local game folder, creates a backup, and compares the source directory fingerprint with the backup before removal. A cloud item deleted locally can be installed again by a later full sync; this behavior is stated in the confirmation dialog.
 - Account sign-in and several authenticated client functions were exercised successfully during development.
 - The client can read the published COS catalog and has been checked against real local map and MOD directories.
 - The sync center avoids repeating an installation when the local and cloud versions match but the catalog has no content fingerprint. When a fingerprint exists, it still checks the full installed directory and repairs a mismatch after backing up the local copy.

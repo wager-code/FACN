@@ -181,7 +181,16 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
             task.Status = "运行中";
             task.Progress = 10;
             var backup = await backups.CreateAsync(localRoot, entry.Kind, entry.Id, entry.Name, entry.Version, "卸载前自动备份", operationCts.Token);
+            task.Detail = "正在核对备份与本地文件是否一致";
+            var sourceHash = await ContentHash.DirectorySha256Async(localRoot, operationCts.Token);
+            if (!sourceHash.Equals(backup.ContentHash, StringComparison.OrdinalIgnoreCase))
+                throw new IOException("备份与本地目录内容不一致，已取消删除；请关闭游戏或其他正在修改文件的程序后重试");
             operationCts.Token.ThrowIfCancellationRequested();
+
+            if (!Directory.Exists(localRoot) ||
+                (File.GetAttributes(localRoot) & FileAttributes.ReparsePoint) != 0 ||
+                !string.Equals(Path.GetDirectoryName(Path.GetFullPath(localRoot)), installRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                throw new IOException("删除前本地目录已变化，已取消删除");
 
             // 真正删除开始后不再接受取消，避免给用户留下只删除了一部分的目录。
             task.ConfigureCancellation(null);
