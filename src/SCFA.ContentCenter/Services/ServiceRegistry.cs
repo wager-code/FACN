@@ -14,6 +14,7 @@ public sealed class ServiceRegistry
     public BackupService Backups { get; private init; } = null!;
     public InstallService Install { get; private init; } = null!;
     public SyncService Sync { get; private init; } = null!;
+    public SyncPreferenceService SyncPreferences { get; private init; } = null!;
     public SyncHistoryService SyncHistory { get; private init; } = null!;
     public UserSessionService Session { get; private init; } = null!;
     public DiagnosticsService Diagnostics { get; private init; } = null!;
@@ -35,8 +36,17 @@ public sealed class ServiceRegistry
         var local = new LocalContentService(paths, log);
         var tasks = new TaskService();
         var backups = new BackupService(paths, log);
-        var install = new InstallService(cloud, paths, local, backups, tasks, log, config);
-        var sync = new SyncService(cloud, local, install, log);
+        ServiceRegistry? registry = null;
+        var preferences = new SyncPreferenceService(() =>
+        {
+            if (registry is null) return "";
+            if (registry.OfflineMode) return "offline";
+            var user = string.IsNullOrWhiteSpace(registry.CurrentUser.Id)
+                ? registry.CurrentUser.Username : registry.CurrentUser.Id;
+            return string.IsNullOrWhiteSpace(user) ? "" : registry.Auth.BaseUrl + "|" + user;
+        });
+        var install = new InstallService(cloud, paths, local, backups, tasks, log, config, preferences);
+        var sync = new SyncService(cloud, local, install, log, preferences);
         var syncHistory = new SyncHistoryService();
         var session = new UserSessionService();
         var diagnostics = new DiagnosticsService(config, paths, cloud, auth, session, log);
@@ -44,7 +54,8 @@ public sealed class ServiceRegistry
         var submissions = new SubmissionService(config, auth, paths, local, tasks, log);
         var management = new ManagementService(config, auth, log);
         var cloudHistory = new CloudHistoryService(config, auth, cloud, log);
-        return new ServiceRegistry { Config = config, Log = log, Auth = auth, Cloud = cloud, Paths = paths, Local = local, Tasks = tasks, Backups = backups, Install = install, Sync = sync, SyncHistory = syncHistory, Session = session, Diagnostics = diagnostics, Updates = updates, Submissions = submissions, Management = management, CloudHistory = cloudHistory };
+        registry = new ServiceRegistry { Config = config, Log = log, Auth = auth, Cloud = cloud, Paths = paths, Local = local, Tasks = tasks, Backups = backups, Install = install, Sync = sync, SyncPreferences = preferences, SyncHistory = syncHistory, Session = session, Diagnostics = diagnostics, Updates = updates, Submissions = submissions, Management = management, CloudHistory = cloudHistory };
+        return registry;
     }
 
     public bool ReconfigureAuth()

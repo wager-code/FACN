@@ -4,7 +4,7 @@ using SCFA.ContentCenter.Models;
 
 namespace SCFA.ContentCenter.Services;
 
-public sealed class InstallService(CloudCatalogService cloud, GamePathService paths, LocalContentService local, BackupService backups, TaskService tasks, LogService log, ConfigService config)
+public sealed class InstallService(CloudCatalogService cloud, GamePathService paths, LocalContentService local, BackupService backups, TaskService tasks, LogService log, ConfigService config, SyncPreferenceService? syncPreferences = null)
 {
     private const int MaxArchiveEntries = 100000;
     private const long MaxExtractedBytes = 8L * 1024 * 1024 * 1024;
@@ -12,14 +12,18 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private readonly SemaphoreSlim _recentGate = new(1, 1);
 
-    public async Task<bool> InstallAsync(CloudContentEntry entry, string? existingRoot = null, CancellationToken ct = default, string? existingVersion = null)
+    public async Task<bool> InstallAsync(CloudContentEntry entry, string? existingRoot = null, CancellationToken ct = default, string? existingVersion = null, bool automatic = false)
     {
         await _operationGate.WaitAsync(ct);
-        try { return await InstallCoreAsync(entry, existingRoot, ct, existingVersion); }
+        try
+        {
+            if (automatic && syncPreferences is not null && await syncPreferences.IsExcludedAsync(entry, ct)) return false;
+            return await InstallCoreAsync(entry, existingRoot, ct, existingVersion, automatic);
+        }
         finally { _operationGate.Release(); }
     }
 
-    private async Task<bool> InstallCoreAsync(CloudContentEntry entry, string? existingRoot, CancellationToken ct, string? existingVersion)
+    private async Task<bool> InstallCoreAsync(CloudContentEntry entry, string? existingRoot, CancellationToken ct, string? existingVersion, bool automatic)
     {
         if (string.IsNullOrWhiteSpace(entry.File)) throw new InvalidOperationException("云端清单没有 ZIP 文件路径");
         if (entry.Size < 0 || entry.Size > CloudCatalogService.MaxPackageBytes) throw new InvalidDataException("云端包大小超出安全范围");
@@ -93,6 +97,13 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
             }
 
             task.Progress = 80;
+            if (automatic && syncPreferences is not null && await syncPreferences.IsExcludedAsync(entry, operationCt))
+            {
+                task.Progress = 100;
+                task.Status = "已跳过";
+                task.Detail = "用户已标记不喜欢，自动同步跳过安装";
+                return false;
+            }
             task.Detail = "正在安装到游戏目录";
             var result = string.IsNullOrWhiteSpace(existingRoot)
                 ? await InstallFreshAsync(source, installRoot, top, entry, operationCt)
@@ -109,7 +120,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
         {
             task.Status = "已取消";
             task.Detail = "用户取消了安装";
-            task.ConfigureRetry(() => InstallAsync(entry, existingRoot, existingVersion: existingVersion));
+            task.ConfigureRetry(() => InstallAsync(entry, existingRoot, existingVersion: existingVersion, automatic: automatic));
             log.Info("安装已取消: " + entry.Name);
             throw;
         }
@@ -118,7 +129,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
             task.Status = "失败";
             task.Progress = 100;
             task.Detail = ex.Message;
-            task.ConfigureRetry(() => InstallAsync(entry, existingRoot, existingVersion: existingVersion));
+            task.ConfigureRetry(() => InstallAsync(entry, existingRoot, existingVersion: existingVersion, automatic: automatic));
             log.Error("安装失败: " + entry.Name, ex);
             throw;
         }

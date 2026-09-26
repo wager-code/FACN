@@ -66,6 +66,22 @@
                         <DataGridTemplateColumn Header="收藏" Width="52">
                             <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock x:Name="FavoriteMark" Text="☆" FontSize="17" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/><DataTemplate.Triggers><DataTrigger Binding="{Binding IsFavorite}" Value="True"><Setter TargetName="FavoriteMark" Property="Text" Value="★"/><Setter TargetName="FavoriteMark" Property="Foreground" Value="{StaticResource WarningBrush}"/></DataTrigger></DataTemplate.Triggers></DataTemplate></DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="同步偏好" Width="108">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button x:Name="SkipButton" Content="{Binding SyncSkipButtonText}" ToolTip="{Binding SyncSkipTooltip}"
+                                            Command="{Binding DataContext.ToggleSyncSkipCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}" Padding="6,3" MinHeight="28" HorizontalAlignment="Center">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource CompactButton}">
+                                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                                <Style.Triggers><DataTrigger Binding="{Binding IsSyncExcluded}" Value="True"><Setter Property="Foreground" Value="#FFB9C5"/></DataTrigger></Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTextColumn Header="名称" Binding="{Binding Name, Mode=OneWay}" Width="2*" MinWidth="180"/>
                         <DataGridTextColumn Header="版本" Binding="{Binding VersionDisplay, Mode=OneWay}" Width="150"/>
                         <DataGridTemplateColumn Header="本地状态" Width="180">

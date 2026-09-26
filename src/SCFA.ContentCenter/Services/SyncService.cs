@@ -5,7 +5,7 @@ namespace SCFA.ContentCenter.Services;
 
 public readonly record struct SyncDecision(bool ShouldInstall, bool VerifyContentHash, string Reason);
 
-public sealed class SyncService(CloudCatalogService cloud, LocalContentService local, InstallService installer, LogService log)
+public sealed class SyncService(CloudCatalogService cloud, LocalContentService local, InstallService installer, LogService log, SyncPreferenceService? syncPreferences = null)
 {
     private readonly SemaphoreSlim _syncGate = new(1, 1);
 
@@ -44,9 +44,20 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                 // 无效内容也必须参与精确 ID/目录匹配，否则损坏目录会被当作“本地缺失”，
                 // 随后的全新安装又会因为目标目录已存在而失败，最终永远无法自动修复。
                 var locals = (await local.ScanAsync(kind, ct)).ToArray();
+                var included = new List<CloudContentEntry>();
+                foreach (var entry in remote)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (syncPreferences is not null && await syncPreferences.IsExcludedAsync(entry, ct))
+                    {
+                        summary.Skipped++;
+                        summary.Messages.Add($"{kind} {entry.Name}：已标记不喜欢，按当前账号设置跳过自动同步");
+                    }
+                    else included.Add(entry);
+                }
                 // 先完成整份清单的匹配。冲突必须在任何目录被改动之前发现，
                 // 否则清单中排在前面的项目可能已经覆盖了冲突目录。
-                var plans = remote.Select(entry => (Entry: entry, Match: ContentIdentity.FindBestResult(locals, entry))).ToArray();
+                var plans = included.Select(entry => (Entry: entry, Match: ContentIdentity.FindBestResult(locals, entry))).ToArray();
                 var conflictingRoots = plans
                     .Where(plan => !plan.Match.Ambiguous && plan.Match.Entry is not null)
                     .GroupBy(plan => Path.GetFullPath(plan.Match.Entry!.Root), StringComparer.OrdinalIgnoreCase)
@@ -56,6 +67,12 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                 foreach (var (entry, match) in plans)
                 {
                     ct.ThrowIfCancellationRequested();
+                    if (syncPreferences is not null && await syncPreferences.IsExcludedAsync(entry, ct))
+                    {
+                        summary.Skipped++;
+                        summary.Messages.Add($"{kind} {entry.Name}：已标记不喜欢，按当前账号设置跳过自动同步");
+                        continue;
+                    }
                     if (match.Ambiguous)
                     {
                         if (!string.IsNullOrWhiteSpace(entry.EffectiveContentHash))
@@ -133,7 +150,7 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                     try
                     {
                         status?.Report($"{reason}，正在安装 {entry.Name} V{entry.Version}…");
-                        if (await installer.InstallAsync(entry, matched?.Root, ct, matched?.Version))
+                        if (await installer.InstallAsync(entry, matched?.Root, ct, matched?.Version, automatic: true))
                         {
                             summary.Installed++;
                             summary.Messages.Add($"{kind} {entry.Name}：{reason} → 已安装");
@@ -141,7 +158,8 @@ public sealed class SyncService(CloudCatalogService cloud, LocalContentService l
                         else
                         {
                             summary.Skipped++;
-                            summary.Messages.Add($"{kind} {entry.Name}：内容已相同，未重复覆盖");
+                            var excluded = syncPreferences is not null && await syncPreferences.IsExcludedAsync(entry, ct);
+                            summary.Messages.Add($"{kind} {entry.Name}：{(excluded ? "已标记不喜欢，跳过自动同步" : "内容已相同，未重复覆盖")}");
                         }
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }

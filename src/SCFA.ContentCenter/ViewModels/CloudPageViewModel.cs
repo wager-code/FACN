@@ -22,10 +22,10 @@ public sealed class CloudPageViewModel : ViewModelBase
 
     public string Kind { get; }
     public string Title => Kind == "地图" ? "云端地图" : "云端 MOD";
-    public string Subtitle => Kind == "地图" ? "正式地图目录：可筛选、排序、批量安装和修复。" : "正式 MOD 目录：可筛选、排序、批量安装和修复。";
+    public string Subtitle => Kind == "地图" ? "正式地图目录：点破心标记不喜欢，一键同步会跳过。" : "正式 MOD 目录：点破心标记不喜欢，一键同步会跳过。";
     public ObservableCollection<CloudContentEntry> Items { get; } = [];
     public ICollectionView ItemsView { get; }
-    public IReadOnlyList<string> StatusFilters { get; } = ["全部状态", "未安装", "可更新", "需要修复", "已安装", "本地较新", "匹配冲突"];
+    public IReadOnlyList<string> StatusFilters { get; } = ["全部状态", "未安装", "可更新", "需要修复", "已安装", "本地较新", "匹配冲突", "已跳过自动同步"];
     public ObservableCollection<string> CategoryFilters { get; } = ["全部分类"];
     public IReadOnlyList<string> SortOptions { get; } = ["名称", "最新发布", "文件从大到小", "文件从小到大", "安装状态"];
     public IReadOnlyList<string> LibraryFilters { get; } = ["全部内容", "只看收藏", "最近安装"];
@@ -42,7 +42,7 @@ public sealed class CloudPageViewModel : ViewModelBase
     public int VisibleCount => ItemsView.Cast<object>().Count();
     public int SelectedCount => Items.Count(x => x.IsSelected);
     public int InstalledCount => Items.Count(x => x.InstallStateCode is "current" or "newer" or "unknown");
-    public int AttentionCount => Items.Count(x => x.InstallStateCode is "missing" or "update" or "repair" or "conflict");
+    public int AttentionCount => Items.Count(x => !x.IsSyncExcluded && x.InstallStateCode is "missing" or "update" or "repair" or "conflict");
     public string CatalogLabel => Kind == "地图" ? "MAP CATALOG" : "MOD CATALOG";
     public CloudContentEntry? SelectedItem
     {
@@ -62,6 +62,7 @@ public sealed class CloudPageViewModel : ViewModelBase
     public AsyncRelayCommand InstallCommand { get; }
     public AsyncRelayCommand InstallSelectedCommand { get; }
     public AsyncRelayCommand ToggleFavoriteCommand { get; }
+    public AsyncItemCommand<CloudContentEntry> ToggleSyncSkipCommand { get; }
     public AsyncRelayCommand UnpublishCommand { get; }
     public RelayCommand SelectVisibleCommand { get; }
     public RelayCommand ClearSelectionCommand { get; }
@@ -76,6 +77,7 @@ public sealed class CloudPageViewModel : ViewModelBase
         InstallCommand = new AsyncRelayCommand(InstallAsync, () => SelectedItem is not null && CanStart());
         InstallSelectedCommand = new AsyncRelayCommand(InstallSelectedAsync, () => SelectedCount > 0 && CanStart());
         ToggleFavoriteCommand = new AsyncRelayCommand(ToggleFavoriteAsync, () => SelectedItem is not null && CanStart());
+        ToggleSyncSkipCommand = new AsyncItemCommand<CloudContentEntry>(ToggleSyncSkipAsync, _ => CanStart());
         UnpublishCommand = new AsyncRelayCommand(UnpublishAsync, () => SelectedItem is not null && CanUnpublish && CanStart());
         SelectVisibleCommand = new RelayCommand(SelectVisible, () => VisibleCount > 0 && CanStart());
         ClearSelectionCommand = new RelayCommand(ClearSelection, () => SelectedCount > 0 && CanStart());
@@ -109,6 +111,7 @@ public sealed class CloudPageViewModel : ViewModelBase
         "已安装" => item.InstallStateCode is "current" or "newer" or "unknown",
         "本地较新" => item.InstallStateCode == "newer",
         "匹配冲突" => item.InstallStateCode == "conflict",
+        "已跳过自动同步" => item.IsSyncExcluded,
         _ => true
     };
 
@@ -158,6 +161,7 @@ public sealed class CloudPageViewModel : ViewModelBase
                 var key = FavoriteKey(item);
                 item.IsFavorite = App.Services.Config.Current.FavoriteContentKeys.Any(x => string.Equals(x, key, StringComparison.OrdinalIgnoreCase));
                 item.IsRecent = App.Services.Config.Current.RecentContentKeys.Any(x => string.Equals(x, key, StringComparison.OrdinalIgnoreCase));
+                item.IsSyncExcluded = await App.Services.SyncPreferences.IsExcludedAsync(item);
                 UpdateInstallState(item, locals);
                 item.PropertyChanged += ItemPropertyChanged;
                 Items.Add(item);
@@ -165,7 +169,7 @@ public sealed class CloudPageViewModel : ViewModelBase
             RefreshCategoryFilters();
             ItemsView.Refresh();
             UpdateSummaries();
-            Status = $"云端目录已刷新 · 共 {Items.Count} 项 · 未安装 {Items.Count(x => x.InstallStateCode == "missing")} · 可更新/修复 {Items.Count(x => x.InstallStateCode is "update" or "repair")}";
+            Status = $"云端目录已刷新 · 共 {Items.Count} 项 · 跳过自动同步 {Items.Count(x => x.IsSyncExcluded)} · 未安装 {Items.Count(x => x.InstallStateCode == "missing")}";
         }
         catch (Exception ex)
         {
@@ -399,6 +403,25 @@ public sealed class CloudPageViewModel : ViewModelBase
         }
     }
 
+    private async Task ToggleSyncSkipAsync(CloudContentEntry item)
+    {
+        var excluded = !item.IsSyncExcluded;
+        try
+        {
+            await App.Services.SyncPreferences.SetExcludedAsync(item, excluded);
+            item.IsSyncExcluded = excluded;
+            RefreshFilteredView();
+            Status = excluded
+                ? $"已标记不喜欢：{item.Name}；一键同步将跳过，本地文件保持不变。"
+                : $"已恢复自动同步：{item.Name}。";
+        }
+        catch (Exception ex)
+        {
+            Status = "保存同步偏好失败：" + ex.Message;
+            MessageBox.Show(ex.Message, "保存同步偏好失败", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private async Task UnpublishAsync()
     {
         var item = SelectedItem;
@@ -425,6 +448,7 @@ public sealed class CloudPageViewModel : ViewModelBase
 
     private async Task<bool> InstallIfNeededAsync(CloudContentEntry item, CancellationToken ct)
     {
+        if (await App.Services.SyncPreferences.IsExcludedAsync(item, ct)) return false;
         var locals = (await App.Services.Local.ScanAsync(Kind, ct)).ToArray();
         var match = ContentIdentity.FindBestResult(locals, item);
         if (match.Ambiguous) throw new InvalidOperationException("存在多个同等匹配的本地目录");
@@ -437,7 +461,7 @@ public sealed class CloudPageViewModel : ViewModelBase
             shouldInstall = !localHash.Equals(item.EffectiveContentHash, StringComparison.OrdinalIgnoreCase);
         }
         if (!shouldInstall) return false;
-        return await App.Services.Install.InstallAsync(item, matched?.Root, ct, matched?.Version);
+        return await App.Services.Install.InstallAsync(item, matched?.Root, ct, matched?.Version, automatic: true);
     }
 
     private void SelectVisible()
@@ -477,7 +501,7 @@ public sealed class CloudPageViewModel : ViewModelBase
     {
         if (e.PropertyName == nameof(CloudContentEntry.IsSelected) && sender is CloudContentEntry { IsSelected: true } selected)
             SelectedItem = selected;
-        if (e.PropertyName is nameof(CloudContentEntry.IsSelected) or nameof(CloudContentEntry.IsFavorite) or nameof(CloudContentEntry.IsRecent) or nameof(CloudContentEntry.InstallStateCode))
+        if (e.PropertyName is nameof(CloudContentEntry.IsSelected) or nameof(CloudContentEntry.IsFavorite) or nameof(CloudContentEntry.IsRecent) or nameof(CloudContentEntry.IsSyncExcluded) or nameof(CloudContentEntry.InstallStateCode))
             UpdateSummaries();
     }
 

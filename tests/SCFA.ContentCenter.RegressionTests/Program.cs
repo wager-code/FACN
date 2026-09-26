@@ -836,6 +836,25 @@ try
     Check(firstSync.Installed == 1 && firstSync.Failed == 0 && Directory.Exists(syncRoot), "一键同步会从云端清单安装缺失地图");
     var unchangedSync = await syncService.SyncAllAsync(["地图"]);
     Check(unchangedSync.Skipped == 1 && unchangedSync.Installed == 0, "一键同步对内容指纹一致的地图不会重复安装");
+    var activeAccount = "test-server|player-a";
+    var syncPreferences = new SyncPreferenceService(() => activeAccount);
+    await syncPreferences.SetExcludedAsync(syncEntry, true);
+    Check(await new SyncPreferenceService(() => activeAccount).IsExcludedAsync(syncEntry), "不喜欢标记重新启动后仍保留");
+    activeAccount = "test-server|player-b";
+    Check(!await syncPreferences.IsExcludedAsync(syncEntry), "不同登录账号不会共享不喜欢列表");
+    activeAccount = "test-server|player-a";
+    var preferredInstaller = new InstallService(syncCloud, pathService, localContent, backups, tasks, log, config, syncPreferences);
+    var preferredSync = new SyncService(syncCloud, localContent, preferredInstaller, log, syncPreferences);
+    Directory.Delete(syncRoot, recursive: true);
+    var excludedSync = await preferredSync.SyncAllAsync(["地图"]);
+    Check(excludedSync.Skipped == 1 && excludedSync.Installed == 0 && excludedSync.Failed == 0 &&
+          !Directory.Exists(syncRoot) && excludedSync.Messages.Any(x => x.Contains("不喜欢")),
+        "玩家删除已标记不喜欢的地图后，一键同步不会重新安装");
+    await preferredInstaller.InstallAsync(syncEntry);
+    Check(Directory.Exists(syncRoot) && await syncPreferences.IsExcludedAsync(syncEntry),
+        "玩家仍可手动安装不喜欢的内容，且手动安装不会取消跳过设置");
+    await syncPreferences.SetExcludedAsync(syncEntry, false);
+    Check(!await syncPreferences.IsExcludedAsync(syncEntry), "再次点击可恢复自动同步");
     var alternatePackage = CreateMapPackage("sync_map_v2");
     var alternatePackagePath = Path.Combine(configDirectory, "alternate-map.zip");
     await File.WriteAllBytesAsync(alternatePackagePath, alternatePackage);
@@ -922,6 +941,13 @@ try
     var modInstaller = new InstallService(modCloud, pathService, localContent, backups, tasks, log, config);
     var modSync = new SyncService(modCloud, localContent, modInstaller, log);
     var modRoot = Path.Combine(modsRoot, "sync_mod");
+    await syncPreferences.SetExcludedAsync(modEntry, true);
+    var preferredModSync = new SyncService(modCloud, localContent,
+        new InstallService(modCloud, pathService, localContent, backups, tasks, log, config, syncPreferences), log, syncPreferences);
+    var excludedModSync = await preferredModSync.SyncAllAsync(["MOD"]);
+    Check(excludedModSync.Skipped == 1 && excludedModSync.Installed == 0 && !Directory.Exists(modRoot),
+        "不喜欢的云端 MOD 也不会被一键同步自动安装");
+    await syncPreferences.SetExcludedAsync(modEntry, false);
     var firstModSync = await modSync.SyncAllAsync(["MOD"]);
     Check(firstModSync.Installed == 1 && firstModSync.Failed == 0 && File.Exists(Path.Combine(modRoot, "mod_info.lua")),
         "一键同步会安装并识别有效 MOD");
@@ -1074,11 +1100,13 @@ finally
 
 var selectionCommandUiPassed = false;
 Exception? selectionCommandUiError = null;
+var cloudSkipUiPassed = false;
 var selectionUiThread = new Thread(() =>
 {
     var selectionRoot = Path.Combine(Path.GetTempPath(), "scfa_selection_ui_" + Guid.NewGuid().ToString("N"));
     SCFA.ContentCenter.App? application = null;
     System.Windows.Window? host = null;
+    System.Windows.Window? cloudHost = null;
     try
     {
         Directory.CreateDirectory(selectionRoot);
@@ -1110,10 +1138,33 @@ var selectionUiThread = new Thread(() =>
                                    probe.SelectedState == "结构校验通过" &&
                                    openButton.IsEnabled && uninstallButton.IsEnabled &&
                                    rowDeleteButton.IsEnabled && ReferenceEquals(rowDeleteButton.CommandParameter, probe.Items[0]);
+        var cloudProbe = new CloudSkipBindingProbe();
+        var cloudView = new SCFA.ContentCenter.Views.CloudContentView { DataContext = cloudProbe };
+        cloudHost = new System.Windows.Window
+        {
+            Content = cloudView,
+            Width = 1200,
+            Height = 760,
+            ShowInTaskbar = false,
+            WindowStyle = System.Windows.WindowStyle.None,
+            Opacity = 0
+        };
+        cloudHost.Show();
+        System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        cloudHost.UpdateLayout();
+        var cloudGrid = VisualTreeProbe.Find<System.Windows.Controls.DataGrid>(cloudView);
+        cloudGrid.ScrollIntoView(cloudProbe.Items[0]);
+        cloudHost.UpdateLayout();
+        System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        var cloudButtons = VisualTreeProbe.FindAll<System.Windows.Controls.Button>(cloudView).ToArray();
+        var skipButton = cloudButtons.SingleOrDefault(button => Equals(button.Content, "♡ 不喜欢")) ??
+            throw new InvalidOperationException("未找到不喜欢按钮；实际按钮：" + string.Join("、", cloudButtons.Select(button => button.Content?.ToString())));
+        cloudSkipUiPassed = skipButton.IsEnabled && ReferenceEquals(skipButton.CommandParameter, cloudProbe.Items[0]);
     }
     catch (Exception ex) { selectionCommandUiError = ex; }
     finally
     {
+        try { cloudHost?.Close(); } catch { }
         try { host?.Close(); } catch { }
         try { application?.Shutdown(); } catch { }
         try { System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown(); } catch { }
@@ -1125,6 +1176,7 @@ selectionUiThread.Start();
 selectionUiThread.Join();
 if (selectionCommandUiError is not null) Console.Error.WriteLine("本地内容选择命令 UI 测试异常：" + selectionCommandUiError);
 Check(selectionCommandUiPassed, "真实 WPF 本地内容页面的逐行删除与选中项操作正确绑定目标目录");
+Check(cloudSkipUiPassed, "真实 WPF 云端列表的不喜欢按钮正确绑定当前地图");
 
 if (failures.Count > 0)
 {
@@ -1534,6 +1586,21 @@ sealed class SelectionCommandBindingProbe : INotifyPropertyChanged
             UninstallCommand.RaiseCanExecuteChanged();
         }
     }
+}
+
+sealed class CloudSkipBindingProbe
+{
+    public CloudSkipBindingProbe()
+    {
+        Items = [new CloudContentEntry { Kind = "地图", Id = "skip-ui-map", Name = "跳过按钮测试地图", Version = "1" }];
+        ItemsView = CollectionViewSource.GetDefaultView(Items);
+        ToggleSyncSkipCommand = new AsyncItemCommand<CloudContentEntry>(_ => Task.CompletedTask);
+    }
+
+    public List<CloudContentEntry> Items { get; }
+    public ICollectionView ItemsView { get; }
+    public AsyncItemCommand<CloudContentEntry> ToggleSyncSkipCommand { get; }
+    public int TotalCount => Items.Count;
 }
 
 static class VisualTreeProbe

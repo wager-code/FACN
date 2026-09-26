@@ -10,6 +10,7 @@ public sealed class CloudContentEntry : INotifyPropertyChanged
     private string _installStateCode = "unchecked";
     private bool _isSelected;
     private bool _isFavorite;
+    private bool _isSyncExcluded;
     private bool _isRecent;
     private string _previewSource = "";
 
@@ -41,6 +42,19 @@ public sealed class CloudContentEntry : INotifyPropertyChanged
     [JsonIgnore] public string InstallStateCode { get => _installStateCode; set => Set(ref _installStateCode, value); }
     [JsonIgnore] public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
     [JsonIgnore] public bool IsFavorite { get => _isFavorite; set => Set(ref _isFavorite, value); }
+    [JsonIgnore] public bool IsSyncExcluded
+    {
+        get => _isSyncExcluded;
+        set
+        {
+            if (_isSyncExcluded == value) return;
+            Set(ref _isSyncExcluded, value);
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SyncSkipButtonText)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SyncSkipTooltip)));
+        }
+    }
+    [JsonIgnore] public string SyncSkipButtonText => IsSyncExcluded ? "💔 已跳过" : "♡ 不喜欢";
+    [JsonIgnore] public string SyncSkipTooltip => IsSyncExcluded ? "一键同步会跳过；点击恢复自动同步" : "点击后，一键同步将跳过此内容；不会删除本机文件";
     [JsonIgnore] public bool IsRecent { get => _isRecent; set => Set(ref _isRecent, value); }
     [JsonIgnore] public string ThumbnailUrl { get; set; } = "";
     [JsonIgnore] public string LocalRoot { get; set; } = "";
