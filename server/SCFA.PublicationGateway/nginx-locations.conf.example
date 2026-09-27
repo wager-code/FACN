@@ -1,16 +1,26 @@
-# Add these locations inside the existing HTTPS server block.
-# Keep the existing account-service locations and TLS certificate settings.
-location ^~ /v1/admin/publications/ {
-    client_max_body_size 20m;
-    proxy_pass http://127.0.0.1:18081;
-    proxy_set_header Host $host;
-    proxy_set_header Authorization $http_authorization;
-    proxy_read_timeout 3600s;
-}
-location ^~ /v1/admin/cos/credentials/ {
-    client_max_body_size 16k;
-    proxy_pass http://127.0.0.1:18081;
-    proxy_set_header Host $host;
-    proxy_set_header Authorization $http_authorization;
-    proxy_read_timeout 120s;
+# Dedicated HTTPS endpoint: the account binary already owns public port 18443.
+# Install as /etc/nginx/conf.d/scfa-publication.conf after checking the live certificate paths.
+server {
+    listen 18444 ssl;
+    server_name _;
+    ssl_certificate /var/lib/scfa-api/direct-api-cert.pem;
+    ssl_certificate_key /var/lib/scfa-api/direct-api-key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    server_tokens off;
+
+    location ^~ /v1/admin/publications/ {
+        client_max_body_size 20m;
+        proxy_pass http://127.0.0.1:18081;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_read_timeout 120s;
+    }
+    location ^~ /v1/admin/cos/credentials/ {
+        client_max_body_size 16k;
+        proxy_pass http://127.0.0.1:18081;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_read_timeout 120s;
+    }
+    location / { return 404; }
 }
