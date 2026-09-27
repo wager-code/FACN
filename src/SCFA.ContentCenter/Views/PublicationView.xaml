@@ -9,7 +9,11 @@
             <TextBlock Text="选择本地地图或 MOD，一键检查、打包并发布到云端。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0" TextWrapping="Wrap"/>
         </StackPanel>
         <Border Grid.Row="1" Style="{StaticResource InsetBorder}" Padding="13" Margin="0,0,0,14">
-            <TextBlock Text="软件内自动发布需要管理员账号服务提供短期 COS 上传授权与清单提交接口。服务未就绪时，发布按钮不可用；“准备发布材料”只在本机生成校验文件。" Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap"/>
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock Text="软件内自动发布需要独立发布服务提供短期 COS 上传授权与清单提交接口。服务未就绪时，发布按钮不可用；“准备发布材料”只在本机生成校验文件。" Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Content="设置 COS 上传密钥" Style="{StaticResource SecondaryButton}" IsEnabled="{Binding CanConfigureCredential}" Click="ConfigureCosCredential_Click" Margin="12,0,0,0" VerticalAlignment="Center"/>
+            </Grid>
         </Border>
         <Border Grid.Row="2" Style="{StaticResource ToolbarBorder}" Margin="0,0,0,14">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
