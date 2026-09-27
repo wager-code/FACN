@@ -1,0 +1,41 @@
+<UserControl x:Class="SCFA.ContentCenter.Views.AdminSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="AdminSettingsView_Loaded">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+            <TextBlock Text="ADMIN SETTINGS" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="Bold"/>
+            <TextBlock Text="管理员设置" FontSize="30" FontWeight="SemiBold" Margin="0,3,0,0"/>
+            <TextBlock Text="管理云端发布所需的服务器凭据。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,18"/>
+
+            <Border Style="{StaticResource CardBorder}" Padding="22">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="COS 上传密钥" FontSize="19" FontWeight="SemiBold"/>
+                            <TextBlock Text="仅超级管理员可以设置；玩家下载地图和 MOD 无需此密钥。"
+                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Style="{StaticResource PillBorder}" VerticalAlignment="Top" Margin="12,0,0,0">
+                            <TextBlock Text="{Binding CredentialState}" Foreground="{StaticResource AccentBrush}"/>
+                        </Border>
+                    </Grid>
+                    <TextBlock Text="SecretId" Style="{StaticResource FieldLabel}" Margin="0,22,0,4"/>
+                    <TextBox x:Name="SecretIdInput" MaxLength="256" ToolTip="只填写具有指定 COS 桶发布权限的子账号 SecretId"/>
+                    <TextBlock Text="SecretKey" Style="{StaticResource FieldLabel}" Margin="0,15,0,4"/>
+                    <PasswordBox x:Name="SecretKeyInput" MaxLength="256" ToolTip="密钥仅本次提交，软件不保存明文"/>
+                    <TextBlock Text="保存时服务器先验证密钥能访问指定存储桶，成功后加密保存。以后更换密钥时在此重新填写即可。"
+                               Foreground="{StaticResource TextMutedBrush}" Margin="0,13,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                        <Button Style="{StaticResource PrimaryButton}" Content="验证并保存到服务器" IsEnabled="{Binding CanSave}" Click="SaveCredential_Click"/>
+                        <Button Style="{StaticResource SecondaryButton}" Content="刷新状态" IsEnabled="{Binding CanSave}" Click="RefreshStatus_Click" Margin="10,0,0,0"/>
+                    </StackPanel>
+                    <Border Style="{StaticResource InsetBorder}" Margin="0,18,0,0">
+                        <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

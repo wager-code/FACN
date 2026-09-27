@@ -2,27 +2,20 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid>
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,15">
             <TextBlock Text="ADMIN PUBLICATION" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="Bold"/>
             <TextBlock Text="管理员发布中心" FontSize="30" FontWeight="SemiBold" Margin="0,3,0,0"/>
             <TextBlock Text="选择本地地图或 MOD，一键检查、打包并发布到云端。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0" TextWrapping="Wrap"/>
         </StackPanel>
-        <Border Grid.Row="1" Style="{StaticResource InsetBorder}" Padding="13" Margin="0,0,0,14">
-            <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <TextBlock Text="软件内自动发布需要独立发布服务提供短期 COS 上传授权与清单提交接口。服务未就绪时，发布按钮不可用；“准备发布材料”只在本机生成校验文件。" Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                <Button Grid.Column="1" Content="设置 COS 上传密钥" Style="{StaticResource SecondaryButton}" IsEnabled="{Binding CanConfigureCredential}" Click="ConfigureCosCredential_Click" Margin="12,0,0,0" VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
-        <Border Grid.Row="2" Style="{StaticResource ToolbarBorder}" Margin="0,0,0,14">
+        <Border Grid.Row="1" Style="{StaticResource ToolbarBorder}" Margin="0,0,0,14">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <ComboBox ItemsSource="{Binding Kinds}" SelectedItem="{Binding SelectedKind, Mode=TwoWay}" Margin="0,0,10,0"/>
                 <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Content="重新扫描" Command="{Binding RefreshCommand}" Margin="0,0,14,0"/>
                 <TextBlock Grid.Column="2" Text="{Binding Status}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
             </Grid>
         </Border>
-        <Grid Grid.Row="3" MinHeight="260">
+        <Grid Grid.Row="2" MinHeight="260">
             <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
             <Border Style="{StaticResource CardBorder}" Padding="14">
                 <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
@@ -77,7 +70,7 @@
                 </Grid>
             </Border>
         </Grid>
-        <Border Grid.Row="4" Style="{StaticResource InsetBorder}" Padding="12" Margin="0,14,0,0">
+        <Border Grid.Row="3" Style="{StaticResource InsetBorder}" Padding="12" Margin="0,14,0,0">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel><TextBlock Text="待上传材料目录" FontWeight="SemiBold"/><TextBlock Text="{Binding OutputDirectory, TargetNullValue=尚未生成}" Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/></StackPanel>
                 <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Content="打开材料目录" Command="{Binding OpenOutputCommand}" Margin="12,0,0,0"/>

@@ -70,6 +70,9 @@
                             <RadioButton x:Name="PublicationButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding PublicationVisibility}" Command="{Binding PublicationCommand}" ToolTip="管理员发布中心">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="PublicationLabel" Grid.Column="1" Text="管理员发布" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
+                            <RadioButton x:Name="AdminSettingsButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding AdminSettingsVisibility}" Command="{Binding AdminSettingsCommand}" ToolTip="管理员设置">
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/settings_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="AdminSettingsLabel" Grid.Column="1" Text="管理员设置" VerticalAlignment="Center"/></Grid>
+                            </RadioButton>
                             <RadioButton x:Name="UsersButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding AdminToolsVisibility}" Command="{Binding UsersCommand}" ToolTip="用户管理">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/people_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="UsersLabel" Grid.Column="1" Text="用户管理" VerticalAlignment="Center"/></Grid>
                             </RadioButton>

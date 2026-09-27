@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -154,6 +155,7 @@ if (args.Contains("--admin-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
             var previews = new (System.Windows.Controls.UserControl View, object Probe)[]
             {
                 (new SCFA.ContentCenter.Views.PublicationView(), new PublicationBindingProbe()),
+                (new SCFA.ContentCenter.Views.AdminSettingsView(), new AdminSettingsBindingProbe()),
                 (new SCFA.ContentCenter.Views.UsersView(), new UsersBindingProbe()),
                 (new SCFA.ContentCenter.Views.OperationsView(), new OperationsBindingProbe())
             };
@@ -173,7 +175,7 @@ if (args.Contains("--admin-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
     uiThread.SetApartmentState(ApartmentState.STA);
     uiThread.Start();
     uiThread.Join();
-    if (bindingError is null) Console.WriteLine("PASS  发布、用户与审计页面可在真实 WPF 布局中完成绑定");
+    if (bindingError is null) Console.WriteLine("PASS  发布、管理员设置、用户与审计页面可在真实 WPF 布局中完成绑定");
     else Console.Error.WriteLine("FAIL  管理员页面运行时绑定异常：" + bindingError);
     Environment.Exit(bindingError is null ? 0 : 1);
     return;
@@ -192,6 +194,7 @@ if (args.Contains("--admin-ui-preview", StringComparer.OrdinalIgnoreCase))
         var (view, probe) = page switch
         {
             "publication" => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.PublicationView(), (object)new PublicationBindingProbe()),
+            "admin-settings" => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.AdminSettingsView(), (object)new AdminSettingsBindingProbe()),
             "users" => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.UsersView(), (object)new UsersBindingProbe()),
             "operations" => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.OperationsView(), (object)new OperationsBindingProbe()),
             _ => ((System.Windows.Controls.UserControl)new SCFA.ContentCenter.Views.UsersView(), (object)new UsersBindingProbe())
@@ -403,6 +406,10 @@ Check(AccessPolicy.CanPublishContent(new UserInfo { RoleKey = "admin" }) &&
       !AccessPolicy.CanPublishContent(new UserInfo { RoleKey = "publisher", Permissions = ["content.publish"] }) &&
       !AccessPolicy.CanPublishContent(new UserInfo { RoleKey = "user" }),
       "发布材料仅允许明确的管理员角色准备");
+Check(AccessPolicy.CanManageCosCredentials(new UserInfo { RoleKey = "super_admin" }) &&
+      !AccessPolicy.CanManageCosCredentials(new UserInfo { RoleKey = "admin" }) &&
+      !AccessPolicy.CanManageCosCredentials(new UserInfo { RoleKey = "user", Permissions = ["settings.cloud"] }),
+      "COS 写入密钥仅允许超级管理员设置");
 var auditEnvelope = JsonSerializer.Deserialize<AuditFetchResult>("""
 {"records":[{"id":"audit-1","time":"2026-09-25T01:00:00Z","actor_name":"admin","action":"user.update","target_name":"player-one","result":"success","detail":"updated","remote_ip":"127.0.0.1"}],"integrity_ok":true,"integrity_message":"ok","total":1}
 """)!;
@@ -569,11 +576,17 @@ Check(dev20Pages[0].Contains("RestrictedCount", StringComparison.Ordinal) && dev
       dev20Pages[1].Contains("AuditView", StringComparison.Ordinal) && dev20Pages[1].Contains("SelectedAuditDetail", StringComparison.Ordinal),
       "用户和审计页面均使用真实身份与审计状态绑定");
 var publicationViewSource = File.ReadAllText(Path.Combine(uiRoot, "Views", "PublicationView.xaml"));
+var adminSettingsViewSource = File.ReadAllText(Path.Combine(uiRoot, "Views", "AdminSettingsView.xaml"));
 Check(mainWindowXaml.Contains("PublicationVisibility", StringComparison.Ordinal) &&
       publicationViewSource.Contains("PublishCommand", StringComparison.Ordinal) &&
       publicationViewSource.Contains("PublisherStatus", StringComparison.Ordinal) &&
       publicationViewSource.Contains("PrepareCommand", StringComparison.Ordinal),
       "管理员发布入口显示自动上传能力与本地准备选项");
+Check(mainWindowXaml.Contains("AdminSettingsVisibility", StringComparison.Ordinal) &&
+      adminSettingsViewSource.Contains("SecretKeyInput", StringComparison.Ordinal) &&
+      adminSettingsViewSource.Contains("验证并保存到服务器", StringComparison.Ordinal) &&
+      !publicationViewSource.Contains("设置 COS 上传密钥", StringComparison.Ordinal),
+      "COS 密钥输入位于独立的超级管理员设置页，不混入发布页");
 var dev21Pages = new[] { "SetupView.xaml", "SettingsView.xaml" }
     .Select(name => File.ReadAllText(Path.Combine(uiRoot, "Views", name))).ToArray();
 Check(dev21Pages[0].Contains("SetupProgress", StringComparison.Ordinal) && dev21Pages[0].Contains("ContentStateLabel", StringComparison.Ordinal) &&
@@ -633,6 +646,17 @@ try
     Check(reloadedConfig.Current.ExtensionData?.ContainsKey("future_setting") == true, "事务式保存继续保留未来版本未知配置字段");
     Check(reloadedConfig.Current.RememberLoginAccount && reloadedConfig.Current.RememberLoginPassword && reloadedConfig.Current.AutoLogin && reloadedConfig.Current.LoginPasswordEncrypted == protectedLoginPassword && reloadedConfig.Current.LoginAccounts.Count == 1, "记住账号、密码、自动登录和多账号记录可持久保存");
     Check(reloadedConfig.Current.LocalUserProfiles.Count == 1 && reloadedConfig.Current.LocalUserProfiles[0].DisplayName == "本机玩家" && reloadedConfig.Current.LocalUserProfiles[0].QQ == "12345678", "本机个人资料可持久保存");
+    var legacyConfig = JsonNode.Parse(await File.ReadAllTextAsync(config.ConfigPath))!.AsObject();
+    legacyConfig["secret_id"] = "old-client-secret-id";
+    legacyConfig["secret_key_encrypted"] = "old-client-secret-key";
+    await File.WriteAllTextAsync(config.ConfigPath, legacyConfig.ToJsonString());
+    var migratedConfig = new ConfigService();
+    await migratedConfig.LoadAsync();
+    var migratedText = await File.ReadAllTextAsync(config.ConfigPath);
+    Check(!migratedText.Contains("old-client-secret", StringComparison.Ordinal) &&
+          !migratedText.Contains("secret_key_encrypted", StringComparison.Ordinal) &&
+          migratedConfig.Current.ExtensionData?.ContainsKey("future_setting") == true,
+          "旧客户端 COS 密钥字段会从本机配置迁移移除，其他未知设置保留");
     var syncHistoryDirectory = Path.Combine(configDirectory, "sync-history");
     var history = new SyncHistoryService(syncHistoryDirectory);
     await history.AppendAsync(new SyncRunRecord { Scope = "地图专项同步", Status = "完成", Installed = 2, Messages = ["地图 A：已安装"] });
@@ -1526,6 +1550,13 @@ sealed class PublicationBindingProbe
     public string Status => "本地地图 2 项，其中 2 项可准备发布";
     public string SelectedSummary => "北境回声 · ID northern_echo · 游戏版本 3 · 12 个文件";
     public string OutputDirectory => "";
+}
+
+sealed class AdminSettingsBindingProbe
+{
+    public string CredentialState => "尚未配置";
+    public string Status => "密钥只在服务器加密保存。";
+    public bool CanSave => true;
 }
 
 sealed class UsersBindingProbe

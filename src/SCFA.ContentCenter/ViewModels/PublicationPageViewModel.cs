@@ -26,7 +26,6 @@ public sealed class PublicationPageViewModel : ViewModelBase
     private string _scannedDirectory = "";
     private string _publisherStatus = "正在检查云端发布服务…";
     private bool _publisherReady;
-    private bool _publisherApiAvailable;
     private bool _publishing;
     private CancellationTokenSource? _publishCts;
     private int _scanGeneration;
@@ -93,17 +92,6 @@ public sealed class PublicationPageViewModel : ViewModelBase
         get => _publisherReady;
         private set { if (Set(ref _publisherReady, value)) RaisePublishState(); }
     }
-    public bool PublisherApiAvailable
-    {
-        get => _publisherApiAvailable;
-        private set
-        {
-            if (!Set(ref _publisherApiAvailable, value)) return;
-            OnPropertyChanged(nameof(CanConfigureCredential));
-        }
-    }
-    public bool CanConfigureCredential => PublisherApiAvailable && !App.Services.OfflineMode &&
-        App.Services.CurrentUser.RoleKey.Equals("super_admin", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(App.Services.Auth.Token);
     public bool IsPublishing
     {
         get => _publishing;
@@ -148,26 +136,18 @@ public sealed class PublicationPageViewModel : ViewModelBase
         try
         {
             var capability = await App.Services.PublicationUpload.GetCapabilityAsync();
-            PublisherApiAvailable = capability.ApiAvailable;
             PublisherReady = capability.Available;
             PublisherStatus = capability.Available ? "云端发布服务已就绪，可直接打包上传"
                 : string.IsNullOrWhiteSpace(capability.Message) ? "云端发布服务尚未就绪" : capability.Message;
         }
         catch (Exception ex)
         {
-            PublisherApiAvailable = false;
             PublisherReady = false;
             PublisherStatus = "无法连接云端发布服务：" + ex.Message;
             App.Services.Log.Error("检查管理员发布服务失败", ex);
         }
     }
 
-    public async Task RotateCredentialAsync(string secretId, string secretKey)
-    {
-        if (!CanConfigureCredential) throw new UnauthorizedAccessException("管理员发布服务尚未就绪");
-        await App.Services.PublicationUpload.RotateCredentialAsync(secretId, secretKey);
-        await RefreshCapabilityAsync();
-    }
     private async Task RefreshAsync()
     {
         var generation = ++_scanGeneration;

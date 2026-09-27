@@ -37,9 +37,18 @@ public sealed class ConfigService
         if (!File.Exists(ConfigPath)) { Current = AppConfig.Defaults(); return; }
         try
         {
-            await using var fs = File.OpenRead(ConfigPath);
-            Current = await JsonSerializer.DeserializeAsync<AppConfig>(fs, _json) ?? AppConfig.Defaults();
+            await using (var fs = File.OpenRead(ConfigPath))
+                Current = await JsonSerializer.DeserializeAsync<AppConfig>(fs, _json) ?? AppConfig.Defaults();
+            var hadLegacyCosCredential = Current.ExtensionData?.Keys.Any(IsLegacyCosCredentialField) == true;
             ApplyDefaults(Current);
+            if (hadLegacyCosCredential)
+            {
+                try { await SaveAsync(Current); }
+                catch (Exception ex)
+                {
+                    LoadWarning = "旧版 COS 密钥字段未能从本机配置清除：" + ex.Message;
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -87,6 +96,9 @@ public sealed class ConfigService
 
     private static void ApplyDefaults(AppConfig c)
     {
+        if (c.ExtensionData is not null)
+            foreach (var key in c.ExtensionData.Keys.Where(IsLegacyCosCredentialField).ToArray())
+                c.ExtensionData.Remove(key);
         if (string.IsNullOrWhiteSpace(c.Bucket)) c.Bucket = "scfa-map-center-1317535019";
         if (string.IsNullOrWhiteSpace(c.Region)) c.Region = "ap-shanghai";
         if (string.IsNullOrWhiteSpace(c.Root)) c.Root = "scfa";
@@ -142,4 +154,8 @@ public sealed class ConfigService
         }
         if (c.LoginAccounts.Count == 0) c.AutoLogin = false;
     }
+
+    private static bool IsLegacyCosCredentialField(string key) =>
+        key.Equals("secret_id", StringComparison.OrdinalIgnoreCase) ||
+        key.Equals("secret_key_encrypted", StringComparison.OrdinalIgnoreCase);
 }

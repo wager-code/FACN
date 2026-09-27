@@ -12,6 +12,8 @@ public static class AccessPolicy
     public static bool CanPublishContent(UserInfo user) => user is not null &&
         (string.Equals(user.RoleKey?.Trim(), "admin", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(user.RoleKey?.Trim(), "super_admin", StringComparison.OrdinalIgnoreCase));
+    public static bool CanManageCosCredentials(UserInfo user) => user is not null &&
+        string.Equals(user.RoleKey?.Trim(), "super_admin", StringComparison.OrdinalIgnoreCase);
     public static bool CanOpenAdminWorkspace(UserInfo user) => CanPublishContent(user) || Has(user, "users.read", "users.manage", "users.write", "audit.read", "server.read");
     public static bool CanManageSettings(UserInfo user) => Has(user, "settings.cloud");
 

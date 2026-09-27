@@ -378,3 +378,10 @@
 - 独立 .NET 8 发布网关 Release 编译：0 警告、0 错误；隔离回归通过，包括加密凭据、官方 COS SDK 签名 URL、地图包结构/指纹、真实清单格式中的含空格目录和错误对象拒绝。
 - Linux x64 自包含单文件网关生成在 artifacts/scfa-publication-linux-x64；该目录被 .gitignore 排除，不上传 GitHub。
 - 生产账号服务、Nginx 和 COS 尚未接入网关；没有使用真实密钥执行上传。客户端当前仍为 dev54 正式发布程序，dev55 只是可编译源码。Steam 与 FAF 脚本语义仍需管理员人工验收。
+
+# Dev56 administrator settings (2026-09-27)
+
+- Added a super_admin-only left navigation page for COS publication credentials, removed credential controls from the publication page, and dropped legacy client COS credential fields with an on-load migration.
+- Release solution build: 0 warnings, 0 errors. Full regression suite passed with a normal Windows user profile, including credential-role and local-config migration checks. Administrator WPF binding smoke passed and the new page was rendered for visual review.
+- Framework-dependent win-x64 single-file build: `artifacts/win-x64-dev56/SCFA内容中心.exe`, `ProductVersion=4.0.0-dev56`, SHA-256 `A62E36396B830D04771263327F7D7AB99CEEA424C847178B5D9BECE1406B4065`.
+- Production gateway connectivity was verified separately. Actual COS credential entry and a live map/MOD publication have not yet been tested.

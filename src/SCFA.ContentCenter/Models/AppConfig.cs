@@ -21,8 +21,6 @@ public sealed class LocalUserProfile
 
 public sealed class AppConfig
 {
-    [JsonPropertyName("secret_id")] public string SecretId { get; set; } = "";
-    [JsonPropertyName("secret_key_encrypted")] public string SecretKeyEncrypted { get; set; } = "";
     [JsonPropertyName("bucket")] public string Bucket { get; set; } = "scfa-map-center-1317535019";
     [JsonPropertyName("region")] public string Region { get; set; } = "ap-shanghai";
     [JsonPropertyName("root")] public string Root { get; set; } = "scfa";
