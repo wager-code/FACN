@@ -55,7 +55,7 @@ public sealed class PublicationUploadService(AuthApiClient auth, CloudCatalogSer
         }
         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed)
         {
-            return new PublicationCapability { ApiAvailable = false, Message = "账号服务尚未安装管理员自动发布接口" };
+            return new PublicationCapability { ApiAvailable = false, Message = "管理员发布服务尚未就绪" };
         }
     }
 
