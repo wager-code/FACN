@@ -38,6 +38,7 @@ public sealed class AppConfig
     [JsonPropertyName("release_dir")] public string ReleaseDir { get; set; } = "";
     [JsonPropertyName("api_base_url")] public string ApiBaseUrl { get; set; } = "https://124.223.170.117:18443";
     [JsonPropertyName("api_direct_url")] public string ApiDirectUrl { get; set; } = "https://124.223.170.117:18443";
+    [JsonPropertyName("publication_api_base_url")] public string PublicationApiBaseUrl { get; set; } = "https://124.223.170.117:18444";
     [JsonPropertyName("api_direct_cert_sha256")] public string ApiDirectCertSha256 { get; set; } = "bcb1a9ebe36a0ce6b25a3408d074301de7561417cde8507db65ede34b7b89aa9";
     [JsonPropertyName("last_login_account")] public string LastLoginAccount { get; set; } = "";
     [JsonPropertyName("remember_login_account")] public bool RememberLoginAccount { get; set; } = true;
