@@ -1,6 +1,6 @@
 # SCFA Content Center project handoff
 
-Updated: 2026-09-26. This file is intentionally safe for the public source repository. It is a project record, not a copy of private server configuration.
+Updated: 2026-09-27. This file is intentionally safe for the public source repository. It is a project record, not a copy of private server configuration.
 
 ## What the system does
 
@@ -9,6 +9,8 @@ Updated: 2026-09-26. This file is intentionally safe for the public source repos
 - The owner decided to retire player submissions and review. Content publication is administrator-only. Dev53 adds an in-app local publication-preparation page; the actual COS upload and manifest update still use the console.
 
 ## Confirmed state
+
+- On 2026-09-27 the owner requested in-app administrator COS credential rotation without client updates. The client builds public COS URLs and fetches published manifests and packages without using `SecretId` or `SecretKeyEncrypted`. These two legacy `AppConfig` fields have no code references outside the model and are blank in this computer's local config. This does not establish how the deployed account service stores its own credentials. The future design keeps a least-privilege write identity on the server, issues short-lived upload authorization, and uses short-lived download URLs only if published objects become private. No long-term COS key goes to players. See `ADMIN_PUBLISH_PLAN.md`.
 
 - The owner requested that all confirmed requirements be carried in the GitHub source and that the repository landing page be less cluttered. `PRODUCT_REQUIREMENTS.md` now records scope and status, including canceled player submissions, sync safety, local deletion, admin-only publication, Steam compatibility review, cross-device preferences, and source continuity. The README is a short overview; detailed history remains in this handoff and `BUILD_VALIDATION.md`. Future agents should update requirement status when implementation or owner decisions change.
 - Dev54 fixes local map naming when `ScenarioInfo` contains a nested team `name` before the top-level map `name`. The actual `E:\SCFA\maps\5iver_survival_land_oxtreme` was included in the scan all along but appeared as `FFA`; a read-only scan after the fix finds 62 maps and reports this one as `5iver_survival_land_oxtreme`, game version 10, 10 files, valid. Seven other installed map names containing apostrophes also display completely. The administrator publication list now searches game name, folder, ID, version, and validation detail, and displays game name with folder together. See `BUILD_VALIDATION.md` for verification and release status.
