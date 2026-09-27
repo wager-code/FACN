@@ -371,3 +371,10 @@
 ## 2026-09-27 dev55 自动发布客户端（未上线）
 
 客户端增加管理员一键打包上传流程、服务端能力检查、取消、签名 URL 目标约束和随机暂存路径约束。dotnet build -c Release --no-restore 通过；run-regression-tests.ps1 全部核心回归通过。当前生产服务端尚无 /v1/admin/publications 接口，未执行真实 COS 上传，也未生成正式可投放版本。
+
+## 2026-09-27 dev55 管理员自动发布网关（源码阶段）
+
+- Windows 客户端 Release 解决方案编译：0 警告、0 错误；完整 run-regression-tests.ps1 通过。
+- 独立 .NET 8 发布网关 Release 编译：0 警告、0 错误；隔离回归通过，包括加密凭据、官方 COS SDK 签名 URL、地图包结构/指纹、真实清单格式中的含空格目录和错误对象拒绝。
+- Linux x64 自包含单文件网关生成在 artifacts/scfa-publication-linux-x64；该目录被 .gitignore 排除，不上传 GitHub。
+- 生产账号服务、Nginx 和 COS 尚未接入网关；没有使用真实密钥执行上传。客户端当前仍为 dev54 正式发布程序，dev55 只是可编译源码。Steam 与 FAF 脚本语义仍需管理员人工验收。
