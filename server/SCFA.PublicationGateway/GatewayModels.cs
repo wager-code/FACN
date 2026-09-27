@@ -25,6 +25,8 @@ public sealed class GatewayOptions
             throw new InvalidOperationException("账号验证服务只能指向本机 127.0.0.1");
         if (MasterKey.Length != 32) throw new InvalidOperationException("需要 32 字节的服务端加密主密钥");
         Directory.CreateDirectory(DataDirectory);
+        if (OperatingSystem.IsLinux()) File.SetUnixFileMode(DataDirectory,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
     }
 }
 
