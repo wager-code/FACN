@@ -85,3 +85,7 @@ GitHub holds the portable client source and safe project record. Private credent
 The owner requested separate left navigation entries for publishing maps and MODs. Dev57 adds administrator-only "发布地图" and "发布 MOD" entries, each with a fixed content type. The page retains the software-based upload action and the local preparation option. The owner's screenshot of a preparation-only page matches an older client build.
 
 The Release build, core regression checks, WPF binding smoke, and self-contained Windows publish passed. The portable client is in the local `artifacts/win-x64-dev57-portable` folder and must be kept with its companion DLLs. The publication gateway was subsequently deployed and the owner corrected a mistyped COS credential, but a production map or MOD upload has not yet been verified. Confirm the resulting catalog, package download, installation, and repeat sync before calling in-app publication complete.
+
+## Dev58 legacy manifest compatibility (2026-09-28)
+
+A production map publication attempt was rejected during intent validation because two unchanged older catalog entries have no `folder_name`. The proposed map entry did include it. The gateway now accepts an unchanged legacy entry using its ID for collision checks, while requiring `folder_name` on new entries and rejecting changes to unrelated old entries. Isolated gateway regression checks pass. The corrected server package is prepared locally; deployment and a successful live publication remain unverified.
