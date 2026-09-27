@@ -12,9 +12,15 @@ namespace SCFA.ContentCenter.Services;
 public sealed class PublicationCapability
 {
     [JsonPropertyName("available")] public bool Available { get; set; }
+    [JsonIgnore] public bool ApiAvailable { get; set; } = true;
     [JsonPropertyName("message")] public string Message { get; set; } = "";
 }
 
+public sealed class CosCredentialStatus
+{
+    [JsonPropertyName("configured")] public bool Configured { get; set; }
+    [JsonPropertyName("updated_at")] public DateTimeOffset? UpdatedAt { get; set; }
+}
 public sealed class PublicationIntent
 {
     [JsonPropertyName("publication_id")] public string PublicationId { get; set; } = "";
@@ -44,14 +50,36 @@ public sealed class PublicationUploadService(AuthApiClient auth, CloudCatalogSer
     {
         try
         {
-            return await auth.GetJsonAsync<PublicationCapability>("/v1/admin/publications/capabilities", ct);
+            using var publication = CreatePublicationClient();
+            return await publication.GetJsonAsync<PublicationCapability>("/v1/admin/publications/capabilities", ct);
         }
         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed)
         {
-            return new PublicationCapability { Message = "账号服务尚未安装管理员自动发布接口" };
+            return new PublicationCapability { ApiAvailable = false, Message = "账号服务尚未安装管理员自动发布接口" };
         }
     }
 
+    public async Task<CosCredentialStatus> GetCredentialStatusAsync(CancellationToken ct = default)
+    {
+        using var publication = CreatePublicationClient();
+        return await publication.GetJsonAsync<CosCredentialStatus>("/v1/admin/cos/credentials/status", ct);
+    }
+
+    public async Task<CosCredentialStatus> RotateCredentialAsync(string secretId, string secretKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(secretId) || string.IsNullOrWhiteSpace(secretKey))
+            throw new ArgumentException("请填写 COS SecretId 和 SecretKey");
+        using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        requestCts.CancelAfter(TimeSpan.FromSeconds(90));
+        using var body = new StringContent(JsonSerializer.Serialize(new
+        {
+            secret_id = secretId.Trim(),
+            secret_key = secretKey.Trim()
+        }), Encoding.UTF8, "application/json");
+        using var publication = CreatePublicationClient();
+        return await publication.SendContentAsync<CosCredentialStatus>(HttpMethod.Post,
+            "/v1/admin/cos/credentials/rotate", body, requestCts.Token);
+    }
     public async Task PublishAsync(PublicationBundle bundle, string kind, UserInfo user, CancellationToken ct = default)
     {
         if (!AccessPolicy.CanPublishContent(user) || string.IsNullOrWhiteSpace(auth.Token))
@@ -80,7 +108,8 @@ public sealed class PublicationUploadService(AuthApiClient auth, CloudCatalogSer
             thumbnailSize = new FileInfo(bundle.ThumbnailPath).Length;
         }
 
-        var intent = await auth.PostJsonAsync<PublicationIntent>("/v1/admin/publications/intents", new
+        using var publication = CreatePublicationClient();
+        var intent = await publication.PostJsonAsync<PublicationIntent>("/v1/admin/publications/intents", new
         {
             kind = kind == "地图" ? "map" : "mod",
             package_key = bundle.PackageKey,
@@ -111,7 +140,7 @@ public sealed class PublicationUploadService(AuthApiClient auth, CloudCatalogSer
             package_sha256 = bundle.PackageSha256,
             next_manifest_sha256 = manifestSha256
         }), Encoding.UTF8, "application/json");
-        var commit = await auth.SendContentAsync<PublicationCommit>(HttpMethod.Post,
+        var commit = await publication.SendContentAsync<PublicationCommit>(HttpMethod.Post,
             "/v1/admin/publications/" + Uri.EscapeDataString(intent.PublicationId) + "/commit", commitBody, ct);
         if (!string.Equals(commit.ManifestSha256, manifestSha256, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("服务端发布结果与待发布清单不一致，请检查云端状态");
@@ -127,6 +156,19 @@ public sealed class PublicationUploadService(AuthApiClient auth, CloudCatalogSer
         throw new InvalidDataException("服务端已提交，但公开清单尚未验证通过；请检查云端状态，勿重复发布");
     }
 
+    private AuthApiClient CreatePublicationClient()
+    {
+        var account = new Uri(auth.BaseUrl, UriKind.Absolute);
+        if (!Uri.TryCreate(config.Current.PublicationApiBaseUrl, UriKind.Absolute, out var endpoint) ||
+            endpoint.Scheme != Uri.UriSchemeHttps ||
+            !endpoint.Host.Equals(account.Host, StringComparison.OrdinalIgnoreCase) ||
+            endpoint.AbsolutePath != "/" || !string.IsNullOrEmpty(endpoint.UserInfo) ||
+            !string.IsNullOrEmpty(endpoint.Query) || !string.IsNullOrEmpty(endpoint.Fragment))
+            throw new InvalidDataException("管理员发布地址必须使用账号服务器的 HTTPS 主机");
+        var client = new AuthApiClient(endpoint.GetLeftPart(UriPartial.Authority), auth.PinnedCertSha256);
+        client.SetToken(auth.Token);
+        return client;
+    }
     private async Task PutFileAsync(string rawUrl, string key, string path, CancellationToken ct)
     {
         var url = ValidateUploadUrl(rawUrl, key, config.Current);
