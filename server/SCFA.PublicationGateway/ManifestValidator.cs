@@ -45,7 +45,15 @@ public static partial class ManifestValidator
         {
             var item = nextList[index] as JsonObject ?? throw new InvalidDataException("清单条目不是对象");
             var id = Required(item, "id");
-            var folder = Required(item, "folder_name");
+            var folder = String(item, "folder_name");
+            // Published manifests can contain legacy entries without folder_name. Keep those
+            // entries byte-for-byte unchanged and use their ID only for collision checking.
+            if (folder.Length == 0 && index < oldList.Count &&
+                oldList[index] is JsonObject legacy &&
+                String(legacy, "id").Equals(id, StringComparison.OrdinalIgnoreCase) &&
+                String(legacy, "folder_name").Length == 0 &&
+                JsonNode.DeepEquals(legacy, item))
+                folder = id;
             if (!IdentityPattern().IsMatch(id) || !ValidFolder(folder) ||
                 !ids.Add(id) || !folders.Add(folder))
                 throw new InvalidDataException("清单含无效或重复 ID/目录");
@@ -90,7 +98,9 @@ public static partial class ManifestValidator
             if (targetIndex != oldIndex || nextList.Count != oldList.Count)
                 throw new InvalidDataException("更新不能改变其他条目位置");
             var old = (JsonObject)oldList[oldIndex]!;
-            if (!String(old, "folder_name").Equals(targetFolder, StringComparison.OrdinalIgnoreCase) ||
+            var oldFolder = String(old, "folder_name") is { Length: > 0 } existingFolder
+                ? existingFolder : Required(old, "id");
+            if (!oldFolder.Equals(targetFolder, StringComparison.OrdinalIgnoreCase) ||
                 !Higher(Required(target, "version"), Required(old, "version")) ||
                 !NotLower(Required(target, "game_version"), String(old, "game_version") is { Length: > 0 } game ? game : Required(old, "version")))
                 throw new InvalidDataException("发布版本、游戏版本或目录不符合安全升级规则");
