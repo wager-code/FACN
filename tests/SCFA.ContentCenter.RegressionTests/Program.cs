@@ -570,9 +570,10 @@ Check(dev20Pages[0].Contains("RestrictedCount", StringComparison.Ordinal) && dev
       "用户和审计页面均使用真实身份与审计状态绑定");
 var publicationViewSource = File.ReadAllText(Path.Combine(uiRoot, "Views", "PublicationView.xaml"));
 Check(mainWindowXaml.Contains("PublicationVisibility", StringComparison.Ordinal) &&
-      publicationViewSource.Contains("不会上传到 COS", StringComparison.Ordinal) &&
+      publicationViewSource.Contains("PublishCommand", StringComparison.Ordinal) &&
+      publicationViewSource.Contains("PublisherStatus", StringComparison.Ordinal) &&
       publicationViewSource.Contains("PrepareCommand", StringComparison.Ordinal),
-      "管理员发布入口与待上传状态有明确界面提示");
+      "管理员发布入口显示自动上传能力与本地准备选项");
 var dev21Pages = new[] { "SetupView.xaml", "SettingsView.xaml" }
     .Select(name => File.ReadAllText(Path.Combine(uiRoot, "Views", name))).ToArray();
 Check(dev21Pages[0].Contains("SetupProgress", StringComparison.Ordinal) && dev21Pages[0].Contains("ContentStateLabel", StringComparison.Ordinal) &&
@@ -1087,7 +1088,27 @@ try
     Check(publishBundle.ContentSha256 == await ContentHash.DirectorySha256Async(publishSource.Root) &&
           publishBundle.PackageSha256 == await ContentHash.FileSha256Async(publishBundle.PackagePath),
           "发布材料中的目录与 ZIP 双哈希均可重新核对");
-    var sameVersionManifest = $$"""{"manifest_version":1,"maps":[{"id":"{{publishSource.Id}}","name":"已发布","version":"{{publishSource.Version}}","folder_name":"{{publishSource.Folder}}","file":"scfa/maps/old.zip"}]}""";
+    var signedUploadUrl = $"https://{config.Current.Bucket}.cos.{config.Current.Region}.myqcloud.com/{publishBundle.PackageKey}?q-signature=example";
+    Check(PublicationUploadService.ValidateUploadUrl(signedUploadUrl, publishBundle.PackageKey, config.Current).Scheme == "https",
+        "管理员上传只接受当前 COS 桶中对应对象的 HTTPS 签名地址");
+    CheckThrows(() => PublicationUploadService.ValidateUploadUrl(
+        "https://other.example.com/" + publishBundle.PackageKey + "?q-signature=example", publishBundle.PackageKey, config.Current),
+        "发布服务不能把管理员上传重定向到其他主机");
+    CheckThrows(() => PublicationUploadService.ValidateUploadUrl(
+        signedUploadUrl.Replace(publishBundle.PackageKey, "scfa/maps/other.zip"), publishBundle.PackageKey, config.Current),
+        "发布服务不能把管理员上传指向其他 COS 对象");
+    CheckThrows(() => PublicationUploadService.ValidateUploadUrl(
+        signedUploadUrl.Replace("https://", "http://"), publishBundle.PackageKey, config.Current),
+        "管理员 COS 上传禁止明文 HTTP");
+    const string publicationId = "8f094dbb-2810-4cff-8ac5-756a7ce1e2ad";
+    var stagedKey = config.Current.Root.Trim('/') + "/publication-staging/" + publicationId + "/package.zip";
+    PublicationUploadService.ValidateStagingKey(stagedKey, publicationId, ".zip", config.Current);
+    CheckThrows(() => PublicationUploadService.ValidateStagingKey(
+        publishBundle.PackageKey, publicationId, ".zip", config.Current),
+        "上传授权不能直接覆盖正式发布包");
+    CheckThrows(() => PublicationUploadService.ValidateStagingKey(
+        stagedKey.Replace(publicationId, "another-publication"), publicationId, ".zip", config.Current),
+        "上传授权必须属于当前发布任务");    var sameVersionManifest = $$"""{"manifest_version":1,"maps":[{"id":"{{publishSource.Id}}","name":"已发布","version":"{{publishSource.Version}}","folder_name":"{{publishSource.Folder}}","file":"scfa/maps/old.zip"}]}""";
     await CheckThrowsAsync<InvalidDataException>(() => publishService.PrepareAsync(publishSource, publishMetadata, sameVersionManifest,
         Path.Combine(configDirectory, "publish-staging"), config.Current, new UserInfo { RoleKey = "admin" }),
         "同 ID 同发布版本不能覆盖已有云端记录");

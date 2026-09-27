@@ -6,10 +6,10 @@
         <StackPanel Margin="0,0,0,15">
             <TextBlock Text="ADMIN PUBLICATION" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="Bold"/>
             <TextBlock Text="管理员发布中心" FontSize="30" FontWeight="SemiBold" Margin="0,3,0,0"/>
-            <TextBlock Text="从本地完整地图或 MOD 准备发布包，核对线上版本并生成待上传清单。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0" TextWrapping="Wrap"/>
+            <TextBlock Text="选择本地地图或 MOD，一键检查、打包并发布到云端。" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0" TextWrapping="Wrap"/>
         </StackPanel>
         <Border Grid.Row="1" Style="{StaticResource InsetBorder}" Padding="13" Margin="0,0,0,14">
-            <TextBlock Text="当前阶段：生成并校验待上传材料。点击“准备发布材料”不会上传到 COS，也不会改变玩家云端清单。请按生成目录中的《发布步骤》由管理员在 COS 控制台上传。" Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap"/>
+            <TextBlock Text="软件内自动发布需要管理员账号服务提供短期 COS 上传授权与清单提交接口。服务未就绪时，发布按钮不可用；“准备发布材料”只在本机生成校验文件。" Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap"/>
         </Border>
         <Border Grid.Row="2" Style="{StaticResource ToolbarBorder}" Margin="0,0,0,14">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -62,7 +62,14 @@
                         <TextBlock Text="内容说明" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/><TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" MaxLength="2000" Height="78" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
                     </StackPanel>
                 </ScrollViewer>
-                <Button Grid.Row="1" Style="{StaticResource PrimaryButton}" Content="准备发布材料" Command="{Binding PrepareCommand}" Margin="0,12,0,0"/>
+                <StackPanel Grid.Row="1" Margin="0,12,0,0">
+                    <TextBlock Text="{Binding PublisherStatus}" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <Button Style="{StaticResource PrimaryButton}" Content="一键打包并发布到云端" Command="{Binding PublishCommand}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Style="{StaticResource SecondaryButton}" Content="准备发布材料" Command="{Binding PrepareCommand}" Margin="0,0,8,0"/>
+                        <Button Style="{StaticResource SecondaryButton}" Content="取消发布" Command="{Binding CancelPublishCommand}"/>
+                    </StackPanel>
+                </StackPanel>
                 </Grid>
             </Border>
         </Grid>
