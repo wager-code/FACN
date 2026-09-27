@@ -577,11 +577,14 @@ Check(dev20Pages[0].Contains("RestrictedCount", StringComparison.Ordinal) && dev
       "用户和审计页面均使用真实身份与审计状态绑定");
 var publicationViewSource = File.ReadAllText(Path.Combine(uiRoot, "Views", "PublicationView.xaml"));
 var adminSettingsViewSource = File.ReadAllText(Path.Combine(uiRoot, "Views", "AdminSettingsView.xaml"));
-Check(mainWindowXaml.Contains("PublicationVisibility", StringComparison.Ordinal) &&
+Check(mainWindowXaml.Contains("PublishMapsCommand", StringComparison.Ordinal) &&
+      mainWindowXaml.Contains("PublishModsCommand", StringComparison.Ordinal) &&
+      mainWindowXaml.Contains("PublicationVisibility", StringComparison.Ordinal) &&
       publicationViewSource.Contains("PublishCommand", StringComparison.Ordinal) &&
       publicationViewSource.Contains("PublisherStatus", StringComparison.Ordinal) &&
-      publicationViewSource.Contains("PrepareCommand", StringComparison.Ordinal),
-      "管理员发布入口显示自动上传能力与本地准备选项");
+      publicationViewSource.Contains("PrepareCommand", StringComparison.Ordinal) &&
+      !publicationViewSource.Contains("SelectedKind, Mode=TwoWay", StringComparison.Ordinal),
+      "地图与 MOD 分别进入管理员发布页，并保留自动上传和本地准备选项");
 Check(mainWindowXaml.Contains("AdminSettingsVisibility", StringComparison.Ordinal) &&
       adminSettingsViewSource.Contains("SecretKeyInput", StringComparison.Ordinal) &&
       adminSettingsViewSource.Contains("验证并保存到服务器", StringComparison.Ordinal) &&

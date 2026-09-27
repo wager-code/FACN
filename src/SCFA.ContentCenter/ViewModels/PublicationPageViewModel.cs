@@ -12,7 +12,7 @@ namespace SCFA.ContentCenter.ViewModels;
 
 public sealed class PublicationPageViewModel : ViewModelBase
 {
-    private string _selectedKind = "地图";
+    private readonly string _selectedKind;
     private LocalContentEntry? _selectedLocal;
     private string _name = "";
     private string _releaseVersion = "";
@@ -30,8 +30,10 @@ public sealed class PublicationPageViewModel : ViewModelBase
     private CancellationTokenSource? _publishCts;
     private int _scanGeneration;
 
-    public PublicationPageViewModel()
+    public PublicationPageViewModel(string kind)
     {
+        if (kind is not ("地图" or "MOD")) throw new ArgumentException("未知内容类型", nameof(kind));
+        _selectedKind = kind;
         ItemsView = CollectionViewSource.GetDefaultView(LocalItems);
         ItemsView.Filter = FilterItem;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
@@ -43,7 +45,7 @@ public sealed class PublicationPageViewModel : ViewModelBase
         _ = RefreshCapabilityAsync();
     }
 
-    public string[] Kinds { get; } = ["地图", "MOD"];
+    public string PageTitle => SelectedKind == "地图" ? "发布地图" : "发布 MOD";
     public ObservableCollection<LocalContentEntry> LocalItems { get; } = [];
     public ICollectionView ItemsView { get; }
     public string SearchText
@@ -57,11 +59,7 @@ public sealed class PublicationPageViewModel : ViewModelBase
             UpdateScanStatus();
         }
     }
-    public string SelectedKind
-    {
-        get => _selectedKind;
-        set { if (Set(ref _selectedKind, value)) _ = RefreshAsync(); }
-    }
+    public string SelectedKind => _selectedKind;
     public LocalContentEntry? SelectedLocal
     {
         get => _selectedLocal;

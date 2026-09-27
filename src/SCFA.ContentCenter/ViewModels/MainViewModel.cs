@@ -26,7 +26,8 @@ public sealed class MainViewModel : ViewModelBase
     private readonly Lazy<UpdatesPageViewModel> _updatesPage;
     private readonly Lazy<UsersPageViewModel> _usersPage;
     private readonly Lazy<OperationsPageViewModel> _operationsPage;
-    private readonly Lazy<PublicationPageViewModel> _publicationPage;
+    private readonly Lazy<PublicationPageViewModel> _publishMapsPage;
+    private readonly Lazy<PublicationPageViewModel> _publishModsPage;
     private readonly Lazy<AdminSettingsPageViewModel> _adminSettingsPage;
     private object _currentPage;
     private string _currentPageTitle;
@@ -80,7 +81,8 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand UpdatesCommand { get; }
     public ICommand UsersCommand { get; }
     public ICommand OperationsCommand { get; }
-    public ICommand PublicationCommand { get; }
+    public ICommand PublishMapsCommand { get; }
+    public ICommand PublishModsCommand { get; }
     public ICommand AdminSettingsCommand { get; }
     public ICommand LogoutCommand { get; }
     public ICommand EditProfileCommand { get; }
@@ -105,7 +107,8 @@ public sealed class MainViewModel : ViewModelBase
         _updatesPage = new(() => new UpdatesPageViewModel());
         _usersPage = new(() => new UsersPageViewModel());
         _operationsPage = new(() => new OperationsPageViewModel());
-        _publicationPage = new(() => new PublicationPageViewModel());
+        _publishMapsPage = new(() => new PublicationPageViewModel("地图"));
+        _publishModsPage = new(() => new PublicationPageViewModel("MOD"));
         _adminSettingsPage = new(() => new AdminSettingsPageViewModel());
 
         var needsSetup = SetupPageViewModel.NeedsSetup();
@@ -126,10 +129,16 @@ public sealed class MainViewModel : ViewModelBase
         UpdatesCommand = new RelayCommand(() => Navigate(_updatesPage.Value, "客户端更新", "检查并安全应用新版本"));
         UsersCommand = new RelayCommand(() => Navigate(_usersPage.Value, "用户管理", "管理角色、状态与登录会话"));
         OperationsCommand = new RelayCommand(() => Navigate(_operationsPage.Value, "服务器审计", "服务健康、权限与审计记录"));
-        PublicationCommand = new RelayCommand(() =>
+        PublishMapsCommand = new RelayCommand(() =>
         {
-            Navigate(_publicationPage.Value, "管理员发布中心", "校验内容并发布地图与 MOD");
-            _ = _publicationPage.Value.RefreshCapabilityAsync();
+            Navigate(_publishMapsPage.Value, "发布地图", "校验并发布本地地图");
+            _ = _publishMapsPage.Value.RefreshCapabilityAsync();
+        },
+            () => PublicationVisibility == Visibility.Visible);
+        PublishModsCommand = new RelayCommand(() =>
+        {
+            Navigate(_publishModsPage.Value, "发布 MOD", "校验并发布本地模组");
+            _ = _publishModsPage.Value.RefreshCapabilityAsync();
         },
             () => PublicationVisibility == Visibility.Visible);
         AdminSettingsCommand = new RelayCommand(() => Navigate(_adminSettingsPage.Value, "管理员设置", "管理服务器 COS 发布凭据"),
