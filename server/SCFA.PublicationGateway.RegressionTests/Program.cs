@@ -1,5 +1,7 @@
 using System.IO.Compression;
+using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using SCFA.ContentCenter.Core;
@@ -33,6 +35,17 @@ try
     Check(url.Scheme == "https" && url.Host == "examplebucket-1250000000.cos.ap-shanghai.myqcloud.com" &&
           url.AbsolutePath == "/scfa/publication-staging/test/package.zip" && url.Query.Contains("q-signature", StringComparison.Ordinal),
           "官方 SDK 生成的签名上传 URL 绑定指定桶与对象");
+
+    using (var forbidden = new HttpResponseMessage(HttpStatusCode.Forbidden)
+    {
+        Content = new StringContent("<Error><Code>SignatureDoesNotMatch</Code><Message>private-path-and-secret</Message></Error>", Encoding.UTF8)
+    })
+    {
+        var failure = await CosRequestException.FromResponseAsync(forbidden, "PUT", CancellationToken.None);
+        Check(failure.StatusCode == HttpStatusCode.Forbidden && failure.CosCode == "SignatureDoesNotMatch" &&
+              !failure.Message.Contains("private-path-and-secret", StringComparison.Ordinal),
+              "COS 拒绝时仅报告状态和安全的错误码，不泄露响应详情");
+    }
 
     var folder = "test_map";
     var mapRoot = Path.Combine(root, folder);
@@ -80,6 +93,46 @@ try
         NextManifestSha256 = CosTransport.Sha256(nextWithSpacesText)
     }, oldWithSpacesText, options);
     Check(true, "既有清单的含空格游戏目录可以继续发布新内容");
+    var oldWithLegacy = JsonNode.Parse(oldManifest)!.AsObject();
+    var nextWithLegacy = JsonNode.Parse(nextManifest)!.AsObject();
+    foreach (var legacyId in new[] { "6_fields_of_isis", "xxx_survival" })
+    {
+        var legacyWithoutFolder = JsonNode.Parse($$"""{"id":"{{legacyId}}","name":"Legacy Map","version":"1","file":"scfa/maps/{{legacyId}}/1.zip"}""")!;
+        oldWithLegacy["maps"]!.AsArray().Add(legacyWithoutFolder.DeepClone());
+        nextWithLegacy["maps"]!.AsArray().Insert(nextWithLegacy["maps"]!.AsArray().Count - 1, legacyWithoutFolder.DeepClone());
+    }
+    var oldWithLegacyText = oldWithLegacy.ToJsonString();
+    var nextWithLegacyText = nextWithLegacy.ToJsonString();
+    var legacyRequest = request with
+    {
+        OriginalManifestSha256 = CosTransport.Sha256(oldWithLegacyText),
+        NextManifest = nextWithLegacyText,
+        NextManifestSha256 = CosTransport.Sha256(nextWithLegacyText)
+    };
+    ManifestValidator.Validate(legacyRequest, oldWithLegacyText, options);
+    Check(true, "未改动的旧地图记录缺少 folder_name 时仍可发布新内容");
+    var changedLegacy = (JsonObject)nextWithLegacy.DeepClone();
+    changedLegacy["maps"]!.AsArray()[0]!["name"] = "Changed Legacy Map";
+    var changedLegacyText = changedLegacy.ToJsonString();
+    await ExpectInvalidAsync(() => Task.Run(() => ManifestValidator.Validate(legacyRequest with
+    {
+        NextManifest = changedLegacyText,
+        NextManifestSha256 = CosTransport.Sha256(changedLegacyText)
+    }, oldWithLegacyText, options)), "缺少目录字段的旧记录不得趁发布时修改");
+    var newWithoutFolder = JsonNode.Parse(nextManifest)!.AsObject();
+    newWithoutFolder["maps"]!.AsArray()[0]!.AsObject().Remove("folder_name");
+    var newWithoutFolderText = newWithoutFolder.ToJsonString();
+    await ExpectInvalidAsync(() => Task.Run(() => ManifestValidator.Validate(request with
+    {
+        NextManifest = newWithoutFolderText,
+        NextManifestSha256 = CosTransport.Sha256(newWithoutFolderText)
+    }, oldManifest, options)), "新发布条目必须明确指定 folder_name");
+    var oldTargetWithoutFolder = JsonNode.Parse(oldManifest)!.AsObject();
+    oldTargetWithoutFolder["maps"]!.AsArray().Add(JsonNode.Parse($$"""{"id":"{{folder}}","name":"Old Map","version":"1","game_version":"1","file":"scfa/maps/{{folder}}/1.zip"}"""));
+    var oldTargetWithoutFolderText = oldTargetWithoutFolder.ToJsonString();
+    ManifestValidator.Validate(request with { OriginalManifestSha256 = CosTransport.Sha256(oldTargetWithoutFolderText) },
+        oldTargetWithoutFolderText, options);
+    Check(true, "更新同 ID 旧地图时可将缺失的 folder_name 补为内容 ID");
     await ExpectInvalidAsync(() => PackageValidator.ValidateAsync(zipPath,
         request with { ContentSha256 = new string('0', 64) }, target, CancellationToken.None),
         "服务端拒绝 ZIP 内容指纹错误");
