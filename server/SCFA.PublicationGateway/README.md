@@ -14,10 +14,10 @@
 ## 部署约束
 
 1. 先备份现有账号服务的数据、二进制、环境文件和 Nginx 配置；本项目不替换账号服务，也不读取其本地数据库。
-2. 账号服务继续监听本机 127.0.0.1:18080，必须支持已登录管理员的 GET /v1/auth/me，返回 user.id、role_key 和 status。此服务每次请求都向该接口验证 Token。
+2. 账号服务继续监听本机 127.0.0.1:18080，且继续独占公网 HTTPS 18443，必须支持已登录管理员的 GET /v1/auth/me，返回 user.id、role_key 和 status。此服务每次请求都向该接口验证 Token。
 3. 把本项目以 Linux x64 自包含方式发布到 /opt/scfa-publication；以独立的 scfa-publication 用户运行，仅监听 127.0.0.1:18081。部署示例见同目录的 .service、.env.example、nginx 示例。
 4. 环境变量指定唯一的 COS 桶、地域与根路径。SCFA_PUBLICATION_MASTER_KEY_B64 是服务器专用的随机 32 字节 AES-GCM 主密钥，必须长期保留并单独备份。丢失它就无法解密已保存的 COS 凭据；主密钥和 COS 密钥都不得上传 GitHub。
-5. 只把 /v1/admin/publications/ 与 /v1/admin/cos/credentials/ 两个前缀反向代理到 18081。其他 /v1 路由保持原账号服务配置。客户端继续使用现有 HTTPS 地址及证书校验。
+5. 在独立的 Nginx HTTPS 18444 入口，只把 /v1/admin/publications/ 与 /v1/admin/cos/credentials/ 两个前缀反向代理到 18081，其余路径返回 404。账号及玩家仍使用 18443；客户端发布请求使用 18444，并复用同一证书指纹校验。启用外网端口前先完成内部测试。
 6. 首次启动后，用软件登录超级管理员，在“管理员发布中心”设置 COS SecretId/SecretKey。服务端先执行随机暂存对象的写、读、删验证，再把凭据加密存入 /var/lib/scfa-publication。COS 身份应只允许该桶的 scfa/manifest、maps、mods、thumbnails、publication-staging 相关操作。
 7. 用隔离桶验收后再切换正式桶，确认线上清单与正式包可公开读取或由现有下载机制读取。
 
