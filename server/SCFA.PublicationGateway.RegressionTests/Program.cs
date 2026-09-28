@@ -82,6 +82,32 @@ try
     Check(downlisted["maps"]!.AsArray().Count == 0 &&
           downlisted["preserved_field"]!.GetValue<bool>() &&
           downlisted["updated_at"] is not null, "下架地图只移除目标记录并保留清单其他字段");
+    var archive = PublicationArchive.Build("map", "scfa", Encoding.UTF8.GetString(UnpublishManifest.Remove(nextManifest, downlist)),
+        [nextManifest, oldManifest]);
+    Check(archive.Items.Count == 1 && archive.Items[0].Downlisted &&
+          archive.Items[0].Versions.Count == 1 && archive.Items[0].Versions[0].State == "downlisted",
+          "已下架地图仍可从清单备份查看，重复快照不制造假版本");
+    var restored = JsonNode.Parse(RestoreManifest.Add(
+        Encoding.UTF8.GetString(UnpublishManifest.Remove(nextManifest, downlist)),
+        "map", "scfa", archive.Items[0].Versions[0].Entry))!.AsObject();
+    Check(restored["maps"]!.AsArray().Count == 1 &&
+          restored["maps"]![0]!["sha256"]!.GetValue<string>() == packageHash &&
+          restored["preserved_field"]!.GetValue<bool>(),
+          "恢复已下架地图保留原记录与无关清单字段");
+    await ExpectInvalidAsync(() => Task.Run(() => RestoreManifest.Add(
+        nextManifest, "map", "scfa", archive.Items[0].Versions[0].Entry)),
+        "现有正式版本不得被历史恢复覆盖");
+    var unsafeArchive = (JsonObject)archive.Items[0].Versions[0].Entry.DeepClone();
+    unsafeArchive["folder_name"] = "..";
+    await ExpectInvalidAsync(() => Task.Run(() => RestoreManifest.Add(
+        oldManifest, "map", "scfa", unsafeArchive)), "不安全的历史目录不得恢复");
+    var historicalMap = (JsonObject)JsonNode.Parse(nextManifest)!.DeepClone();
+    historicalMap["maps"]![0]!["version"] = "3";
+    historicalMap["maps"]![0]!["file"] = "scfa/maps/test_map/test_map-3.zip";
+    var multiVersion = PublicationArchive.Build("map", "scfa", historicalMap.ToJsonString(), [nextManifest]);
+    Check(multiVersion.Items.Count == 1 && !multiVersion.Items[0].Downlisted &&
+          multiVersion.Items[0].Versions.Select(x => x.Entry["version"]!.GetValue<string>()).SequenceEqual(["3", "2"]),
+          "当前地图和旧版按版本记录一同显示");
     await ExpectInvalidAsync(() => Task.Run(() => UnpublishManifest.Remove(nextManifest,
         downlist with { ContentId = "other_map" })), "不存在的地图 ID 不得下架");
     var duplicate = JsonNode.Parse(nextManifest)!.AsObject();
@@ -175,4 +201,3 @@ static async Task ExpectInvalidAsync(Func<Task> action, string title)
     catch (InvalidDataException) { Console.WriteLine("PASS " + title); return; }
     throw new Exception("FAIL " + title);
 }
-
