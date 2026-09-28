@@ -83,6 +83,19 @@ app.MapPost("/v1/admin/publications/{publicationId}/commit",
             return Results.Ok(result);
         }, app.Logger));
 
+app.MapPost("/v1/admin/publications/unpublish",
+    async (HttpContext context, UnpublishRequest request, AdminAuthenticator auth,
+        PublicationCoordinator publications, CancellationToken ct) =>
+        await Guard(async () =>
+        {
+            var user = await auth.VerifyAsync(context, ct);
+            if (user is null) return Results.Unauthorized();
+            var result = await publications.UnpublishAsync(request, user, ct);
+            app.Logger.LogInformation("Content downlisted {Kind} {ContentId} by {UserId}",
+                request.Kind, request.ContentId, user.UserId);
+            return Results.Ok(result);
+        }, app.Logger));
+
 app.Run();
 
 static async Task<IResult> Guard(Func<Task<IResult>> work, ILogger logger)
@@ -92,6 +105,13 @@ static async Task<IResult> Guard(Func<Task<IResult>> work, ILogger logger)
     catch (FileNotFoundException ex) { return Results.NotFound(new { message = ex.Message }); }
     catch (InvalidDataException ex) { return Results.BadRequest(new { message = ex.Message }); }
     catch (TimeoutException ex) { return Results.BadRequest(new { message = ex.Message }); }
+    catch (CosRequestException ex)
+    {
+        logger.LogWarning("COS {Operation} failed with HTTP {Status} and code {CosCode}",
+            ex.Operation, (int)ex.StatusCode!.Value, ex.CosCode ?? "unknown");
+        var code = ex.CosCode is null ? "" : $"，错误码 {ex.CosCode}";
+        return Results.Json(new { message = $"COS {ex.Operation} 请求失败：HTTP {(int)ex.StatusCode!.Value}{code}" }, statusCode: 502);
+    }
     catch (HttpRequestException ex)
     {
         logger.LogWarning("Publication upstream request failed with status {Status}", ex.StatusCode);
@@ -103,3 +123,4 @@ static async Task<IResult> Guard(Func<Task<IResult>> work, ILogger logger)
         return Results.Problem("发布服务内部错误，请查看服务器日志", statusCode: 500);
     }
 }
+
