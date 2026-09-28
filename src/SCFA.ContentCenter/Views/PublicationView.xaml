@@ -51,11 +51,11 @@
                         <TextBlock Text="{Binding SelectedSummary}" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,5,0,10"/>
                         <TextBlock Text="发布名称" Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" MaxLength="120"/>
                         <TextBlock Text="发布版本" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/><TextBox Text="{Binding ReleaseVersion, UpdateSourceTrigger=PropertyChanged}" MaxLength="80"/>
-                        <TextBlock Text="游戏内部版本从文件读取，不可在这里修改。发布版本必须高于线上版本。" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        <TextBlock Text="发布版本是云端更新号，须高于线上版本；游戏内部版本从文件读取，两者可以不同。" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
                         <TextBlock Text="作者" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/><TextBox Text="{Binding Author, UpdateSourceTrigger=PropertyChanged}" MaxLength="120"/>
                         <TextBlock Text="分类" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/><TextBox Text="{Binding Category, UpdateSourceTrigger=PropertyChanged}" MaxLength="80"/>
                         <TextBlock Text="标签（逗号分隔，可不填）" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/><TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" MaxLength="400"/>
-                        <TextBlock Text="内容说明" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/><TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" MaxLength="2000" Height="78" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
+                        <TextBlock Text="内容说明（可不填）" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/><TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" MaxLength="2000" Height="78" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
                     </StackPanel>
                 </ScrollViewer>
                 <StackPanel Grid.Row="1" Margin="0,12,0,0">
