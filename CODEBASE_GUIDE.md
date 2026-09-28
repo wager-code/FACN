@@ -82,7 +82,7 @@ WPF 界面。主要负责布局、绑定和少量纯 UI 交互。
 | 一键同步 | `Services/SyncService.cs`, `ViewModels/SyncPageViewModel.cs`, `Views/SyncView.*` | 调用安装服务，不另写一套安装逻辑 |
 | “不喜欢”自动跳过 | `Services/SyncPreferenceService.cs` + 云端/同步页面 | 当前仅本机按账号隔离 |
 | 同步历史 | `Services/SyncHistoryService.cs`, `Models/SyncHistoryModels.cs` | 本地数据 |
-| **管理员发布地图/MOD** | **`ViewModels/PublicationPageViewModel.cs`, `Views/PublicationView.*`, `Services/PublicationPreparationService.cs`, `Services/PublicationUploadService.cs`** | **`server/SCFA.PublicationGateway/`** |
+| **管理员发布地图/MOD** | **`ViewModels/PublicationPageViewModel.cs`, `Views/PublicationView.*`, `Services/PublicationPreparationService.cs`, `Services/PublicationApiModels.cs`, `Services/PublicationUploadService.cs`** | **`server/SCFA.PublicationGateway/`** |
 | 管理员 COS 凭据 | `ViewModels/AdminSettingsPageViewModel.cs`, `Views/AdminSettingsView.*`, `Services/PublicationUploadService.cs` | 网关 `Program.cs`, `GatewayModels.cs`, `CosTransport.cs` |
 | 下架内容 | `ViewModels/CloudPageViewModel.cs`, `Services/PublicationUploadService.cs` | `PublicationCoordinator.cs`, `UnpublishManifest.cs` |
 | 版本档案/历史版本 | `Services/CloudHistoryService.cs`, `ViewModels/CloudHistoryPageViewModel.cs`, `Views/CloudHistoryView.*` | `PublicationArchive.cs`, `PublicationCoordinator.cs` |
@@ -105,6 +105,11 @@ WPF 界面。主要负责布局、绑定和少量纯 UI 交互。
 - 生成下一版 manifest。
 - 准备可选缩略图。
 - **它只准备本地材料，不直接写 COS。**
+
+**`PublicationApiModels.cs`**
+
+- 客户端与发布网关通信使用的 DTO：capability、intent、commit、downlist、archive、restore、COS credential status。
+- 只描述协议数据，不执行网络操作。
 
 **`PublicationUploadService.cs`**
 

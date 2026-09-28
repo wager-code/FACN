@@ -88,7 +88,7 @@ SCFA 内容中心面向《最高指挥官：钢铁联盟》Steam 版玩家，目
 1. 把 `tests/SCFA.ContentCenter.RegressionTests/Program.cs` 从单个超大文件逐步拆成按领域组织的测试文件。
 2. 评估拆分 `CloudPageViewModel.cs`，把展示状态、批量操作、冲突处理等职责分开。
 3. 评估拆分 `SettingsPageViewModel.cs`，避免设置、检测、保存、健康状态全部集中在一个类。
-4. 评估把 `PublicationUploadService.cs` 中的 API DTO 与网络操作拆开，但必须保持客户端/网关协议一致。
+4. `PublicationUploadService.cs` 的 API DTO 已拆到 `PublicationApiModels.cs`；后续继续保持协议模型与网络逻辑分离。
 5. 每次新增 Service/Model 前先查重，避免产生并行实现。
 6. 只在有引用证据和回归覆盖时删除旧代码。
 

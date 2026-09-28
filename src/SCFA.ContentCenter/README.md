@@ -28,7 +28,7 @@
 - 安装/修复：`InstallService.cs`
 - 备份/恢复：`BackupService.cs`
 - 一键同步：`SyncService.cs` + `SyncPageViewModel.cs`
-- 管理员发布：`PublicationPreparationService.cs` + `PublicationUploadService.cs` + `PublicationPageViewModel.cs`
+- 管理员发布：`PublicationPreparationService.cs` + `PublicationApiModels.cs` + `PublicationUploadService.cs` + `PublicationPageViewModel.cs`
 - 下架/版本档案/恢复：`CloudHistoryService.cs` + `CloudHistoryPageViewModel.cs` + `PublicationUploadService.cs`
 - 客户端更新：`UpdateService.cs` + `UpdateApplier.cs`
 - 设置：`SettingsPageViewModel.cs` + `ConfigService.cs`
