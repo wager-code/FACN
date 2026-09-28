@@ -63,10 +63,13 @@
                             <RadioButton x:Name="BackupsButton" Style="{StaticResource NavRadioButton}" Command="{Binding BackupsCommand}" ToolTip="历史回滚">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/history_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="BackupsLabel" Grid.Column="1" Text="历史回滚" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
-                            <RadioButton x:Name="CloudHistoryButton" Style="{StaticResource NavRadioButton}" Command="{Binding CloudHistoryCommand}" ToolTip="云端历史">
-                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="CloudHistoryLabel" Grid.Column="1" Text="云端历史" VerticalAlignment="Center"/></Grid>
-                            </RadioButton>
                             <TextBlock x:Name="AdminGroupLabel" Text="管理" Visibility="{Binding AdminToolsVisibility}" Margin="24,18,0,6" Foreground="{StaticResource TextMutedBrush}" FontSize="10" FontWeight="SemiBold"/>
+                            <RadioButton x:Name="CloudHistoryButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding PublicationVisibility}" Command="{Binding CloudHistoryCommand}" ToolTip="地图版本">
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/history_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="CloudHistoryLabel" Grid.Column="1" Text="地图版本" VerticalAlignment="Center"/></Grid>
+                            </RadioButton>
+                            <RadioButton x:Name="DownlistedButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding PublicationVisibility}" Command="{Binding DownlistedCommand}" ToolTip="已下架内容">
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="DownlistedLabel" Grid.Column="1" Text="已下架内容" VerticalAlignment="Center"/></Grid>
+                            </RadioButton>
                             <RadioButton x:Name="PublishMapsButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding PublicationVisibility}" Command="{Binding PublishMapsCommand}" ToolTip="发布地图">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/map_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="PublishMapsLabel" Grid.Column="1" Text="发布地图" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
