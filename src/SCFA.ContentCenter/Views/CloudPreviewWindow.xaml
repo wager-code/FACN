@@ -1,0 +1,13 @@
+<Window x:Class="SCFA.ContentCenter.Views.CloudPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="内容预览" Width="1000" Height="760" MinWidth="420" MinHeight="320"
+        WindowStartupLocation="CenterOwner" Background="#07101C" Foreground="White">
+    <Grid Margin="18">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <TextBlock Text="{Binding DisplayName, Mode=OneWay}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,0,0,14"/>
+        <Border Grid.Row="1" Background="#0A1727" BorderBrush="#29415D" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+            <Image Source="{Binding DisplayPreviewSource, Mode=OneWay}" Stretch="Uniform" Margin="12" RenderOptions.BitmapScalingMode="HighQuality"/>
+        </Border>
+    </Grid>
+</Window>
