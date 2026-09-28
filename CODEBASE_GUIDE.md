@@ -167,6 +167,86 @@ HTTP 路由与依赖注册。这里能快速看到网关对外提供哪些管理
 
 从档案中安全构造恢复后的正式清单。
 
+## 客户端关键文件索引
+
+### Core
+
+| 文件 | 责任 |
+| --- | --- |
+| `AccessPolicy.cs` | 根据真实用户角色/权限决定管理员入口和敏感操作是否可用 |
+| `AppVersion.cs` | 统一读取/展示客户端版本 |
+| `ContentHash.cs` | 文件和目录 SHA-256/内容指纹 |
+| `ContentIdentity.cs` | 判断本地内容与云端条目是否是同一个地图/MOD |
+| `ProgressStreamContent.cs` | HTTP 上传/传输进度支持 |
+| `SafeArchive.cs` | ZIP 相对路径与解压安全规则，防止越界写入 |
+| `SettingsValidator.cs` | 配置、目录、网络地址等保存前校验 |
+
+### Services
+
+| 文件 | 责任 |
+| --- | --- |
+| `AuthApiClient.cs` | 账号服务 HTTP 客户端：登录、注册、身份、健康状态等 |
+| `BackupService.cs` | 创建、校验、列出和恢复地图/MOD 备份 |
+| `CloudCatalogService.cs` | 读取 COS 正式清单、构造公开 URL、下载内容包 |
+| `CloudHistoryService.cs` | 调用管理员档案 API，并转换成客户端可展示的版本列表 |
+| `ConfigService.cs` | 本机配置读取、迁移、原子保存和数据目录定位 |
+| `DiagnosticsService.cs` | 游戏目录、网络、运行环境等只读诊断 |
+| `GamePathService.cs` | 游戏根目录与 Maps/Mods 目录发现/验证 |
+| `InstallService.cs` | 下载后校验、备份、解压、替换、冲突清理和失败恢复 |
+| `LocalContentService.cs` | 扫描并解析本地地图/MOD 的真实名称、版本、结构 |
+| `LogService.cs` | 本地运行日志与启动阶段日志 |
+| `LoginCredentialProtector.cs` | 使用 Windows 用户级保护保存“记住密码”等登录信息 |
+| `ManagementService.cs` | 用户管理、会话/审计等管理员账号服务调用 |
+| `MapPreviewService.cs` | 从地图文件读取/提取游戏预览图 |
+| `PreviewImageValidator.cs` | 发布/展示用图片的格式、尺寸与安全检查 |
+| `PublicationPreparationService.cs` | 本地发布材料：ZIP、哈希、下一版 manifest、缩略图 |
+| `PublicationApiModels.cs` | 客户端 ↔ 发布网关协议 DTO，不执行网络操作 |
+| `PublicationUploadService.cs` | 发布网关调用、staging 上传、commit、下架、档案、恢复、COS 凭据管理 |
+| `ServiceRegistry.cs` | 创建并共享客户端所有长期 Service |
+| `SyncHistoryService.cs` | 保存最近同步执行历史 |
+| `SyncPreferenceService.cs` | 保存按账号隔离的“不喜欢/自动跳过”偏好 |
+| `SyncService.cs` | 比较云端与本地状态，决定跳过/安装/升级/阻止冲突 |
+| `TaskService.cs` | 下载/后台任务状态集合 |
+| `UpdateApplier.cs` | 客户端更新后的进程替换与临时文件清理 |
+| `UpdateService.cs` | 检查、下载和验证客户端更新包 |
+| `UserSessionService.cs` | 本机登录会话的恢复与清除 |
+
+### 主要 ViewModel / View
+
+| ViewModel | 对应界面 | 责任 |
+| --- | --- | --- |
+| `MainViewModel.cs` | `MainWindow.xaml` | 主导航、页面实例、权限可见性 |
+| `DashboardPageViewModel.cs` | `DashboardView.xaml` | 首页状态概览 |
+| `CloudPageViewModel.cs` | `CloudContentView.xaml` | 云端地图/MOD 列表、搜索、安装、冲突处理、管理员下架入口 |
+| `LocalPageViewModel.cs` | `LocalContentView.xaml` | 本地地图/MOD 列表和安全删除 |
+| `SyncPageViewModel.cs` | `SyncView.xaml` | 一键同步状态、取消、结果和历史 |
+| `BackupsPageViewModel.cs` | `BackupsView.xaml` | 备份浏览和恢复 |
+| `PublicationPageViewModel.cs` | `PublicationView.xaml` | 管理员地图/MOD 发布页面流程 |
+| `CloudHistoryPageViewModel.cs` | `CloudHistoryView.xaml` | 管理员版本档案、历史安装和恢复 |
+| `AdminSettingsPageViewModel.cs` | `AdminSettingsView.xaml` | 超级管理员 COS 写入凭据设置 |
+| `UsersPageViewModel.cs` | `UsersView.xaml` | 用户/账号管理 |
+| `OperationsPageViewModel.cs` | `OperationsView.xaml` | 服务状态和审计 |
+| `SettingsPageViewModel.cs` | `SettingsView.xaml` | 软件配置、检测和保存 |
+| `SetupPageViewModel.cs` | `SetupView.xaml` | 首次设置向导 |
+| `UpdatesPageViewModel.cs` | `UpdatesView.xaml` | 客户端更新页面 |
+| `DiagnosticsPageViewModel.cs` | `DiagnosticsView.xaml` | 诊断页面 |
+| `DownloadsPageViewModel.cs` | `DownloadsView.xaml` | 当前任务/下载列表 |
+
+### Models
+
+模型文件原则上只描述数据，不执行磁盘或网络操作：
+
+- `AppConfig.cs`：本机配置与用户本地资料。
+- `AuthModels.cs`：账号/权限/登录 API 数据。
+- `BackupModels.cs`：备份元数据。
+- `ContentModels.cs`：云端/本地地图和 MOD 数据。
+- `DiagnosticModels.cs`：诊断结果。
+- `HistoryModels.cs`：版本档案结果。
+- `ManagementModels.cs`：用户/审计管理数据。
+- `SyncHistoryModels.cs`：同步历史。
+- `TaskModels.cs`：后台任务。
+- `UpdateModels.cs`：客户端更新。
+
 ## 关键安全边界
 
 修改以下区域时必须先读相关回归测试：
