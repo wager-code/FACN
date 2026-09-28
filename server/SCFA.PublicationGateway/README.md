@@ -17,7 +17,7 @@
 | `PublicationArchive.cs` | 组合当前清单与历史快照，生成管理员版本档案 |
 | `RestoreManifest.cs` | 从档案构造安全的恢复清单 |
 
-客户端对应代码主要在 `src/SCFA.ContentCenter/Services/PublicationPreparationService.cs` 和 `PublicationUploadService.cs`。完整链路见仓库根目录 `CODEBASE_GUIDE.md`。
+客户端对应代码主要在 `src/SCFA.ContentCenter/Services/PublicationPreparationService.cs` 和 `PublicationUploadService.cs`。完整链路见`docs/CODEBASE_GUIDE.md`。
 
 ## 本地验证
 

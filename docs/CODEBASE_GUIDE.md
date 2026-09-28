@@ -19,12 +19,17 @@ FACN/
 ├─ server/SCFA.PublicationGateway.RegressionTests/
 ├─ tests/SCFA.ContentCenter.RegressionTests/ 客户端核心回归/WPF smoke
 ├─ .github/workflows/                       CI 与网关发布
-├─ PRODUCT_REQUIREMENTS.md                  已确认产品要求
-├─ ROADMAP.md                               后续开发顺序
-├─ PROJECT_HANDOFF.md                       当前生产/交接事实
-├─ BUILD_VALIDATION.md                      当前构建与验收门槛
-├─ ADMIN_PUBLISH_PLAN.md                    管理员发布架构
-└─ ADMIN_PUBLISH_API.md                     客户端与网关 API 契约
+└─ docs/                                    项目开发与维护手册
+   ├─ 00_START_HERE.md                      新电脑/新开发者入口
+   ├─ PRODUCT_REQUIREMENTS.md               已确认产品要求
+   ├─ ROADMAP.md                            后续开发顺序
+   ├─ CODEBASE_GUIDE.md                     功能与源码导航
+   ├─ PROJECT_HANDOFF.md                    当前生产/交接事实
+   ├─ BUILD_VALIDATION.md                   构建与验收门槛
+   ├─ DEPLOYMENT_POLICY.md                  生产服务器部署边界
+   ├─ ADMIN_PUBLISH_PLAN.md                 管理员发布架构
+   ├─ ADMIN_PUBLISH_API.md                  客户端与网关 API 契约
+   └─ TROUBLESHOOTING.md                    故障排查与服务器交接
 ```
 
 ## 客户端分层
