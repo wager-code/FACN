@@ -37,7 +37,7 @@ public sealed class CloudPageViewModel : ViewModelBase
     public string LibraryFilter { get => _libraryFilter; set { if (Set(ref _libraryFilter, value)) RefreshFilteredView(); } }
     public string FavoriteActionText => SelectedItem?.IsFavorite == true ? "取消收藏" : "收藏所选内容";
     public Visibility AdminActionVisibility => CanUnpublish ? Visibility.Visible : Visibility.Collapsed;
-    public bool CanUnpublish => AccessPolicy.CanUnpublish(App.Services.CurrentUser);
+    public bool CanUnpublish => AccessPolicy.CanPublishContent(App.Services.CurrentUser);
     public int TotalCount => Items.Count;
     public int VisibleCount => ItemsView.Cast<object>().Count();
     public int SelectedCount => Items.Count(x => x.IsSelected);
@@ -462,7 +462,7 @@ public sealed class CloudPageViewModel : ViewModelBase
         var item = SelectedItem;
         if (item is null || !CanUnpublish) return;
         var answer = MessageBox.Show(
-            $"确定从正式云端目录下架以下内容吗？\n\n{item.Kind}：{item.Name}\n版本：{item.Version}\nID：{item.Id}\n\n下架不会删除玩家电脑上已经安装的内容，服务器会保留审计记录。",
+            $"确定从正式云端目录下架以下内容吗？\n\n{item.Kind}：{item.Name}\n版本：{item.Version}\nID：{item.Id}\n\n玩家已安装的内容不受影响；云端包和缩略图会保留以便恢复。",
             "确认下架云端内容",
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
@@ -470,7 +470,7 @@ public sealed class CloudPageViewModel : ViewModelBase
         try
         {
             Status = $"正在下架 {item.Name}…";
-            await App.Services.Management.UnpublishContentAsync(item.Kind, item.Id, "管理员在云端内容目录中手动下架");
+            await App.Services.PublicationUpload.UnpublishAsync(item.Kind, item.Id, App.Services.CurrentUser);
             Status = $"已下架：{item.Name}";
             await RefreshAsync();
         }
@@ -567,3 +567,4 @@ public sealed class CloudPageViewModel : ViewModelBase
         CancelBatchCommand.RaiseCanExecuteChanged();
     }
 }
+
