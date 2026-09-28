@@ -77,6 +77,23 @@ try
         nextManifest, CosTransport.Sha256(nextManifest), null, null, null);
     var target = ManifestValidator.Validate(request, oldManifest, options);
     Check(target.Folder == folder && target.GameVersion == "2", "服务端独立识别待发布地图和游戏版本");
+    var downlist = new UnpublishRequest("map", folder, "管理员撤回此地图", "test");
+    var downlisted = JsonNode.Parse(UnpublishManifest.Remove(nextManifest, downlist))!.AsObject();
+    Check(downlisted["maps"]!.AsArray().Count == 0 &&
+          downlisted["preserved_field"]!.GetValue<bool>() &&
+          downlisted["updated_at"] is not null, "下架地图只移除目标记录并保留清单其他字段");
+    await ExpectInvalidAsync(() => Task.Run(() => UnpublishManifest.Remove(nextManifest,
+        downlist with { ContentId = "other_map" })), "不存在的地图 ID 不得下架");
+    var duplicate = JsonNode.Parse(nextManifest)!.AsObject();
+    duplicate["maps"]!.AsArray().Add(duplicate["maps"]!.AsArray()[0]!.DeepClone());
+    await ExpectInvalidAsync(() => Task.Run(() => UnpublishManifest.Remove(duplicate.ToJsonString(), downlist)),
+        "重复 ID 的清单不得模糊下架");
+    var modsManifest = """{"mods":[{"id":"mod_a","file":"a.zip"},{"id":"mod_b","file":"b.zip"}],"preserved_field":true}""";
+    var downlistedMods = JsonNode.Parse(UnpublishManifest.Remove(modsManifest,
+        new UnpublishRequest("mod", "mod_a", "管理员撤回此 MOD", "test")))!.AsObject();
+    Check(downlistedMods["mods"]!.AsArray().Count == 1 &&
+          downlistedMods["mods"]![0]!["id"]!.GetValue<string>() == "mod_b",
+          "下架 MOD 保留未选中的 MOD");
     await PackageValidator.ValidateAsync(zipPath, request, target, CancellationToken.None);
     Check(true, "服务端重新验证 ZIP 路径、引用文件、版本和目录内容指纹");
     var legacy = JsonNode.Parse("""{"id":"old_map","name":"Old Map","version":"1","folder_name":"Old Map","file":"scfa/maps/old_map/1.zip"}""")!;
@@ -158,3 +175,4 @@ static async Task ExpectInvalidAsync(Func<Task> action, string title)
     catch (InvalidDataException) { Console.WriteLine("PASS " + title); return; }
     throw new Exception("FAIL " + title);
 }
+
