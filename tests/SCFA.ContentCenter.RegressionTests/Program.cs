@@ -564,12 +564,15 @@ Check(new[] { "WorkflowStepBorder", "StatusBadgeBorder", "PreviewFrame" }.All(ap
 var dev19Pages = new[] { "BackupsView.xaml", "CloudHistoryView.xaml", "DiagnosticsView.xaml", "UpdatesView.xaml" }
     .Select(name => File.ReadAllText(Path.Combine(uiRoot, "Views", name))).ToArray();
 Check(dev19Pages[0].Contains("SelectedIntegrity", StringComparison.Ordinal) && dev19Pages[0].Contains("TotalSizeText", StringComparison.Ordinal) &&
-      dev19Pages[1].Contains("SelectedVersionLabel", StringComparison.Ordinal) && dev19Pages[1].Contains("VersionCount", StringComparison.Ordinal) &&
+      dev19Pages[1].Contains("SelectedVersionLabel", StringComparison.Ordinal) && dev19Pages[1].Contains("DownlistedCount", StringComparison.Ordinal) &&
       dev19Pages[2].Contains("HealthLabel", StringComparison.Ordinal) && dev19Pages[2].Contains("ProblemCount", StringComparison.Ordinal) &&
       dev19Pages[3].Contains("SecurityStateLabel", StringComparison.Ordinal) && dev19Pages[3].Contains("StageStateLabel", StringComparison.Ordinal),
-      "备份、云历史、诊断和更新页面均使用真实状态与统计绑定");
-Check(dev19Pages[1].Contains("SearchText", StringComparison.Ordinal) && dev19Pages[1].Contains("FilteredContentCount", StringComparison.Ordinal), "云端历史提供实时搜索、清除与结果计数");
-Check(dev19Pages[1].Contains("ContentCount, Mode=OneWay", StringComparison.Ordinal) && dev19Pages[1].Contains("FilteredContentCount, Mode=OneWay", StringComparison.Ordinal) && dev19Pages[1].Contains("VersionCount, Mode=OneWay", StringComparison.Ordinal), "云端历史只读统计使用单向绑定");
+      "备份、版本档案、诊断和更新页面均使用真实状态与统计绑定");
+Check(dev19Pages[1].Contains("SearchText", StringComparison.Ordinal) && dev19Pages[1].Contains("ShowDownlistedOnly", StringComparison.Ordinal) &&
+      dev19Pages[1].Contains("SelectedVersion", StringComparison.Ordinal), "管理员档案支持实时搜索、已下架筛选和版本下拉选择");
+Check(dev19Pages[1].Contains("RestoreCommand", StringComparison.Ordinal) && dev19Pages[1].Contains("InstallCommand", StringComparison.Ordinal) &&
+      File.ReadAllText(Path.Combine(uiRoot, "MainWindow.xaml")).Contains("Visibility=\"{Binding PublicationVisibility}\" Command=\"{Binding DownlistedCommand}\"", StringComparison.Ordinal),
+      "恢复入口仅出现在管理员档案页，玩家导航不显示");
 var dev20Pages = new[] { "UsersView.xaml", "OperationsView.xaml" }
     .Select(name => File.ReadAllText(Path.Combine(uiRoot, "Views", name))).ToArray();
 Check(dev20Pages[0].Contains("RestrictedCount", StringComparison.Ordinal) && dev20Pages[0].Contains("SelectedPermissionSummary", StringComparison.Ordinal) &&
@@ -599,9 +602,9 @@ Check(dev21Pages[0].Contains("SetupProgress", StringComparison.Ordinal) && dev21
       "首次设置与软件设置页面使用真实进度、草稿、健康状态和分组配置绑定");
 Check(dev21Pages[1].Contains("Header=\"启动与更新\"", StringComparison.Ordinal) &&
       dev21Pages[1].Contains("Header=\"存储与数据\"", StringComparison.Ordinal) &&
-       dev19Pages[1].Contains("刷新内容列表", StringComparison.Ordinal) &&
-       dev19Pages[1].Contains("查询历史版本", StringComparison.Ordinal),
-       "客户界面使用清晰的设置和云端历史操作文案");
+       dev19Pages[1].Contains("刷新档案", StringComparison.Ordinal) &&
+       dev19Pages[1].Contains("恢复为正式版", StringComparison.Ordinal),
+       "客户界面使用清晰的设置和版本恢复文案");
 
 var previousConfigDirectory = Environment.GetEnvironmentVariable("SCFA_CONTENT_HUB_CONFIG_DIR");
 var previousDataDirectory = Environment.GetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR");
