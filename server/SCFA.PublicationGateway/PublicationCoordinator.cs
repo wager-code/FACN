@@ -12,6 +12,38 @@ public sealed class PublicationCoordinator(GatewayOptions options, CredentialSto
     private string TempPath => Path.Combine(options.DataDirectory, "temp");
     private string HistoryPath => Path.Combine(options.DataDirectory, "history");
 
+    public async Task<UnpublishResponse> UnpublishAsync(UnpublishRequest request, AdminIdentity user, CancellationToken ct)
+    {
+        // Publish and unpublish share the same manifest lock so this service cannot lose an update.
+        await _commitGate.WaitAsync(ct);
+        try
+        {
+            var operationCt = CancellationToken.None;
+            var credentials = await credentialStore.ReadAsync(operationCt)
+                ?? throw new InvalidOperationException("COS 写入凭据不可用");
+            if (request.Kind is not ("map" or "mod")) throw new InvalidDataException("未知内容类型");
+            var key = options.Root + "/manifest/" + (request.Kind == "map" ? "latest.json" : "mods.json");
+            var oldBytes = await cos.GetBytesAsync(credentials, key, 16 * 1024 * 1024, operationCt);
+            var nextBytes = UnpublishManifest.Remove(Encoding.UTF8.GetString(oldBytes), request);
+            var nextHash = CosTransport.Sha256(nextBytes);
+            Directory.CreateDirectory(HistoryPath);
+            var backup = Path.Combine(HistoryPath, DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss") +
+                "_unpublish_" + Guid.NewGuid().ToString("N") + ".json");
+            await File.WriteAllBytesAsync(backup, oldBytes, operationCt);
+            if (OperatingSystem.IsLinux()) File.SetUnixFileMode(backup, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            // The archive is retained. Downlisting never removes package or thumbnail objects.
+            var latestBytes = await cos.GetBytesAsync(credentials, key, 16 * 1024 * 1024, operationCt);
+            if (CosTransport.Sha256(latestBytes) != CosTransport.Sha256(oldBytes))
+                throw new InvalidDataException("云端清单在下架前发生变化，请刷新后重试");
+            await cos.PutBytesAsync(credentials, key, nextBytes, operationCt);
+            var verified = await cos.GetBytesAsync(credentials, key, 16 * 1024 * 1024, operationCt);
+            if (CosTransport.Sha256(verified) != nextHash)
+                throw new InvalidDataException("下架清单写入后复核失败，请检查云端状态");
+            return new UnpublishResponse(nextHash, request.ContentId);
+        }
+        finally { _commitGate.Release(); }
+    }
+
     public async Task<PublicationIntentResponse> CreateIntentAsync(
         PublicationIntentRequest request, AdminIdentity user, CancellationToken ct)
     {
@@ -143,3 +175,4 @@ public sealed class PublicationCoordinator(GatewayOptions options, CredentialSto
         return Path.Combine(TicketsPath, id + ".json");
     }
 }
+
