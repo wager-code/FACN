@@ -55,7 +55,7 @@ public sealed class ServiceRegistry
         var management = new ManagementService(config, auth, log);
         var publication = new PublicationPreparationService(local);
         var publicationUpload = new PublicationUploadService(auth, cloud, config);
-        var cloudHistory = new CloudHistoryService(config, auth, cloud, log);
+        var cloudHistory = new CloudHistoryService(publicationUpload, cloud, log);
         registry = new ServiceRegistry { Config = config, Log = log, Auth = auth, Cloud = cloud, Paths = paths, Local = local, Tasks = tasks, Backups = backups, Install = install, Sync = sync, SyncPreferences = preferences, SyncHistory = syncHistory, Session = session, Diagnostics = diagnostics, Updates = updates, Management = management, Publication = publication, PublicationUpload = publicationUpload, CloudHistory = cloudHistory };
         return registry;
     }
