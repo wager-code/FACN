@@ -1099,7 +1099,7 @@ try
         "管理员发布页可按游戏名或文件夹名查找地图");
     var publishService = new PublicationPreparationService(localContent);
     var publishSource = await localContent.AnalyzeDirectoryAsync(Path.Combine(mapsRoot, "recent_map"));
-    var publishMetadata = new PublicationMetadata("回归测试发布地图", publishSource.Version, "测试管理员", "隔离目录内的发布材料回归检查。", "地图", "测试,安全");
+    var publishMetadata = new PublicationMetadata("回归测试发布地图", publishSource.Version, "测试管理员", "", "地图", "测试,安全");
     const string emptyMapManifest = """{"manifest_version":1,"updated_at":"2026-01-01T00:00:00Z","maps":[],"preserved_field":{"enabled":true}}""";
     var publishBundle = await publishService.PrepareAsync(publishSource, publishMetadata, emptyMapManifest,
         Path.Combine(configDirectory, "publish-staging"), config.Current, new UserInfo { RoleKey = "admin" });
@@ -1107,6 +1107,8 @@ try
         Check(preparedZip.Entries.Count == publishSource.Files && preparedZip.Entries.All(x => x.FullName.StartsWith(publishSource.Folder + "/", StringComparison.Ordinal)),
             "管理员发布包只包含目标地图顶层目录且文件数量一致");
     var preparedManifest = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(publishBundle.ManifestPath))!;
+    Check(preparedManifest["maps"]?[0]?["description"]?.GetValue<string>() == "",
+          "管理员发布内容说明可留空，清单仍保留兼容字段");
     Check(preparedManifest["preserved_field"]?["enabled"]?.GetValue<bool>() == true &&
           preparedManifest["maps"]?[0]?["game_version"]?.GetValue<string>() == publishSource.Version &&
           preparedManifest["maps"]?[0]?["sha256"]?.GetValue<string>() == publishBundle.PackageSha256 &&
