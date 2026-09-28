@@ -1192,12 +1192,14 @@ finally
 var selectionCommandUiPassed = false;
 Exception? selectionCommandUiError = null;
 var cloudSkipUiPassed = false;
+var cloudPreviewUiPassed = false;
 var selectionUiThread = new Thread(() =>
 {
     var selectionRoot = Path.Combine(Path.GetTempPath(), "scfa_selection_ui_" + Guid.NewGuid().ToString("N"));
     SCFA.ContentCenter.App? application = null;
     System.Windows.Window? host = null;
     System.Windows.Window? cloudHost = null;
+    System.Windows.Window? previewHost = null;
     try
     {
         Directory.CreateDirectory(selectionRoot);
@@ -1261,10 +1263,24 @@ var selectionUiThread = new Thread(() =>
         cloudSkipUiPassed = skipButton.IsEnabled && ReferenceEquals(skipButton.CommandParameter, cloudProbe.Items[0]) &&
                             ReferenceEquals(cloudProbe.SelectedItem, cloudProbe.Items[0]) &&
                             System.Windows.Data.BindingOperations.GetBinding(versionRun, System.Windows.Documents.Run.TextProperty)?.Mode == System.Windows.Data.BindingMode.OneWay;
+        var rowPreview = VisualTreeProbe.FindAll<System.Windows.Controls.Border>(cloudGrid)
+            .Single(border => border.Name == "RowPreviewBorder" && ReferenceEquals(border.DataContext, cloudProbe.Items[0]));
+        var enlargeButton = (System.Windows.Controls.Button)cloudView.FindName("EnlargePreviewButton")!;
+        previewHost = new SCFA.ContentCenter.Views.CloudPreviewWindow(cloudProbe.Items[0])
+        {
+            Owner = cloudHost, ShowInTaskbar = false, Opacity = 0
+        };
+        previewHost.Show();
+        System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        var enlargedImage = VisualTreeProbe.Find<System.Windows.Controls.Image>(previewHost);
+        cloudPreviewUiPassed = rowPreview.Visibility == System.Windows.Visibility.Visible &&
+                               enlargeButton.IsEnabled && ReferenceEquals(enlargeButton.Tag, cloudProbe.Items[0]) &&
+                               enlargedImage.Source is not null && previewHost.Title.Contains(cloudProbe.Items[0].Name, StringComparison.Ordinal);
     }
     catch (Exception ex) { selectionCommandUiError = ex; }
     finally
     {
+        try { previewHost?.Close(); } catch { }
         try { cloudHost?.Close(); } catch { }
         try { host?.Close(); } catch { }
         try { application?.Shutdown(); } catch { }
@@ -1277,7 +1293,8 @@ selectionUiThread.Start();
 selectionUiThread.Join();
 if (selectionCommandUiError is not null) Console.Error.WriteLine("本地内容选择命令 UI 测试异常：" + selectionCommandUiError);
 Check(selectionCommandUiPassed, "真实 WPF 本地内容页面的逐行删除与选中项操作正确绑定目标目录");
-Check(cloudSkipUiPassed, "真实 WPF 云端列表选中地图后版本详情保持只读绑定且不喜欢按钮指向当前行");
+Check(cloudSkipUiPassed, "真实 WPF 云端列表选中 MOD 后版本详情保持只读绑定且不喜欢按钮指向当前行");
+Check(cloudPreviewUiPassed, "真实 WPF 云端 MOD 列表显示预览图且详情图可点击放大");
 
 if (failures.Count > 0)
 {
@@ -1676,9 +1693,10 @@ sealed class CloudSkipBindingProbe
 {
     public CloudSkipBindingProbe()
     {
-        Items = [new CloudContentEntry { Kind = "地图", Id = "skip-ui-map", Name = "跳过按钮测试地图", Version = "1" }];
+        Items = [new CloudContentEntry { Kind = "MOD", Id = "skip-ui-mod", Name = "预览按钮测试 MOD", Version = "1", PreviewSource = "/SCFA内容中心;component/Assets/Fluent/cloud_regular.png" }];
         ItemsView = CollectionViewSource.GetDefaultView(Items);
         ToggleSyncSkipCommand = new AsyncItemCommand<CloudContentEntry>(_ => Task.CompletedTask);
+        SelectedItem = Items[0];
     }
 
     public List<CloudContentEntry> Items { get; }
