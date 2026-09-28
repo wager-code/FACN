@@ -2,7 +2,7 @@
 
 这是 Windows .NET 8 WPF 客户端。
 
-完整“功能 → 文件”导航见仓库根目录 `CODEBASE_GUIDE.md`。
+完整“功能 → 文件”导航见`docs/CODEBASE_GUIDE.md`。
 
 ## 目录职责
 

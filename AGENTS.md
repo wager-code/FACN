@@ -2,20 +2,37 @@
 
 This repository contains the Windows .NET 8 WPF client and the independent publication gateway for SCFA Content Center.
 
-## Source of truth order
+## Mandatory startup
 
-Before changing behavior, read these in order:
+Before changing source code, read:
 
-1. `PRODUCT_REQUIREMENTS.md` — confirmed owner requirements, scope, and current completion status.
-2. `CODEBASE_GUIDE.md` — feature-to-file map; use it before creating a new module.
-3. `PROJECT_HANDOFF.md` — verified current state, production facts, and unknowns.
-4. `ROADMAP.md` — sequencing and future milestones; candidate ideas are not requirements.
-5. `BUILD_VALIDATION.md` — concrete build/regression evidence.
-6. `ADMIN_PUBLISH_PLAN.md` and `ADMIN_PUBLISH_API.md` — publication architecture and API contract when working on administrator publishing.
+1. `docs/00_START_HERE.md`
+2. `docs/PRODUCT_REQUIREMENTS.md`
+3. `docs/ROADMAP.md`
+4. `docs/CODEBASE_GUIDE.md`
+5. `docs/PROJECT_HANDOFF.md`
+6. `docs/BUILD_VALIDATION.md`
 
-`README.md` is a user-facing overview, not the authoritative implementation status.
+For administrator publication work, also read `docs/ADMIN_PUBLISH_PLAN.md` and `docs/ADMIN_PUBLISH_API.md`.
 
-Do not reconstruct current requirements from old commits, removed V3/Win32 reference notes, or abandoned submission/review flows. Player submissions and review were retired in dev52.
+For any server/deployment task, read `docs/DEPLOYMENT_POLICY.md` and `docs/TROUBLESHOOTING.md`.
+
+`README.md` is user-facing and is not the authoritative implementation status.
+
+## Production-server boundary
+
+Codex owns source-code work: development, refactoring, tests, local build, CI, release preparation, deployment notes, and handoff material.
+
+Do not directly perform production-server mutations when work reaches SSH, systemd, Nginx, firewall/security-group ports, TLS certificates, production environment variables/secrets, Tencent COS production permissions/credentials, production data migration/deletion, or a live Publication Gateway upgrade.
+
+At that boundary:
+
+1. stop production mutations;
+2. prepare the handoff template from `docs/DEPLOYMENT_POLICY.md`;
+3. tell the user to send the handoff and actual server logs/status to the ChatGPT server-deployment conversation;
+4. continue owning source-code fixes if deployment diagnosis later identifies a code defect.
+
+Do not workaround 403/404/502 errors by repeatedly changing product code before identifying the failing layer.
 
 ## Repository layout
 
@@ -23,18 +40,18 @@ Do not reconstruct current requirements from old commits, removed V3/Win32 refer
 - `server/SCFA.PublicationGateway/` — independent administrator publication gateway.
 - `server/SCFA.PublicationGateway.RegressionTests/` — gateway regression coverage.
 - `tests/SCFA.ContentCenter.RegressionTests/` — client regression and WPF smoke coverage.
-- `.github/workflows/` — Windows build and publication-gateway release workflows.
-- `ROADMAP.md` — planned development sequence.
-- `CODEBASE_GUIDE.md` — architecture and feature/file navigation.
+- `.github/workflows/` — build/release workflows.
+- `docs/` — authoritative project manual.
 
 ## Working agreements
 
-- Work in the source checkout selected by the user. Preserve existing user files and make a source backup before a major local change.
-- Keep build artifacts, local backups, real content packages, credentials, tokens, private server configuration, and one-off visual QA artifacts out of the public repository.
-- Use the existing solution and regression scripts for relevant verification. Report exactly what was tested and what remains unverified.
-- Keep `PROJECT_HANDOFF.md` current after major milestones. Separate verified facts, plans, and unknowns.
-- Keep `PRODUCT_REQUIREMENTS.md` aligned with confirmed owner decisions.
-- Prefer extending existing services/view models over creating parallel replacement modules unless there is a clear migration plan.
-- Before adding a new model/service/helper, search for an existing equivalent and reuse or refactor it when practical.
+- Do not reconstruct requirements from old commits, removed V3/Win32 notes, abandoned player submission/review flows, or chat history.
+- Player submissions and review were retired in dev52.
+- Keep build artifacts, local backups, real packages, credentials, tokens, private server configuration, and one-off QA artifacts out of the public repository.
+- Use existing regression/build gates and report what was actually verified.
+- Keep `docs/PROJECT_HANDOFF.md` current after major milestones.
+- Keep `docs/PRODUCT_REQUIREMENTS.md` aligned with confirmed owner decisions.
+- Prefer extending/refactoring existing services and view models over parallel replacements.
+- Search for existing models/services/helpers before adding another.
 - Remove obsolete code only after checking references and regression coverage.
-- The account service, COS, Windows client, and publication gateway are separate concerns. Check actual server/deployed behavior before changing client API assumptions.
+- Account service, COS, Windows client, Nginx, and Publication Gateway are separate concerns; identify the failing layer before changing API assumptions.
