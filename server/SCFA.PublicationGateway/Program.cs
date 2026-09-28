@@ -96,6 +96,28 @@ app.MapPost("/v1/admin/publications/unpublish",
             return Results.Ok(result);
         }, app.Logger));
 
+app.MapGet("/v1/admin/publications/archive",
+    async (HttpContext context, string kind, AdminAuthenticator auth,
+        PublicationCoordinator publications, CancellationToken ct) =>
+        await Guard(async () =>
+        {
+            if (await auth.VerifyAsync(context, ct) is null) return Results.Unauthorized();
+            return Results.Ok(await publications.ReadArchiveAsync(kind, ct));
+        }, app.Logger));
+
+app.MapPost("/v1/admin/publications/restore",
+    async (HttpContext context, RestoreRequest request, AdminAuthenticator auth,
+        PublicationCoordinator publications, CancellationToken ct) =>
+        await Guard(async () =>
+        {
+            var user = await auth.VerifyAsync(context, ct);
+            if (user is null) return Results.Unauthorized();
+            var result = await publications.RestoreAsync(request, user, ct);
+            app.Logger.LogInformation("Content restored {Kind} {ContentId} by {UserId}",
+                request.Kind, request.ContentId, user.UserId);
+            return Results.Ok(result);
+        }, app.Logger));
+
 app.Run();
 
 static async Task<IResult> Guard(Func<Task<IResult>> work, ILogger logger)
@@ -123,4 +145,3 @@ static async Task<IResult> Guard(Func<Task<IResult>> work, ILogger logger)
         return Results.Problem("发布服务内部错误，请查看服务器日志", statusCode: 500);
     }
 }
-
