@@ -42,7 +42,7 @@ public sealed class PublicationPreparationService(LocalContentService local)
         var release = Required(metadata.ReleaseVersion, "发布版本", 80);
         if (!ReleaseVersionPattern.IsMatch(release)) throw new InvalidDataException("发布版本只能使用字母、数字、点、短横线和下划线");
         var author = Required(metadata.Author, "作者", 120);
-        var description = Required(metadata.Description, "说明", 2000);
+        var description = OptionalDescription(metadata.Description);
         var category = Required(metadata.Category, "分类", 80);
         var tags = metadata.TagsText.Split([',', '，', ';', '；'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
@@ -250,6 +250,14 @@ public sealed class PublicationPreparationService(LocalContentService local)
         var normalized = value?.Trim() ?? "";
         if (normalized.Length is 0 or > 2000 || normalized.Length > max || normalized.Any(char.IsControl))
             throw new InvalidDataException($"{label}不能为空、不能包含控制字符，且不得超过 {max} 字");
+        return normalized;
+    }
+
+    private static string OptionalDescription(string? value)
+    {
+        var normalized = value?.Trim() ?? "";
+        if (normalized.Length > 2000 || normalized.Any(c => char.IsControl(c) && c is not ('\r' or '\n' or '\t')))
+            throw new InvalidDataException("内容说明不能包含非法控制字符，且不得超过 2000 字");
         return normalized;
     }
 }
