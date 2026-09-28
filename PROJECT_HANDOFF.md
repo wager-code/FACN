@@ -1,91 +1,90 @@
 # SCFA Content Center project handoff
 
-Updated: 2026-09-27. This file is intentionally safe for the public source repository. It is a project record, not a copy of private server configuration.
+Updated: 2026-09-28  
+Current source baseline: `V4.0.0-dev61`
 
-## What the system does
+This file records only the current project state. Old dev-by-dev history remains available in Git history and should not be treated as current requirements.
 
-- A Windows .NET 8 WPF client lets players discover, install, and update SCFA maps and MODs.
-- Tencent Cloud COS stores published game content. A separate account service handles player sign-in and related API calls.
-- The owner decided to retire player submissions and review. Content publication is administrator-only. Dev53 adds an in-app local publication-preparation page; the actual production COS upload and manifest update still use the console until the new gateway is deployed and verified.
+## Architecture
 
-## Confirmed state
+- `src/SCFA.ContentCenter/`: Windows .NET 8 WPF client.
+- Tencent Cloud COS stores published map/MOD packages, manifests, and thumbnails.
+- The account service is separate from this repository and provides authentication, identity, user management, and audit APIs.
+- `server/SCFA.PublicationGateway/`: independent .NET 8 administrator publication gateway.
+- The publication gateway verifies the signed-in administrator through the account service and performs privileged COS publication operations.
+- Long-term COS write credentials must never be distributed to player clients.
 
-- Dev55 work in progress (2026-09-27): the owner clarified that the final administrator workflow must package, upload and publish inside the software without opening the COS console. The Windows client now prepares a checked bundle, asks an authenticated publication API for object-scoped signed PUT URLs, uploads to a random staging key, requests server commit, verifies the public manifest, and supports cancellation. The button checks a server capability endpoint and remains unavailable against the current production service, which has no publication routes. No live upload or server deployment has occurred. Full local regression passes, including signed-URL host/path and staging-key checks. An independent .NET publication gateway and credential rotation UI are now in source. Its isolated regression suite passes, but no live upload or deployment has occurred. The contract is in ADMIN_PUBLISH_API.md. Do not claim the product feature is complete until deployed end-to-end COS publication is verified.
+## Current product state
 
-- On 2026-09-27 the owner requested in-app administrator COS credential rotation without client updates. The client builds public COS URLs and fetches published manifests and packages without using `SecretId` or `SecretKeyEncrypted`. These two legacy `AppConfig` fields have no code references outside the model and are blank in this computer's local config. This does not establish how the deployed account service stores its own credentials. The future design keeps a least-privilege write identity on the server, issues short-lived upload authorization, and uses short-lived download URLs only if published objects become private. No long-term COS key goes to players. See `ADMIN_PUBLISH_PLAN.md`.
+### Player client
 
-- The owner requested that all confirmed requirements be carried in the GitHub source and that the repository landing page be less cluttered. `PRODUCT_REQUIREMENTS.md` now records scope and status, including canceled player submissions, sync safety, local deletion, admin-only publication, Steam compatibility review, cross-device preferences, and source continuity. The README is a short overview; detailed history remains in this handoff and `BUILD_VALIDATION.md`. Future agents should update requirement status when implementation or owner decisions change.
-- Dev54 fixes local map naming when `ScenarioInfo` contains a nested team `name` before the top-level map `name`. The actual `E:\SCFA\maps\5iver_survival_land_oxtreme` was included in the scan all along but appeared as `FFA`; a read-only scan after the fix finds 62 maps and reports this one as `5iver_survival_land_oxtreme`, game version 10, 10 files, valid. Seven other installed map names containing apostrophes also display completely. The administrator publication list now searches game name, folder, ID, version, and validation detail, and displays game name with folder together. See `BUILD_VALIDATION.md` for verification and release status.
-- Dev53 adds an administrator-only publication-preparation page to the Windows client. It reads the selected self-contained local map/MOD and fresh public manifest, rejects repeated release versions and conflicting destination folders, creates and verifies a single-folder ZIP, records package/content SHA-256, optional map preview, original and proposed manifests, and COS console upload instructions. These materials are local to `PublicationStaging`; the button does not upload or edit COS. The page does not claim automated Steam-versus-FAF compatibility validation. This describes the dev53 milestone; a separate publication gateway was added in dev55, but authenticated one-click cloud publication is still not deployed. Build, full regression suite, and WPF binding smoke passed on 2026-09-26; the full suite's DPAPI check requires a normal loaded Windows user profile and fails inside the restricted sandbox.
-- The dev53 source was backed up before modification under `_源码备份/pre_dev53_publish_center_20260926`. The single-file client and verification are recorded in `BUILD_VALIDATION.md`. The public dev53 source was synced to GitHub `main` as commit `6348776d9024c9b23436e838e704a06523a88350`.
-- Dev52 removes player submission and review client screens, services, models, configuration paths, status checks, and associated tests. Login, user management, catalog, installation, sync, and local delete remain. The account server and COS were not changed; old server submission routes may still exist. See `ADMIN_PUBLISH_PLAN.md` for the future in-app administrator publishing workflow.
-- The dev52 regression executable now locates the source tree relative to either its working directory or its own binary location. An older build crashed with DirectoryNotFoundException when launched from a different working directory; the fixed build passed the full suite from that same location. This affected the test executable, not the published client.
-- The client source in this repository builds and has regression checks. The current published client is dev54; dev55 source includes a not-yet-deployed publication gateway.
-- Dev51 recognizes a scenario-only map that safely references an existing sibling `.scmap` and contains its own scenario, save, and script files as a shared-terrain map. It displays the real name, version, own file count and size, and a separate "shared terrain" status rather than reporting it as a damaged independent package. Such a folder remains ineligible as an independent upload/install package. A read-only scan of the current `E:\SCFA\maps` found 61 folders, including `X1CA_TUT` with version 3, four own files, and a valid reference to `SCMP_019.scmap`. The owner screenshot confirmed its preview image in dev50. The full regression suite and synthetic missing-reference checks passed; the dev51 GUI still needs an owner check.
-- Dev50 notifies the local map list when a selected map's preview is loaded after the initial scan, so the detail image and row thumbnail update together. The packaged `artifacts/win-x64/SCFA内容中心.exe` was rebuilt after the full regression suite passed.
-- Dev49 makes the local map/MOD table read-only while preserving its delete buttons, fixing the WPF `LocalContentEntry.SizeText` TwoWay binding error when a user clicks the size cell. Selecting a local map with a missing cached preview retries the embedded game preview read.
-- Dev48 displays map previews directly in the cloud and local map rows. The local list reads previews for every discovered map, independent of strict install validity. A scenario-only map such as `X1CA_TUT` can use its safe `/maps/<sibling>/<file>.scmap` reference for the preview while remaining ineligible as a self-contained package. A read-only scan of the current `E:\SCFA\maps` found previews for all 80 folders; 79 have their own `.scmap` and one references `SCMP_019`.
-- Dev47 shows the installed map's `_scenario.lua` name in the cloud list when its content identity can be verified locally, while retaining the catalog title and folder for recognition. Both cloud and local map detail panes can read the embedded game preview from the `.scmap` DDS section without modifying the map. Missing cloud maps still rely on catalog names and optional thumbnail objects; the production COS manifest now provides game_name and thumbnail for all 18 published maps. On 2026-09-26, 17 new PNG thumbnails were added without replacing the existing one; the published manifest and all 18 public thumbnail URLs were fetched and verified against the staged files (manifest SHA-256 0892de94dcb75270874c2cbd9d4d347c623981a4b874fd8c5257898b74544676). The previous manifest is backed up under _源码备份/pre_dev47_cos_manifest_20260926.
-- Dev46 offers an explicit single-item action for duplicate local map/MOD folders. After confirmation it downloads and verifies the cloud package, backs up every matching local folder, then replaces the duplicates with the published version. If installation fails, it attempts to restore the originals. Batch installation and one-click sync still leave ambiguous local folders untouched.
-- Dev45 makes cloud list status, batch install, and one-click sync share the same duplicate-copy rule: when multiple local versions match one catalog item, an existing copy must match both the catalog's game version and full content fingerprint before it is treated as already installed. No local copy is removed or replaced by this status check. If no copy can be verified, automatic replacement stays blocked. Dev46 adds a separate confirmed manual cleanup and reinstall action.
-- A read-only Saltrock Colony check on 2026-09-26 found two local map versions; the current published version's full content fingerprint matched one local copy exactly. The reported manual installation failure came from its ambiguity check, not a missing map package.
-- Dev44 fixes a WPF crash when selecting a cloud map or MOD: the detail pane's read-only `VersionDisplay` Run explicitly uses OneWay binding. A real WPF selection regression check now verifies that binding mode.
-- The cloud map/MOD lists now let each signed-in account mark content as disliked. One-click sync and cloud batch installation skip marked entries before modifying game files; manual single-item installation remains available. A second click restores automatic sync. The preference is stored locally per account and server endpoint, with a separate offline scope. It does not roam between computers because no account preference API has been verified or implemented on the server.
-- Local map and MOD lists now have a per-row delete action. It targets the selected local game folder, creates a backup, and compares the source directory fingerprint with the backup before removal. A cloud item deleted locally can be installed again by a later full sync; this behavior is stated in the confirmation dialog.
-- Account sign-in and several authenticated client functions were exercised successfully during development.
-- The client can read the published COS catalog and has been checked against real local map and MOD directories.
-- The sync center avoids repeating an installation when the local and cloud versions match but the catalog has no content fingerprint. When a fingerprint exists, it still checks the full installed directory and repairs a mismatch after backing up the local copy.
-- Catalog entries with the same declared destination folder are rejected before installation. Package metadata, version, and content are verified before replacing a local copy; the installer checks the local version again immediately before replacement.
-- If several local folders match one catalog item, sync can recognize an already installed copy only when its version and complete content fingerprint match the catalog. It leaves every local folder intact and reports the duplicate. Without that proof it stops the automatic action.
-- A read-only catalog audit on 2026-09-25 found two legacy map records with inconsistent version metadata: `6_fields_of_isis` is labeled `13` and `xxx_survival` is labeled `2026.08.15`, while both published ZIPs contain scenario version `3`. The ZIP file hashes match their catalog records, and their extracted content matches the corresponding audited local folders. This is a catalog metadata issue, not a damaged download. The client must keep blocking a version-mismatched replacement.
-- The client now accepts an optional `game_version` field for catalog items. It compares and validates the version inside map/MOD files against `game_version`, while keeping `version` as the visible release label. Older catalog items still use `version` for both meanings.
-- On 2026-09-25, the corrected `scfa/manifest/latest.json` was published to COS. A fresh public download matched SHA256 `630AB534C5E8064EB32B7841A61F303C234B10E987FBBB00DF821BE5ABB58194` and contained all 18 maps. The two corrected records retain their release labels and now include `game_version: "3"` plus verified `content_sha256` values: `6_fields_of_isis` = `7ced89b270736347849029408f8917d55f4fea0177925e28b25298ba4ed98926`; `xxx_survival` = `774a02a00ab4fd6196a582968e596c7175b86cc2415ee275d94874babd331dbb`. The prior catalog is saved under the local `_源码备份` directory.
-- On 2026-09-25, an isolated live-COS sync installed the two corrected map ZIPs and one small MOD ZIP, then skipped all three on a repeat run without a new backup. An injected same-version map edit was backed up and repaired; an injected newer map version was preserved. No game directory was used for this test.
-- A read-only scan of `E:\SCFA\maps` and `E:\SCFA\mods` found 79 self-contained local maps, one scenario-only map referencing a sibling `.scmap`, and 7 valid local MODs. All 17 unambiguous published maps and all 6 published MODs matched their catalog directory fingerprints. The remaining published map, Saltrock Colony, has multiple local copies; one copy matched the published version and content fingerprint exactly, so sync would skip while preserving all copies. No E: game content was changed.
-- On 2026-09-25 at 10:58:55 CST, the signed-in packaged client `V4.0.0-dev41` ran the full sync in its Sync Center. The UI reported 0 installed/updated, 24 skipped, and 0 failed. This matches the read-only E: audit: all 18 published maps and 6 published MODs were left in place.
-- A read-only production check on 2026-09-25 found account service version 8 healthy, ordinary submission POST registered, and the signed-in administrator able to read their own submission list, user list, and audit records. The same administrator has `review.read` and `review.approve`, but `GET /v1/admin/submissions` returns 404. Seven alternate read paths did not expose a review queue. Review and publication are therefore not end-to-end verified.
-- The owner supplied `SCFA账号API_V1_腾讯云部署包.zip` on 2026-09-25. Its SHA-256 is `A3045ED21D25460DD4F9F847F4B24D86330DCFA770A46AFDA08AC4B5B0BF33DE`. The archive has one Linux executable plus a README, systemd unit, Nginx example, and environment example. It has no Go source or `go.mod`. Its README identifies the earlier `V3.0.0-dev17` account API stage and lists only registration, login, logout, identity, and read-only admin users. A binary string check found no submission routes in this archive. A private copy is stored under `_源码备份/server_package_20260925`.
-- The current repository does not contain the account-service source. This old deployment binary must not replace the newer production service; doing so could remove the existing submission and administration features.
-- Historical context: the owner could not locate the current server source or the former third-party review site. Player submissions were later removed from product scope. Administrator publication must still check Steam compatibility and reject FAF-only dependencies.
-- On 2026-09-26, the owner supplied a download of the current Linux `scfa-api` binary (SHA-256 `61038BBB5A6E79792C54F4ABD29C5162D93836F1D1431F6AFEDDD72D69A5C5F8`), saved privately under `_源码备份/server_binary_20260925`. Offline inspection found `POST /v1/submissions`, `GET /v1/submissions/mine`, `DELETE /v1/submissions/{id}`, and `GET /v1/admin/submission-storage`, but no `/v1/admin/submissions` or `/review` route. The binary contains COS object-path literals `/submissions/index.json` and `/submissions/files/`; their actual data format and access policy still need confirmation. A signed-in read-only request to the storage-status endpoint returned `ready: true` and showed that bucket, region, and root match the client's COS configuration without disclosing their values.
-- A 2026-09-26 screenshot of the configured COS root showed `launcher/`, `manifest/`, `maps/`, `mods/`, and `thumbnails/`, with no visible `submissions/` prefix. The complete read-only account audit response contained 178 records at the time of the check; the only `submission.*` event was one `submission.storage.configure`, and there were no review or publish events. This is evidence that no player submission was recorded in the current audit; it is not a substitute for a protected server/COS backup before routing changes.
+The main player workflow is implemented and regression-covered:
 
-## Unknowns: do not guess
+- account registration/login/session restore and offline mode;
+- cloud map/MOD browsing, search, previews, and enlarged previews;
+- local map/MOD scanning and real game-name/version detection;
+- install/update/repair with package and content verification;
+- one-click synchronization with cancel support;
+- no automatic downgrade of newer local content;
+- duplicate/conflicting local content protection;
+- verified backup before destructive replacement or local deletion;
+- rollback/history restore;
+- per-account local “dislike” preference that makes automatic sync skip selected content.
 
-- The previously considered third-party player review site or service remains unidentified. This is historical context; player submissions are no longer in product scope.
-- The source and exact build process for the deployed account-service executable are not yet available. Local source and GitHub inventory found no backend source. The supplied archive was inspected and contains only an old executable and deployment examples. The current binary was obtained and audited offline, but its source, actual COS submission-index schema, and private server configuration have not been obtained or verified.
-- No authenticated live in-app COS publication has been validated. Dev55 gateway source and isolated tests are present; production routing and COS end-to-end tests remain.
+The “dislike” preference is still local to each computer and is not synchronized through the account service.
 
-## Recommended next milestone
+### Administrator publication
 
-The map/MOD sync milestone is verified with the signed-in client and current COS catalog. For future content releases, keep `version`, optional `game_version`, ZIP SHA-256, and full directory fingerprint consistent, then verify a small installation and repeat sync before general publication. A catalog item without a content fingerprint cannot prove that an edited same-version local folder matches the cloud package; automatic sync deliberately leaves that folder alone.
+The client and publication gateway currently implement:
 
-For publication, use the administrator's COS console workflow until an authenticated server publication API has been designed and verified. Implement the planned administrator-only in-app flow described in `ADMIN_PUBLISH_PLAN.md`; do not expose COS long-term credentials in the client.
+- separate “发布地图” and “发布 MOD” administrator entries;
+- local publication preparation and package validation;
+- release version separated from the game-internal version;
+- package/content SHA-256 checks;
+- short-lived/object-scoped COS upload authorization;
+- random staging paths;
+- server-side package/manifest validation;
+- manifest backup, commit, and post-write verification;
+- super-admin COS credential rotation after live credential verification;
+- safe downlisting without deleting the package/thumbnail objects;
+- administrator publication archive reading;
+- restoring an archived/downlisted version as the current published version.
 
-The current backend source could not be found. Before server routing changes, make a protected copy of `/var/lib/scfa-api`, the deployed binary, and effective service/Nginx configuration. Keep `/etc/scfa-api.env`, account data, tokens, and COS credentials out of this public repository. Verify login, existing account data, publication, rollback, and a fresh client sync in a test environment before production cutover.
+The owner reported that a real map was successfully published from the software. A complete real MOD publication → player install → repeat sync cycle is still pending. The dev60 downlisting flow and dev61 archive/restore flow also still require production deployment/real-account acceptance testing.
+
+## Security and data-safety rules
+
+- Never place COS `SecretId`/`SecretKey`, account tokens, real packages, or private server configuration in this public repository.
+- Player clients read published content without receiving long-term COS write credentials.
+- Automatic sync must not guess which duplicate local folder to overwrite.
+- Package metadata, release/game versions, hashes, destination paths, and extracted content must be validated before replacement.
+- Destructive local operations require a verified backup and must stay inside the configured Maps/Mods roots.
+- Publication must re-check the live manifest before commit and verify the published manifest after commit.
+- Production should keep the publication gateway single-writer or otherwise prevent uncoordinated external manifest writes until atomic cross-writer protection is implemented.
+
+## Known gaps / do not claim complete
+
+1. Full real MOD publication acceptance: publish, install on a player client, repeat sync, update, and rollback.
+2. Deploy/upgrade the production gateway to the dev61 archive/restore implementation and verify downlist/restore with a real administrator account.
+3. Cross-device synchronization for the per-account “dislike” preference.
+4. Steam-vs-FAF semantic compatibility remains partly manual; current checks cover structure, paths, versions, hashes, and package safety, not every script/API semantic difference.
+5. The client update channel still needs acceptance with a real published client package.
+6. The current account-service source/build process is not present in this repository; do not replace or redesign the deployed account service based on guesses.
+
+## Development rules
+
+- Read `PRODUCT_REQUIREMENTS.md` before feature work.
+- Use this handoff for verified current state and unknowns.
+- Use `BUILD_VALIDATION.md` for the current test/release gate.
+- Use `ADMIN_PUBLISH_PLAN.md` and `ADMIN_PUBLISH_API.md` for publication architecture.
+- Do not revive player submissions/review; they were removed from product scope in dev52.
+- Prefer refactoring/reusing existing services and models over adding parallel replacements.
+- When a milestone changes product state, update the requirements/handoff instead of appending another large chronological history.
 
 ## Moving to another computer
 
-1. Clone `https://github.com/wager-code/FACN` into the location chosen for the new computer, and open that checkout as a local Codex project.
-2. Ask Codex to read `AGENTS.md` and this handoff file, then inspect the current code and tests before changing anything.
-3. Install a compatible Windows .NET SDK and run the solution build and relevant regression checks.
-4. Restore local game files, private configuration, source backups, and any server or COS backups separately. They are not part of this public repository.
-5. Re-check live service behavior before relying on old observations. Record new evidence and decisions here after each major milestone.
-
-GitHub holds the portable client source and safe project record. Private credentials and server data require separate, protected backups. Chat history and local AI memory are useful context but are not the project record of truth.
-
-## Dev55 independent publication gateway source (2026-09-27)
-
-- The new server/SCFA.PublicationGateway is separate from the existing account binary. It checks the bearer token against the local account service for every privileged request; only super_admin can rotate encrypted COS write credentials. The WPF administrator publication page now has an in-app key-entry dialog, short-lived staging uploads, server commit, and public manifest verification.
-- The gateway verifies the ZIP, game version, content fingerprint, exact COS object paths and old manifest hash. It keeps a local old-manifest copy before commit and can recognize a verified upload after an interrupted commit. It has no verified cross-process COS compare-and-swap. Run one gateway instance and restrict other manifest writers.
-- The server source and deployment examples are in this public repository; the current production account service source is still missing. The new service is not deployed, and no live COS publication has been tested. Keep the auto-publish button gated by the capability endpoint until deployment.
-
-## Dev57 publication navigation (2026-09-28)
-
-The owner requested separate left navigation entries for publishing maps and MODs. Dev57 adds administrator-only "发布地图" and "发布 MOD" entries, each with a fixed content type. The page retains the software-based upload action and the local preparation option. The owner's screenshot of a preparation-only page matches an older client build.
-
-The Release build, core regression checks, WPF binding smoke, and self-contained Windows publish passed. The portable client is in the local `artifacts/win-x64-dev57-portable` folder and must be kept with its companion DLLs. The publication gateway was subsequently deployed and the owner corrected a mistyped COS credential, but a production map or MOD upload has not yet been verified. Confirm the resulting catalog, package download, installation, and repeat sync before calling in-app publication complete.
-
-## Dev58 legacy manifest compatibility (2026-09-28)
-
-A production map publication attempt was rejected during intent validation because two unchanged older catalog entries have no `folder_name`. The proposed map entry did include it. The gateway now accepts an unchanged legacy entry using its ID for collision checks, while requiring `folder_name` on new entries and rejecting changes to unrelated old entries. Isolated gateway regression checks pass. The corrected server package is prepared locally; deployment and a successful live publication remain unverified.
+1. Clone the repository and open `SCFA.ContentCenter.sln`.
+2. Read `AGENTS.md`, `PRODUCT_REQUIREMENTS.md`, this file, and `BUILD_VALIDATION.md`.
+3. Restore private configuration, game content, source backups, and server/COS backups separately; they are intentionally not stored in GitHub.
+4. Run the build and regression gates before changing behavior.
+5. Re-check live service behavior before relying on an old production observation.
