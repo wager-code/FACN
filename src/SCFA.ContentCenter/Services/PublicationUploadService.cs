@@ -41,6 +41,30 @@ public sealed class UnpublishResult
     [JsonPropertyName("content_id")] public string ContentId { get; set; } = "";
 }
 
+public sealed class RestoreResult
+{
+    [JsonPropertyName("manifest_sha256")] public string ManifestSha256 { get; set; } = "";
+    [JsonPropertyName("content_id")] public string ContentId { get; set; } = "";
+}
+
+public sealed class PublicationArchiveDto
+{
+    [JsonPropertyName("items")] public List<ArchivedContentDto> Items { get; set; } = [];
+    [JsonPropertyName("truncated")] public bool Truncated { get; set; }
+}
+public sealed class ArchivedContentDto
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("downlisted")] public bool Downlisted { get; set; }
+    [JsonPropertyName("versions")] public List<ArchivedVersionDto> Versions { get; set; } = [];
+}
+public sealed class ArchivedVersionDto
+{
+    [JsonPropertyName("entry")] public JsonElement Entry { get; set; }
+    [JsonPropertyName("state")] public string State { get; set; } = "";
+}
+
 /// <summary>
 /// Uploads checked materials only after an authenticated server issues object-scoped upload URLs.
 /// The server owns COS credentials, validates uploaded bytes and atomically commits the manifest.
@@ -123,6 +147,62 @@ public sealed class PublicationUploadService(AuthApiClient auth, CloudCatalogSer
             if (attempt < 2) await Task.Delay(TimeSpan.FromSeconds(2), ct);
         }
         throw new InvalidDataException("服务器已提交下架，但公开清单尚未核验通过；请刷新目录检查，勿重复操作");
+    }
+
+    public async Task<PublicationArchiveDto> GetArchiveAsync(string kind, UserInfo user, CancellationToken ct = default)
+    {
+        if (!AccessPolicy.CanPublishContent(user) || string.IsNullOrWhiteSpace(auth.Token))
+            throw new UnauthorizedAccessException("请先使用管理员账号登录");
+        if (kind is not ("地图" or "MOD")) throw new ArgumentException("未知内容类型", nameof(kind));
+        using var publication = CreatePublicationClient();
+        try
+        {
+            return await publication.GetJsonAsync<PublicationArchiveDto>(
+                "/v1/admin/publications/archive?kind=" + (kind == "地图" ? "map" : "mod"), ct);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed)
+        {
+            throw new InvalidOperationException("服务器尚未部署版本档案接口，请先升级发布服务", ex);
+        }
+    }
+
+    public async Task RestoreAsync(string kind, CloudContentEntry item, UserInfo user, CancellationToken ct = default)
+    {
+        if (!AccessPolicy.CanPublishContent(user) || string.IsNullOrWhiteSpace(auth.Token))
+            throw new UnauthorizedAccessException("请先使用管理员账号登录");
+        if (kind is not ("地图" or "MOD") || string.IsNullOrWhiteSpace(item.Id) ||
+            string.IsNullOrWhiteSpace(item.File) || item.Sha256.Length != 64 ||
+            !item.Sha256.All(Uri.IsHexDigit))
+            throw new InvalidDataException("恢复版本缺少完整的包校验信息");
+        using var publication = CreatePublicationClient();
+        RestoreResult result;
+        try
+        {
+            result = await publication.PostJsonAsync<RestoreResult>("/v1/admin/publications/restore", new
+            {
+                kind = kind == "地图" ? "map" : "mod",
+                content_id = item.Id,
+                package_key = item.File,
+                package_sha256 = item.Sha256.ToLowerInvariant()
+            }, ct);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed)
+        {
+            throw new InvalidOperationException("服务器尚未部署恢复接口，请先升级发布服务", ex);
+        }
+        if (!string.Equals(result.ContentId, item.Id, StringComparison.OrdinalIgnoreCase) ||
+            result.ManifestSha256.Length != 64 || !result.ManifestSha256.All(Uri.IsHexDigit))
+            throw new InvalidDataException("服务器恢复响应无效，请检查云端状态");
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                if (Sha256(await cloud.FetchManifestTextAsync(kind, ct)) == result.ManifestSha256) return;
+            }
+            catch (HttpRequestException) when (attempt < 2) { }
+            if (attempt < 2) await Task.Delay(TimeSpan.FromSeconds(2), ct);
+        }
+        throw new InvalidDataException("服务器已提交恢复，但公开清单尚未核验通过；请刷新目录检查，勿重复操作");
     }
     public async Task PublishAsync(PublicationBundle bundle, string kind, UserInfo user, CancellationToken ct = default)
     {
@@ -251,4 +331,3 @@ public sealed class PublicationUploadService(AuthApiClient auth, CloudCatalogSer
     private static string Sha256(string content) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
 }
-
