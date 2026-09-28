@@ -12,6 +12,75 @@ public sealed class PublicationCoordinator(GatewayOptions options, CredentialSto
     private string TempPath => Path.Combine(options.DataDirectory, "temp");
     private string HistoryPath => Path.Combine(options.DataDirectory, "history");
 
+    public async Task<PublicationArchiveResponse> ReadArchiveAsync(string kind, CancellationToken ct)
+    {
+        if (kind is not ("map" or "mod")) throw new InvalidDataException("未知内容类型");
+        var credentials = await credentialStore.ReadAsync(ct)
+            ?? throw new InvalidOperationException("COS 写入凭据不可用");
+        var key = options.Root + "/manifest/" + (kind == "map" ? "latest.json" : "mods.json");
+        var current = Encoding.UTF8.GetString(await cos.GetBytesAsync(credentials, key, 16 * 1024 * 1024, ct));
+        if (!Directory.Exists(HistoryPath)) return PublicationArchive.Build(kind, options.Root, current, []);
+        var files = Directory.EnumerateFiles(HistoryPath, "*.json", SearchOption.TopDirectoryOnly)
+            .Select(path => new FileInfo(path)).OrderByDescending(file => file.Name, StringComparer.Ordinal)
+            .Take(501).ToArray();
+        var snapshots = new List<string>();
+        long loadedBytes = 0;
+        var truncated = files.Length > 500;
+        foreach (var file in files.Take(500))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (file.Length is <= 0 or > 16 * 1024 * 1024) continue;
+            if (loadedBytes + file.Length > 64 * 1024 * 1024) { truncated = true; break; }
+            try { snapshots.Add(await File.ReadAllTextAsync(file.FullName, ct)); }
+            catch (IOException) { continue; }
+            loadedBytes += file.Length;
+        }
+        return PublicationArchive.Build(kind, options.Root, current, snapshots, truncated);
+    }
+
+    public async Task<RestoreResponse> RestoreAsync(RestoreRequest request, AdminIdentity user, CancellationToken ct)
+    {
+        if (request.Kind is not ("map" or "mod") || string.IsNullOrWhiteSpace(request.ContentId) ||
+            string.IsNullOrWhiteSpace(request.PackageKey) || string.IsNullOrWhiteSpace(request.PackageSha256))
+            throw new InvalidDataException("恢复参数不完整");
+        await _commitGate.WaitAsync(ct);
+        try
+        {
+            // Complete the manifest operation even if the administrator disconnects.
+            var operationCt = CancellationToken.None;
+            var credentials = await credentialStore.ReadAsync(operationCt)
+                ?? throw new InvalidOperationException("COS 写入凭据不可用");
+            var key = options.Root + "/manifest/" + (request.Kind == "map" ? "latest.json" : "mods.json");
+            var oldBytes = await cos.GetBytesAsync(credentials, key, 16 * 1024 * 1024, operationCt);
+            var archive = await ReadArchiveAsync(request.Kind, operationCt);
+            var group = archive.Items.FirstOrDefault(x => x.Id.Equals(request.ContentId, StringComparison.OrdinalIgnoreCase));
+            if (group is null || !group.Downlisted)
+                throw new InvalidDataException("该内容不是已下架状态，请刷新档案");
+            var version = group.Versions.FirstOrDefault(x =>
+                string.Equals(x.Entry["file"]?.ToString(), request.PackageKey, StringComparison.Ordinal) &&
+                string.Equals(x.Entry["sha256"]?.ToString(), request.PackageSha256, StringComparison.OrdinalIgnoreCase));
+            if (version is null) throw new InvalidDataException("所选历史包不在服务器档案中");
+            var nextBytes = RestoreManifest.Add(Encoding.UTF8.GetString(oldBytes), request.Kind, options.Root, version.Entry);
+            await cos.VerifyObjectHashAsync(credentials, request.PackageKey,
+                version.Entry["size"]?.GetValue<long>() ?? 0, request.PackageSha256.ToLowerInvariant(), operationCt);
+            Directory.CreateDirectory(HistoryPath);
+            var backup = Path.Combine(HistoryPath, DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss") +
+                "_restore_" + Guid.NewGuid().ToString("N") + ".json");
+            await File.WriteAllBytesAsync(backup, oldBytes, operationCt);
+            if (OperatingSystem.IsLinux()) File.SetUnixFileMode(backup, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            var latest = await cos.GetBytesAsync(credentials, key, 16 * 1024 * 1024, operationCt);
+            if (CosTransport.Sha256(latest) != CosTransport.Sha256(oldBytes))
+                throw new InvalidDataException("云端清单在恢复前发生变化，请刷新后重试");
+            await cos.PutBytesAsync(credentials, key, nextBytes, operationCt);
+            var hash = CosTransport.Sha256(nextBytes);
+            var verified = await cos.GetBytesAsync(credentials, key, 16 * 1024 * 1024, operationCt);
+            if (CosTransport.Sha256(verified) != hash)
+                throw new InvalidDataException("恢复清单写入后复核失败，请检查云端状态");
+            return new RestoreResponse(hash, request.ContentId);
+        }
+        finally { _commitGate.Release(); }
+    }
+
     public async Task<UnpublishResponse> UnpublishAsync(UnpublishRequest request, AdminIdentity user, CancellationToken ct)
     {
         // Publish and unpublish share the same manifest lock so this service cannot lose an update.
@@ -175,4 +244,3 @@ public sealed class PublicationCoordinator(GatewayOptions options, CredentialSto
         return Path.Combine(TicketsPath, id + ".json");
     }
 }
-
