@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace SCFA.PublicationGateway;
@@ -102,8 +103,12 @@ public sealed record PublicationCommitRequest(string PackageSha256, string NextM
 public sealed record PublicationCommitResponse(string ManifestSha256);
 public sealed record UnpublishRequest(string Kind, string ContentId, string Reason, string? ClientVersion);
 public sealed record UnpublishResponse(string ManifestSha256, string ContentId);
+public sealed record ArchiveVersion(JsonObject Entry, string State);
+public sealed record ArchivedContent(string Id, string Name, bool Downlisted, List<ArchiveVersion> Versions);
+public sealed record PublicationArchiveResponse(List<ArchivedContent> Items, bool Truncated);
+public sealed record RestoreRequest(string Kind, string ContentId, string PackageKey, string PackageSha256);
+public sealed record RestoreResponse(string ManifestSha256, string ContentId);
 public sealed record CredentialRotationRequest(string SecretId, string SecretKey);
 public sealed record PublicationTicket(
     string Id, string UserId, DateTimeOffset ExpiresAt, PublicationIntentRequest Request,
     string PackageStagingKey, string? ThumbnailStagingKey, bool Completed = false);
-
