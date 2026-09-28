@@ -35,6 +35,12 @@ public sealed class PublicationCommit
     [JsonPropertyName("manifest_sha256")] public string ManifestSha256 { get; set; } = "";
 }
 
+public sealed class UnpublishResult
+{
+    [JsonPropertyName("manifest_sha256")] public string ManifestSha256 { get; set; } = "";
+    [JsonPropertyName("content_id")] public string ContentId { get; set; } = "";
+}
+
 /// <summary>
 /// Uploads checked materials only after an authenticated server issues object-scoped upload URLs.
 /// The server owns COS credentials, validates uploaded bytes and atomically commits the manifest.
@@ -79,6 +85,44 @@ public sealed class PublicationUploadService(AuthApiClient auth, CloudCatalogSer
         using var publication = CreatePublicationClient();
         return await publication.SendContentAsync<CosCredentialStatus>(HttpMethod.Post,
             "/v1/admin/cos/credentials/rotate", body, requestCts.Token);
+    }
+
+    public async Task UnpublishAsync(string kind, string contentId, UserInfo user, CancellationToken ct = default)
+    {
+        if (!AccessPolicy.CanPublishContent(user) || string.IsNullOrWhiteSpace(auth.Token))
+            throw new UnauthorizedAccessException("请先使用管理员账号登录");
+        if (kind is not ("地图" or "MOD") || string.IsNullOrWhiteSpace(contentId))
+            throw new ArgumentException("内容类型或 ID 无效");
+        using var publication = CreatePublicationClient();
+        UnpublishResult result;
+        try
+        {
+            result = await publication.PostJsonAsync<UnpublishResult>("/v1/admin/publications/unpublish", new
+            {
+                kind = kind == "地图" ? "map" : "mod",
+                content_id = contentId,
+                reason = "管理员在软件中手动下架",
+                client_version = AppVersion.Informational
+            }, ct);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed)
+        {
+            throw new InvalidOperationException("服务器尚未部署下架接口，请先升级发布服务", ex);
+        }
+        if (!string.Equals(result.ContentId, contentId, StringComparison.OrdinalIgnoreCase) ||
+            result.ManifestSha256.Length != 64)
+            throw new InvalidDataException("服务器下架响应无效，请检查云端状态");
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                var publicManifest = await cloud.FetchManifestTextAsync(kind, ct);
+                if (Sha256(publicManifest) == result.ManifestSha256) return;
+            }
+            catch (HttpRequestException) when (attempt < 2) { }
+            if (attempt < 2) await Task.Delay(TimeSpan.FromSeconds(2), ct);
+        }
+        throw new InvalidDataException("服务器已提交下架，但公开清单尚未核验通过；请刷新目录检查，勿重复操作");
     }
     public async Task PublishAsync(PublicationBundle bundle, string kind, UserInfo user, CancellationToken ct = default)
     {
@@ -207,3 +251,4 @@ public sealed class PublicationUploadService(AuthApiClient auth, CloudCatalogSer
     private static string Sha256(string content) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
 }
+
