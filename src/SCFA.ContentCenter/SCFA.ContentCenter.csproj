@@ -10,9 +10,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>SCFA内容中心</AssemblyName>
     <RootNamespace>SCFA.ContentCenter</RootNamespace>
-    <Version>4.0.0.59</Version>
-    <FileVersion>4.0.0.59</FileVersion>
-    <InformationalVersion>4.0.0-dev59</InformationalVersion>
+    <Version>4.0.0.60</Version>
+    <FileVersion>4.0.0.60</FileVersion>
+    <InformationalVersion>4.0.0-dev60</InformationalVersion>
     <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
   <ItemGroup>
@@ -21,3 +21,4 @@
     <Resource Include="Assets\Fluent\*.png" />
   </ItemGroup>
 </Project>
+
