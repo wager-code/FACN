@@ -76,6 +76,7 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand DownloadsCommand { get; }
     public ICommand BackupsCommand { get; }
     public ICommand CloudHistoryCommand { get; }
+    public ICommand DownlistedCommand { get; }
     public ICommand SettingsCommand { get; }
     public ICommand DiagnosticsCommand { get; }
     public ICommand UpdatesCommand { get; }
@@ -123,7 +124,16 @@ public sealed class MainViewModel : ViewModelBase
         SyncCommand = new RelayCommand(() => Navigate(_syncPage, "同步中心", "安全补齐、更新与修复内容"));
         DownloadsCommand = new RelayCommand(() => Navigate(_downloadsPage.Value, "下载任务", "查看进度、取消与重试"));
         BackupsCommand = new RelayCommand(() => Navigate(_backupsPage.Value, "历史回滚", "浏览安装快照并恢复内容"));
-        CloudHistoryCommand = new RelayCommand(() => Navigate(_cloudHistoryPage.Value, "云端历史", "查看并安装服务器历史版本"));
+        CloudHistoryCommand = new RelayCommand(() =>
+        {
+            Navigate(_cloudHistoryPage.Value, "地图版本", "管理员查看正式与历史版本");
+            _cloudHistoryPage.Value.Open(false);
+        }, () => PublicationVisibility == Visibility.Visible);
+        DownlistedCommand = new RelayCommand(() =>
+        {
+            Navigate(_cloudHistoryPage.Value, "已下架内容", "管理员查看并恢复已下架版本");
+            _cloudHistoryPage.Value.Open(true);
+        }, () => PublicationVisibility == Visibility.Visible);
         SettingsCommand = new RelayCommand(() => Navigate(_settingsPage.Value, "软件设置", "目录、启动与软件数据"));
         DiagnosticsCommand = new RelayCommand(() => Navigate(_diagnosticsPage.Value, "诊断中心", "检查环境、网络与配置健康"));
         UpdatesCommand = new RelayCommand(() => Navigate(_updatesPage.Value, "客户端更新", "检查并安全应用新版本"));
