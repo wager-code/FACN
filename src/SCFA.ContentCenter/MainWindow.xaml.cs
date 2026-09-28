@@ -15,8 +15,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         var viewModel = new MainViewModel();
         DataContext = viewModel;
-        _navButtons = [HomeButton, CloudMapsButton, CloudModsButton, LocalMapsButton, LocalModsButton, SyncButton, DownloadsButton, BackupsButton, CloudHistoryButton, PublishMapsButton, PublishModsButton, AdminSettingsButton, UsersButton, OperationsButton, DiagnosticsButton, UpdatesButton, SettingsButton];
-        _navLabels = [HomeLabel, CloudMapsLabel, CloudModsLabel, LocalMapsLabel, LocalModsLabel, SyncLabel, DownloadsLabel, BackupsLabel, CloudHistoryLabel, PublishMapsLabel, PublishModsLabel, AdminSettingsLabel, UsersLabel, OperationsLabel, DiagnosticsLabel, UpdatesLabel, SettingsLabel];
+        _navButtons = [HomeButton, CloudMapsButton, CloudModsButton, LocalMapsButton, LocalModsButton, SyncButton, DownloadsButton, BackupsButton, CloudHistoryButton, DownlistedButton, PublishMapsButton, PublishModsButton, AdminSettingsButton, UsersButton, OperationsButton, DiagnosticsButton, UpdatesButton, SettingsButton];
+        _navLabels = [HomeLabel, CloudMapsLabel, CloudModsLabel, LocalMapsLabel, LocalModsLabel, SyncLabel, DownloadsLabel, BackupsLabel, CloudHistoryLabel, DownlistedLabel, PublishMapsLabel, PublishModsLabel, AdminSettingsLabel, UsersLabel, OperationsLabel, DiagnosticsLabel, UpdatesLabel, SettingsLabel];
         if (viewModel.CurrentPage is not SetupPageViewModel) HomeButton.IsChecked = true;
         SizeChanged += (_, _) => UpdateResponsiveNavigation();
         Loaded += (_, _) => UpdateResponsiveNavigation();
