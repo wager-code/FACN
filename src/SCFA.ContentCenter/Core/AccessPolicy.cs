@@ -8,7 +8,7 @@ public static class AccessPolicy
     public static bool CanManageUsers(UserInfo user) => Has(user, "users.manage", "users.write");
     public static bool CanRevokeSessions(UserInfo user) => Has(user, "sessions.revoke", "users.manage", "users.write");
     public static bool CanReadAudit(UserInfo user) => Has(user, "audit.read");
-    public static bool CanUnpublish(UserInfo user) => Has(user, "content.manage", "content.unpublish");
+    public static bool CanUnpublish(UserInfo user) => CanPublishContent(user);
     public static bool CanPublishContent(UserInfo user) => user is not null &&
         (string.Equals(user.RoleKey?.Trim(), "admin", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(user.RoleKey?.Trim(), "super_admin", StringComparison.OrdinalIgnoreCase));
@@ -28,3 +28,4 @@ public static class AccessPolicy
             permissions.Any(expected => string.Equals(value, expected, StringComparison.OrdinalIgnoreCase)));
     }
 }
+
