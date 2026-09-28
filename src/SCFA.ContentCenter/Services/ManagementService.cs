@@ -30,23 +30,6 @@ public sealed class ManagementService(ConfigService config, AuthApiClient auth, 
         log.Info("用户会话撤销已发送: " + userId);
     }
 
-    public async Task UnpublishContentAsync(string kind, string contentId, string reason, CancellationToken ct = default)
-    {
-        EnsureAuthenticated();
-        if (kind is not ("地图" or "MOD")) throw new ArgumentException("未知内容类型：" + kind, nameof(kind));
-        if (string.IsNullOrWhiteSpace(contentId)) throw new ArgumentException("内容 ID 为空", nameof(contentId));
-        reason = string.IsNullOrWhiteSpace(reason) ? "管理员在内容目录中下架" : reason.Trim();
-        var path = NormalizePath(config.Current.AdminContentPath, "/v1/admin/content").TrimEnd('/') + "/unpublish";
-        _ = await auth.PostJsonAsync<JsonElement>(path, new
-        {
-            kind = kind == "地图" ? "map" : "mod",
-            content_id = contentId.Trim(),
-            reason,
-            client_version = Core.AppVersion.Informational
-        }, ct);
-        log.Info($"管理员下架请求已发送: {kind} {contentId} reason={reason}");
-    }
-
     public async Task<IReadOnlyList<AuditRecord>> FetchAuditAsync(CancellationToken ct = default)
         => (await FetchAuditResultAsync(ct)).Records;
 
@@ -81,3 +64,4 @@ public sealed class ManagementService(ConfigService config, AuthApiClient auth, 
         return [];
     }
 }
+
