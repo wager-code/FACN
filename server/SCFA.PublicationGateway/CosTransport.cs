@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using COSXML;
 using COSXML.Auth;
 using COSXML.Model.Tag;
@@ -43,14 +44,14 @@ public sealed class CosTransport(GatewayOptions options)
         using var request = new HttpRequestMessage(HttpMethod.Head, SignedUrl(credentials, "HEAD", key, 300));
         using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         if (response.StatusCode == HttpStatusCode.NotFound) return false;
-        response.EnsureSuccessStatusCode();
+        await EnsureCosSuccessAsync(response, "HEAD", ct);
         return true;
     }
     public async Task<byte[]> GetBytesAsync(CosCredentials credentials, string key, int limit, CancellationToken ct)
     {
         using var response = await Http.GetAsync(SignedUrl(credentials, "GET", key, 300), HttpCompletionOption.ResponseHeadersRead, ct);
         if (response.StatusCode == HttpStatusCode.NotFound) throw new FileNotFoundException("COS 对象不存在");
-        response.EnsureSuccessStatusCode();
+        await EnsureCosSuccessAsync(response, "GET", ct);
         if (response.Content.Headers.ContentLength is long length && length > limit)
             throw new InvalidDataException("COS 对象超过读取上限");
         await using var input = await response.Content.ReadAsStreamAsync(ct);
@@ -69,7 +70,7 @@ public sealed class CosTransport(GatewayOptions options)
     public async Task DownloadToFileAsync(CosCredentials credentials, string key, string path, long limit, CancellationToken ct)
     {
         using var response = await Http.GetAsync(SignedUrl(credentials, "GET", key, 300), HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureCosSuccessAsync(response, "GET", ct);
         if (response.Content.Headers.ContentLength is long length && length > limit)
             throw new InvalidDataException("COS 包超过安全上限");
         await using var input = await response.Content.ReadAsStreamAsync(ct);
@@ -86,13 +87,39 @@ public sealed class CosTransport(GatewayOptions options)
         }
     }
 
+    public async Task VerifyObjectHashAsync(CosCredentials credentials, string key, long expectedSize, string expectedSha256, CancellationToken ct)
+    {
+        if (expectedSize is <= 0 or > 4L * 1024 * 1024 * 1024 ||
+            !Regex.IsMatch(expectedSha256, "^[a-f0-9]{64}$", RegexOptions.CultureInvariant))
+            throw new InvalidDataException("待恢复 ZIP 的大小或哈希无效");
+        using var response = await Http.GetAsync(SignedUrl(credentials, "GET", key, 3600), HttpCompletionOption.ResponseHeadersRead, ct);
+        await EnsureCosSuccessAsync(response, "GET", ct);
+        if (response.Content.Headers.ContentLength is long declared && declared != expectedSize)
+            throw new InvalidDataException("待恢复 ZIP 的云端大小与档案不符");
+        await using var input = await response.Content.ReadAsStreamAsync(ct);
+        using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buffer = new byte[128 * 1024];
+        long total = 0;
+        while (true)
+        {
+            var count = await input.ReadAsync(buffer, ct);
+            if (count == 0) break;
+            total += count;
+            if (total > expectedSize) throw new InvalidDataException("待恢复 ZIP 超过档案大小");
+            digest.AppendData(buffer, 0, count);
+        }
+        if (total != expectedSize ||
+            !Convert.ToHexString(digest.GetHashAndReset()).Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("待恢复 ZIP 内容与档案校验不符");
+    }
+
     public async Task PutFileAsync(CosCredentials credentials, string key, string path, CancellationToken ct)
     {
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, FileOptions.Asynchronous);
         using var content = new StreamContent(file);
         using var request = new HttpRequestMessage(HttpMethod.Put, SignedUrl(credentials, "PUT", key, 3600)) { Content = content };
         using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureCosSuccessAsync(response, "PUT", ct);
     }
 
     public async Task PutBytesAsync(CosCredentials credentials, string key, byte[] data, CancellationToken ct)
@@ -100,14 +127,14 @@ public sealed class CosTransport(GatewayOptions options)
         using var content = new ByteArrayContent(data);
         using var request = new HttpRequestMessage(HttpMethod.Put, SignedUrl(credentials, "PUT", key, 300)) { Content = content };
         using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureCosSuccessAsync(response, "PUT", ct);
     }
 
     public async Task DeleteAsync(CosCredentials credentials, string key, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, SignedUrl(credentials, "DELETE", key, 300));
         using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-        if (response.StatusCode != HttpStatusCode.NotFound) response.EnsureSuccessStatusCode();
+        if (response.StatusCode != HttpStatusCode.NotFound) await EnsureCosSuccessAsync(response, "DELETE", ct);
     }
 
     public async Task VerifyCredentialAsync(CosCredentials candidate, CancellationToken ct)
@@ -127,4 +154,34 @@ public sealed class CosTransport(GatewayOptions options)
     public static string Sha256(byte[] data) =>
         Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
     public static string Sha256(string data) => Sha256(Encoding.UTF8.GetBytes(data));
+
+    private static async Task EnsureCosSuccessAsync(HttpResponseMessage response, string operation, CancellationToken ct)
+    {
+        if (!response.IsSuccessStatusCode)
+            throw await CosRequestException.FromResponseAsync(response, operation, ct);
+    }
+}
+
+public sealed class CosRequestException(string operation, HttpStatusCode statusCode, string? cosCode)
+    : HttpRequestException($"COS {operation} HTTP {(int)statusCode}" + (cosCode is null ? "" : $" ({cosCode})"), null, statusCode)
+{
+    public string Operation { get; } = operation;
+    public string? CosCode { get; } = cosCode;
+
+    public static async Task<CosRequestException> FromResponseAsync(HttpResponseMessage response, string operation, CancellationToken ct)
+    {
+        // COS error XML can include object paths and request details. Only a short, validated Code reaches logs or clients.
+        await using var input = await response.Content.ReadAsStreamAsync(ct);
+        var bytes = new byte[4096];
+        var count = 0;
+        while (count < bytes.Length)
+        {
+            var read = await input.ReadAsync(bytes.AsMemory(count), ct);
+            if (read == 0) break;
+            count += read;
+        }
+        var body = Encoding.UTF8.GetString(bytes.AsSpan(0, count));
+        var match = Regex.Match(body, @"<Code>\s*([A-Za-z][A-Za-z0-9]{0,63})\s*</Code>", RegexOptions.CultureInvariant);
+        return new CosRequestException(operation, response.StatusCode, match.Success ? match.Groups[1].Value : null);
+    }
 }
