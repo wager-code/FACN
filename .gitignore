@@ -11,3 +11,5 @@ config.json
 session.json
 tasks.json
 sync-history.json
+design-qa.md
+reference-dev*/
