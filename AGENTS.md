@@ -7,9 +7,11 @@ This repository contains the Windows .NET 8 WPF client and the independent publi
 Before changing behavior, read these in order:
 
 1. `PRODUCT_REQUIREMENTS.md` — confirmed owner requirements, scope, and current completion status.
-2. `PROJECT_HANDOFF.md` — verified current state, production facts, and unknowns.
-3. `BUILD_VALIDATION.md` — concrete build/regression evidence.
-4. `ADMIN_PUBLISH_PLAN.md` and `ADMIN_PUBLISH_API.md` — publication architecture and API contract when working on administrator publishing.
+2. `CODEBASE_GUIDE.md` — feature-to-file map; use it before creating a new module.
+3. `PROJECT_HANDOFF.md` — verified current state, production facts, and unknowns.
+4. `ROADMAP.md` — sequencing and future milestones; candidate ideas are not requirements.
+5. `BUILD_VALIDATION.md` — concrete build/regression evidence.
+6. `ADMIN_PUBLISH_PLAN.md` and `ADMIN_PUBLISH_API.md` — publication architecture and API contract when working on administrator publishing.
 
 `README.md` is a user-facing overview, not the authoritative implementation status.
 
@@ -22,6 +24,8 @@ Do not reconstruct current requirements from old commits, removed V3/Win32 refer
 - `server/SCFA.PublicationGateway.RegressionTests/` — gateway regression coverage.
 - `tests/SCFA.ContentCenter.RegressionTests/` — client regression and WPF smoke coverage.
 - `.github/workflows/` — Windows build and publication-gateway release workflows.
+- `ROADMAP.md` — planned development sequence.
+- `CODEBASE_GUIDE.md` — architecture and feature/file navigation.
 
 ## Working agreements
 

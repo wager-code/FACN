@@ -2,6 +2,23 @@
 
 独立于现有账号服务运行。管理员在 Windows 软件中选地图或 MOD，客户端校验并打包，向本服务取得仅能写入暂存对象的短期 COS 签名 URL，软件直接上传 ZIP，服务端重新验证后把正式包和新清单发布到 COS。普通玩家没有发布接口，也不会收到长期 COS SecretKey。
 
+## 源码文件职责
+
+| 文件 | 作用 |
+| --- | --- |
+| `Program.cs` | HTTP 路由、依赖注册、统一错误处理 |
+| `AdminAuthenticator.cs` | 使用 Bearer Token 向本机账号服务复核管理员身份 |
+| `GatewayModels.cs` | 网关配置、加密凭据存储、API DTO、发布 ticket |
+| `CosTransport.cs` | COS 凭据验证、对象读写、签名上传 URL 等底层通信 |
+| `ManifestValidator.cs` | 验证发布前后的 manifest 变化是否合法 |
+| `PackageValidator.cs` | 服务端重新验证暂存 ZIP 的结构、版本与内容哈希 |
+| `PublicationCoordinator.cs` | intent/commit/下架/档案/恢复的主业务编排 |
+| `UnpublishManifest.cs` | 从正式清单安全移除指定条目 |
+| `PublicationArchive.cs` | 组合当前清单与历史快照，生成管理员版本档案 |
+| `RestoreManifest.cs` | 从档案构造安全的恢复清单 |
+
+客户端对应代码主要在 `src/SCFA.ContentCenter/Services/PublicationPreparationService.cs` 和 `PublicationUploadService.cs`。完整链路见仓库根目录 `CODEBASE_GUIDE.md`。
+
 ## 本地验证
 
 在源码根目录运行：
@@ -23,4 +40,4 @@
 
 本服务对进程内提交加锁；如果同时用 COS 控制台或另一台发布服务修改清单，COS 没有被本项目验证过的条件写入保证，可能出现外部并发竞争。正式环境保持单实例并限制其他写入入口。发布前会保存旧清单到服务端 history 目录。日志不记录密钥、Token 或签名 URL。
 
-当前仓库没有生产账号服务源码及其部署配置。独立发布网关已部署，但 dev58 的旧清单兼容修复尚待更新到服务器；首次真实地图/MOD 发布仍需验收。软件的自动发布按钮只有检测到服务端能力后才启用。
+当前仓库没有生产账号服务源码及其部署配置。网关曾完成部署，且仓库已生成 `gateway-v61` Release；生产服务器是否已经升级到 dev61 能力必须现场核实。负责人已报告真实地图从软件发布成功，MOD 完整发布闭环以及 dev60/dev61 的下架、档案、恢复仍需生产验收。软件的自动发布按钮只有检测到服务端能力后才启用。

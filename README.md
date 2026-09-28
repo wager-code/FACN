@@ -93,16 +93,9 @@
 
 ## 🚀 后续计划
 
-未来计划继续完善：
+当前正式路线图见 **[ROADMAP.md](ROADMAP.md)**。
 
-- ☁️ 管理员一键发布地图 / MOD
-- ❤️ “不喜欢”设置账号云同步
-- 🧩 更完善的 MOD 兼容性与依赖检查
-- 🗺️ 更完善的地图兼容性检查
-- 🔔 地图 / MOD 更新提醒
-- ⭐ 收藏功能
-- 📢 软件公告与更新日志
-- 🔑 更多快捷登录方式
+近期重点是完成 V4.0 生产闭环：MOD 真实发布、下架/档案/恢复验收、客户端更新链以及 Steam 兼容检查。候选功能不会仅因为写在 README 中就直接进入开发。
 
 ---
 
@@ -148,10 +141,12 @@ SCFA.ContentCenter.sln
 
 详细开发、测试和服务器相关文档请查看仓库中的：
 
-- `PRODUCT_REQUIREMENTS.md`
-- `PROJECT_HANDOFF.md`
-- `ADMIN_PUBLISH_PLAN.md`
-- `BUILD_VALIDATION.md`
+- `PRODUCT_REQUIREMENTS.md`：确认过的产品要求
+- `ROADMAP.md`：后续开发顺序
+- `CODEBASE_GUIDE.md`：功能与源码文件对应关系
+- `PROJECT_HANDOFF.md`：当前交接/生产事实
+- `BUILD_VALIDATION.md`：构建和验收门槛
+- `ADMIN_PUBLISH_PLAN.md` / `ADMIN_PUBLISH_API.md`：管理员发布架构与接口
 
 ---
 
