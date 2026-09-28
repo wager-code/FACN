@@ -100,7 +100,10 @@ public sealed record PublicationIntentResponse(
     string? ThumbnailUploadKey, string? ThumbnailUploadUrl);
 public sealed record PublicationCommitRequest(string PackageSha256, string NextManifestSha256);
 public sealed record PublicationCommitResponse(string ManifestSha256);
+public sealed record UnpublishRequest(string Kind, string ContentId, string Reason, string? ClientVersion);
+public sealed record UnpublishResponse(string ManifestSha256, string ContentId);
 public sealed record CredentialRotationRequest(string SecretId, string SecretKey);
 public sealed record PublicationTicket(
     string Id, string UserId, DateTimeOffset ExpiresAt, PublicationIntentRequest Request,
     string PackageStagingKey, string? ThumbnailStagingKey, bool Completed = false);
+
