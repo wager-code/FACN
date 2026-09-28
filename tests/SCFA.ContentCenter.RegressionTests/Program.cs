@@ -143,6 +143,36 @@ if (args.Contains("--profile-ui-smoke", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+if (args.Contains("--archive-ui-smoke", StringComparer.OrdinalIgnoreCase))
+{
+    Exception? archiveError = null;
+    var uiThread = new Thread(() =>
+    {
+        try
+        {
+            var application = new SCFA.ContentCenter.App();
+            application.InitializeComponent();
+            var page = new SCFA.ContentCenter.Views.CloudHistoryView
+            {
+                DataContext = new SCFA.ContentCenter.ViewModels.CloudHistoryPageViewModel()
+            };
+            var window = new System.Windows.Window { Content = page, Width = 1100, Height = 760, ShowInTaskbar = false, Opacity = 0 };
+            window.Show();
+            window.UpdateLayout();
+            window.Close();
+            application.Shutdown();
+        }
+        catch (Exception ex) { archiveError = ex; }
+    });
+    uiThread.SetApartmentState(ApartmentState.STA);
+    uiThread.Start();
+    uiThread.Join();
+    if (archiveError is not null) Console.Error.WriteLine("FAIL  版本档案页面加载异常：" + archiveError);
+    else Console.WriteLine("PASS  版本档案页面可实际构造和布局");
+    Environment.Exit(archiveError is null ? 0 : 1);
+    return;
+}
+
 if (args.Contains("--admin-ui-binding-smoke", StringComparer.OrdinalIgnoreCase))
 {
     Exception? bindingError = null;
