@@ -1,0 +1,35 @@
+name: release-publication-gateway
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example gateway-v61"
+        required: true
+        type: string
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Validate tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^gateway-v[0-9]+$ ]]
+      - name: Verify gateway
+        run: dotnet run --project server/SCFA.PublicationGateway.RegressionTests/SCFA.PublicationGateway.RegressionTests.csproj -c Release
+      - name: Build Linux gateway
+        run: dotnet publish server/SCFA.PublicationGateway/SCFA.PublicationGateway.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o dist/gateway
+      - name: Package and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          tar -C dist/gateway -czf scfa-publication-linux-x64.tar.gz .
+          sha256sum scfa-publication-linux-x64.tar.gz > scfa-publication-linux-x64.tar.gz.sha256
+          gh release create "$RELEASE_TAG" scfa-publication-linux-x64.tar.gz scfa-publication-linux-x64.tar.gz.sha256 --target "$GITHUB_SHA" --title "$RELEASE_TAG" --notes "SCFA publication gateway. Server installation is a separate administrator action."
