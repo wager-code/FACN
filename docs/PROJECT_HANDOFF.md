@@ -1,9 +1,10 @@
 # SCFA Content Center project handoff
 
-Updated: 2026-09-28  
-Current source baseline: `V4.0.0-dev61`
+Updated: 2026-09-30  
+Current source baseline: `V4.0.0-dev61`  
+Current production publication gateway: `gateway-v61`
 
-This file records only the current project state. Old dev-by-dev history remains available in Git history and should not be treated as current requirements.
+This file records the **verified current project/production state and the next handoff point**. Old dev-by-dev history remains available in Git history and should not be treated as current requirements.
 
 ## Architecture
 
@@ -50,41 +51,138 @@ The client and publication gateway currently implement:
 - administrator publication archive reading;
 - restoring an archived/downlisted version as the current published version.
 
-The owner reported that a real map was successfully published from the software. A complete real MOD publication → player install → repeat sync cycle is still pending. The dev60 downlisting flow and dev61 archive/restore flow also still require production deployment/real-account acceptance testing.
+A real map publication has already succeeded from inside the software. A complete real MOD publication → player install → repeat sync → update cycle is still pending.
+
+## Verified production state — 2026-09-30
+
+The production server was inspected before further deployment work. The following facts were verified:
+
+- `scfa-publication.service` is active and runs `/opt/scfa-publication/SCFA.PublicationGateway`.
+- The installed release marker is `gateway-v61`.
+- The running process and on-disk gateway executable have the same SHA-256:
+  `15f3bfa453f075ce29791806a89ab39299661243f2353cdba8f51c00838e7e50`.
+- `/publication-healthz` returns HTTP 200.
+- Anonymous access to the administrator archive API is rejected with HTTP 401.
+- The production account service and updater service are active.
+- No OOM event was found in the inspected seven-day kernel-log window.
+- Disk capacity is healthy; no OS reinstall is required for the investigated deployment/download problem.
+- `scfa-gateway-release-check.timer` is currently **disabled** and should remain disabled until a reviewed updater flow replaces the current production auto-update path.
+
+### Production backup status
+
+Before updater testing, a consistent production backup was created and verified. It includes:
+
+- account data and audit data;
+- publication history/tickets/COS credential ciphertext;
+- the publication master-key environment file;
+- SCFA service environment files;
+- Nginx publication config and TLS material;
+- systemd service/timer units;
+- current API/updater/publication binaries;
+- the pre-existing gateway rollback binary.
+
+The backup was also copied off the server and checksum-verified. **Do not upload that backup, private keys, environment files, or credential material to this public repository.**
+
+### Gateway updater v2 validation
+
+A production-side v2 updater prototype currently exists as:
+
+- `/opt/scfa-publication/ops/update-from-release-v2.sh`
+- `/opt/scfa-publication/ops/check-gateway-release-v2.sh`
+
+Important: these v2 scripts are **not yet the systemd production entry point and are not yet source-controlled in this repository**.
+
+Validated behavior:
+
+- `--report-only` correctly reported `CURRENT=gateway-v61` and `LATEST=gateway-v61`.
+- Full Release package validation downloaded the real `41,115,979` byte gateway package.
+- Release package SHA-256 verified as `81b55fef432e2a32a2a02f5eef75f1a1b77aa896ace8a0f089f0f2de4f1a79dd`.
+- Four-part progress reporting worked and exposed a slower individual route instead of appearing frozen.
+- A second `--verify-only` run reused all four cached parts without re-downloading the package.
+- A same-version `gateway-v61` install rehearsal completed successfully:
+  backup → staged switch → service restart → health/auth checks → runtime SHA-256 verification.
+- The final independent acceptance check again returned service active, health 200, anonymous admin 401, and matching runtime/disk SHA-256.
+- A deliberate forced-failure rollback drill was **not** performed on the live server.
+
+The current systemd release-check service still points to the older production scripts. Do not enable the timer merely because the v2 sidecar test succeeded.
+
+## Source issues found during the deployment audit
+
+These are source-code tasks for Codex, not OS-reinstall tasks:
+
+1. **Client update file-handle bug — P0**
+   - `UpdateService.DownloadAsync` creates the destination with `FileShare.None`.
+   - The code calls `ContentHash.FileSha256Async(destination)` before the output stream has left scope.
+   - On Windows this can prevent reopening the downloaded file for SHA-256 verification.
+   - Fix by flushing/disposing the output stream before reopening for hash verification, with regression coverage.
+
+2. **COS request timeout policy — P0**
+   - `CosTransport` currently uses a static `HttpClient` with `Timeout = Timeout.InfiniteTimeSpan`.
+   - Add an explicit bounded timeout/cancellation strategy appropriate for metadata operations and large package transfers.
+   - Do not replace this with an arbitrarily short global timeout that breaks large uploads/downloads.
+
+3. **Publication lock scope — P0/P1**
+   - `PublicationCoordinator` serializes commit/unpublish/restore through one `SemaphoreSlim`, which protects manifest consistency.
+   - Do **not** simply remove serialization.
+   - Review whether long COS download/validation work can happen outside the final manifest-mutation critical section so unrelated administrator operations are not blocked longer than necessary.
+   - Preserve the re-read/conflict check immediately before the manifest write.
+
+4. **Health/version evidence — P1**
+   - `/publication-healthz` currently proves liveness but does not expose the gateway release/commit.
+   - Add a safe version/build identifier so future deployment validation can prove which binary is running without relying only on server-side marker files.
+
+5. **Updater v2 source control — P0 before auto-update**
+   - Convert the validated production-side v2 behavior into reviewed repository-managed deployment tooling.
+   - Keep report-only, full-size validation, progress reporting, cache reuse, package SHA-256, staging, backup, atomic switch, runtime SHA verification, and verified rollback.
+   - Only after source review/testing and production handoff should the systemd release-check service/timer be changed.
+
+## Next action for Codex
+
+Unless the owner gives a newer priority, start in this order:
+
+1. Fix the Windows client updater file-handle/SHA-256 bug and add a regression test.
+2. Add a bounded COS timeout strategy with regression coverage.
+3. Review/narrow publication lock scope while preserving manifest serialization/conflict protection.
+4. Add safe gateway version/build information to the health response and tests.
+5. Bring the validated updater-v2 behavior into the repository as reviewed deployment tooling; do **not** directly change the live systemd timer from Codex.
+6. Run the full client + gateway validation gates.
+7. Prepare a production deployment handoff per `DEPLOYMENT_POLICY.md`.
+8. After those source tasks, continue the remaining V4.0 production acceptance: real MOD publish/install/repeat-sync/update, downlist/archive/restore with a real administrator, and real client-update-channel acceptance.
 
 ## Security and data-safety rules
 
-- Never place COS `SecretId`/`SecretKey`, account tokens, real packages, or private server configuration in this public repository.
+- Never place COS `SecretId`/`SecretKey`, account tokens, real packages, backups, environment files, master keys, TLS private keys, or private server configuration in this public repository.
 - Player clients read published content without receiving long-term COS write credentials.
 - Automatic sync must not guess which duplicate local folder to overwrite.
 - Package metadata, release/game versions, hashes, destination paths, and extracted content must be validated before replacement.
 - Destructive local operations require a verified backup and must stay inside the configured Maps/Mods roots.
 - Publication must re-check the live manifest before commit and verify the published manifest after commit.
-- Production should keep the publication gateway single-writer or otherwise prevent uncoordinated external manifest writes until atomic cross-writer protection is implemented.
+- Production must prevent uncoordinated external manifest writes until a stronger cross-writer atomic strategy exists.
 
 ## Known gaps / do not claim complete
 
 1. Full real MOD publication acceptance: publish, install on a player client, repeat sync, update, and rollback.
-2. Deploy/upgrade the production gateway to the dev61 archive/restore implementation and verify downlist/restore with a real administrator account.
+2. Real-admin downlist → archive → restore acceptance is still pending even though `gateway-v61` is deployed and healthy.
 3. Cross-device synchronization for the per-account “dislike” preference.
-4. Steam-vs-FAF semantic compatibility remains partly manual; current checks cover structure, paths, versions, hashes, and package safety, not every script/API semantic difference.
+4. Steam-vs-FAF semantic compatibility remains partly manual.
 5. The client update channel still needs acceptance with a real published client package.
-6. The current account-service source/build process is not present in this repository; do not replace or redesign the deployed account service based on guesses.
+6. The forced-failure rollback path of the updater-v2 prototype has not been deliberately exercised on production.
+7. The current account-service source/build process is not present in this repository; do not redesign the deployed account service based on guesses.
 
 ## Development rules
 
 - Read `PRODUCT_REQUIREMENTS.md` before feature work.
 - Use this handoff for verified current state and unknowns.
-- Use `BUILD_VALIDATION.md` for the current test/release gate.
+- Use `ROADMAP.md` for priority and `BUILD_VALIDATION.md` for the release gate.
 - Use `ADMIN_PUBLISH_PLAN.md` and `ADMIN_PUBLISH_API.md` for publication architecture.
 - Do not revive player submissions/review; they were removed from product scope in dev52.
 - Prefer refactoring/reusing existing services and models over adding parallel replacements.
-- When a milestone changes product state, update the requirements/handoff instead of appending another large chronological history.
+- When a milestone changes product/production state, update this file and `OPERATION_LOG.md`.
 
 ## Moving to another computer
 
 1. Clone the repository and open `SCFA.ContentCenter.sln`.
-2. Read `AGENTS.md`, `PRODUCT_REQUIREMENTS.md`, this file, and `BUILD_VALIDATION.md`.
+2. Read `AGENTS.md`, `docs/00_START_HERE.md`, `PRODUCT_REQUIREMENTS.md`, `ROADMAP.md`, this file, `BUILD_VALIDATION.md`, and the latest `OPERATION_LOG.md` entries.
 3. Restore private configuration, game content, source backups, and server/COS backups separately; they are intentionally not stored in GitHub.
 4. Run the build and regression gates before changing behavior.
-5. Re-check live service behavior before relying on an old production observation.
+5. Re-check live service behavior before relying on old production observations.
