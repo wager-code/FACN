@@ -1,7 +1,8 @@
 # START HERE — SCFA 内容中心开发入口
 
-Updated: 2026-09-29  
-Baseline: `V4.0.0-dev61`
+Updated: 2026-09-30  
+Baseline: `V4.0.0-dev61`  
+Production gateway: `gateway-v61`
 
 如果你是新电脑、新开发者或 Codex 新会话，**修改源码前先读本文件**。
 
@@ -48,6 +49,24 @@ SCFA 内容中心是面向《最高指挥官：钢铁联盟》Steam 版玩家的
 - Steam/FAF 兼容性检查和管理员验收
 
 详细优先级以 [ROADMAP.md](ROADMAP.md) 为准。
+
+## Codex 现在先做什么
+
+如果产品负责人没有给出新的优先级，**不要从聊天记录猜下一步**。直接按以下顺序：
+
+1. 先读 [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) 的“Verified production state / Source issues / Next action for Codex”。
+2. 再读 [ROADMAP.md](ROADMAP.md) 的“Codex 当前执行顺序”。
+3. 当前优先修复：
+   - 客户端更新下载文件仍被 `FileShare.None` 占用时重新打开做 SHA-256 的问题；
+   - Publication Gateway COS 无限 HTTP timeout；
+   - PublicationCoordinator 过大的 manifest 串行锁临界区；
+   - healthz 缺少安全版本/构建信息；
+   - 将已在生产旁路验证的 updater v2 行为整理为仓库内可评审部署工具。
+4. 每一项先补/改回归测试，再改实现。
+5. 源码和 CI 完成后，按 [DEPLOYMENT_POLICY.md](DEPLOYMENT_POLICY.md) 生成部署交接单，**不要由 Codex 直接改生产 systemd/timer**。
+
+当前生产 release-check timer 保持 disabled；这一状态不是 Codex 自行改变的事项。
+
 
 ## 源码修改规则
 
