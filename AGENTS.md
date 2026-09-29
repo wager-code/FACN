@@ -20,6 +20,21 @@ For any server/deployment task, read `docs/DEPLOYMENT_POLICY.md` and `docs/TROUB
 
 `README.md` is user-facing and is not the authoritative implementation status.
 
+## Choosing the next task
+
+If the owner has not given a newer explicit priority, do not infer the next task from chat history or old commits. Use the current sections in `docs/PROJECT_HANDOFF.md` and `docs/ROADMAP.md`.
+
+As of the 2026-09-30 handoff, the source-level order is:
+
+1. fix the Windows client updater file-handle/SHA-256 bug;
+2. add a bounded COS timeout/cancellation strategy;
+3. narrow publication lock scope without removing final manifest serialization;
+4. expose a safe gateway build/version identifier in health output;
+5. move the validated updater-v2 behavior into reviewed repository tooling;
+6. run the full validation gate and prepare a production handoff.
+
+Do not enable or modify the live release-check timer from Codex. Production status and the exact remaining acceptance work are documented in `docs/PROJECT_HANDOFF.md`.
+
 ## Operation log requirement
 
 After a significant development, refactor, deployment preparation, production incident, rollback, release, or project-structure change, update `docs/OPERATION_LOG.md`.
