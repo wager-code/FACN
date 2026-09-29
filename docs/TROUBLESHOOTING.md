@@ -1,6 +1,6 @@
 # 故障排查与服务器交接
 
-Updated: 2026-09-28
+Updated: 2026-09-30
 
 先判断问题属于哪一层，不要先改代码。
 
@@ -47,12 +47,19 @@ nginx -t
 ### Publication Gateway
 
 - 生产实际运行版本
-- systemd 服务状态
+- systemd 服务状态和 MainPID
 - 本机监听端口
 - 数据目录权限
 - 主密钥环境变量是否存在（不输出值）
 - COS 凭据是否配置
 - capabilities/downlist/archive/restore 是否与当前源码版本一致
+- healthz=200 只表示服务存活；当前 healthz 尚不包含版本号
+- 需要确认真实运行二进制时，同时核对：
+  - `/var/lib/scfa-publication/installed-gateway-release`
+  - `systemctl show scfa-publication.service -p MainPID`
+  - `/opt/scfa-publication/SCFA.PublicationGateway` SHA-256
+  - `/proc/<MainPID>/exe` SHA-256
+- 如果磁盘文件和运行中 exe SHA-256 不一致，先停止继续部署并查明进程是否真正重启
 
 ### Nginx
 
