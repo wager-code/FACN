@@ -12,12 +12,34 @@ Before changing source code, read:
 4. `docs/CODEBASE_GUIDE.md`
 5. `docs/PROJECT_HANDOFF.md`
 6. `docs/BUILD_VALIDATION.md`
+7. `docs/OPERATION_LOG.md` — recent important work, failures, incomplete items, and handoffs
 
 For administrator publication work, also read `docs/ADMIN_PUBLISH_PLAN.md` and `docs/ADMIN_PUBLISH_API.md`.
 
 For any server/deployment task, read `docs/DEPLOYMENT_POLICY.md` and `docs/TROUBLESHOOTING.md`.
 
 `README.md` is user-facing and is not the authoritative implementation status.
+
+## Operation log requirement
+
+After a significant development, refactor, deployment preparation, production incident, rollback, release, or project-structure change, update `docs/OPERATION_LOG.md`.
+
+Each important entry must include:
+
+- date/time;
+- actor;
+- target/version;
+- what was done;
+- result/status;
+- what completed;
+- what remains incomplete or unverified;
+- errors/abnormalities;
+- next step;
+- related commit/PR/release when available.
+
+Do not create one entry for every tiny edit. Group one coherent task into one useful record.
+
+Never place passwords, tokens, SecretId/SecretKey, master keys, private keys, or other secret values in the operation log.
 
 ## Production-server boundary
 

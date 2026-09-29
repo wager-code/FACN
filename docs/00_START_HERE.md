@@ -1,6 +1,6 @@
 # START HERE — SCFA 内容中心开发入口
 
-Updated: 2026-09-28  
+Updated: 2026-09-29  
 Baseline: `V4.0.0-dev61`
 
 如果你是新电脑、新开发者或 Codex 新会话，**修改源码前先读本文件**。
@@ -26,6 +26,7 @@ SCFA 内容中心是面向《最高指挥官：钢铁联盟》Steam 版玩家的
 3. [CODEBASE_GUIDE.md](CODEBASE_GUIDE.md)
 4. [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md)
 5. [BUILD_VALIDATION.md](BUILD_VALIDATION.md)
+6. [OPERATION_LOG.md](OPERATION_LOG.md) — 看最近谁做了什么、结果、错误和未完成项
 
 任务涉及管理员发布时，再读：
 
@@ -51,12 +52,14 @@ SCFA 内容中心是面向《最高指挥官：钢铁联盟》Steam 版玩家的
 ## 源码修改规则
 
 - 先看 [CODEBASE_GUIDE.md](CODEBASE_GUIDE.md)，找到已有模块。
+- 开工前看 [OPERATION_LOG.md](OPERATION_LOG.md)，避免重复踩已经记录过的坑。
 - 新建 Service/Model/helper 前先搜索仓库，避免重复实现。
 - 不恢复 dev52 已取消的普通玩家投稿/审核流程。
 - 不把长期 COS SecretId/SecretKey 放进玩家客户端。
 - 不自动覆盖无法确认身份的重复本地地图/MOD。
 - 不因为文件大就一次性重写核心模块；小步拆分并保持 CI 通过。
 - 安装、备份、ZIP、manifest、COS、账号权限相关修改必须保留安全校验。
+- 完成重要任务后更新 [OPERATION_LOG.md](OPERATION_LOG.md)。
 
 ## Codex 与服务器的分工
 
@@ -92,5 +95,6 @@ Codex可以负责：
 3. 打开 `SCFA.ContentCenter.sln`。
 4. 私有配置、服务器备份、游戏内容单独恢复，不提交 Git。
 5. 按 [BUILD_VALIDATION.md](BUILD_VALIDATION.md) 建立构建/回归基线。
-6. 确认任务是源码开发还是生产服务器运维。
-7. 再开始修改。
+6. 看 [OPERATION_LOG.md](OPERATION_LOG.md) 确认最近未完成项和已知错误。
+7. 确认任务是源码开发还是生产服务器运维。
+8. 再开始修改。
