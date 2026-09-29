@@ -1,6 +1,6 @@
 # SCFA 内容中心操作记录
 
-Updated: 2026-09-29
+Updated: 2026-09-30
 
 本文件记录项目的重要开发、部署、排障、发布、回滚和结构调整。  
 它不是 Git commit 历史的替代品，而是给新开发者和维护者看的“发生了什么、结果如何、还剩什么”。
@@ -94,6 +94,59 @@ Updated: 2026-09-29
 ---
 
 # 最新记录
+
+### 2026-09-30 01:50 — 生产 gateway-v61 核实、完整备份与 updater v2 旁路验收
+
+- **执行人：** ChatGPT 服务器部署会话 + 用户/管理员
+- **对象/版本：** 生产 Publication Gateway / `gateway-v61`
+- **状态：** ✅ 完成（自动更新接管与故障回滚演练仍未执行）
+- **关联：** `docs/PROJECT_HANDOFF.md`；生产 `scfa-publication.service`
+
+**做了什么**
+- 只读核实生产服务器 OS、服务、版本、磁盘、内存、systemd、Nginx/TLS、账号数据、发布历史、COS 凭据密文与主密钥配置位置。
+- 确认实际运行网关为 `gateway-v61`，运行中与磁盘二进制 SHA-256 一致。
+- 核实旧 Release 下载曾出现低速超时、Broken pipe 和 HTTP/2 protocol error，但后续完整包 + checksum 的 v61 安装成功。
+- 在任何新部署前创建生产完整备份，并完成关键文件、压缩包 SHA-256、服务恢复与异机副本校验。
+- 安装旁路 `update-from-release-v2.sh` / `check-gateway-release-v2.sh`，未替换 systemd 正式入口。
+- 用真实 `gateway-v61` Release 做 41,115,979 字节完整下载验证，显示分块/总进度并验证 Release SHA-256。
+- 第二次 verify-only 验证四个分块全部从缓存复用。
+- 用相同 v61 二进制执行一次真实安装链路演练：备份 → `.next` → 原子切换 → restart → health/auth → runtime SHA-256。
+
+**已完成**
+- `scfa-publication.service` 最终保持 active。
+- `/publication-healthz` 返回 200。
+- 未登录管理员 archive API 返回 401。
+- 运行中 `/proc/<pid>/exe` 与 `/opt/scfa-publication/SCFA.PublicationGateway` SHA-256 一致。
+- 生产 timer 继续保持 disabled。
+- 结论：本次问题不需要重装 OS。
+
+**未完成 / 待验证**
+- updater v2 还没有纳入仓库源码/CI/正式 systemd 入口。
+- 没有在生产上人为制造启动失败，因此 `ROLLBACK_OK/ROLLBACK_FAILED` 路径尚未做故障注入演练。
+- 真实 MOD 发布→玩家安装→重复同步→更新仍待完成。
+- 下架→档案→恢复仍需真实管理员生产验收。
+- 客户端真实更新包验收需先修复 `UpdateService` 文件句柄/SHA-256 问题。
+
+**源码审计发现**
+- `CosTransport` 的共享 `HttpClient.Timeout` 当前为无限，需要明确的有界超时/取消策略。
+- `PublicationCoordinator` 的 commit/unpublish/restore 共用 manifest 串行锁；必须保留最终写入串行，但应评估缩小耗时临界区。
+- `UpdateService.DownloadAsync` 在 `FileShare.None` 输出流仍在作用域时重新打开同一文件做 SHA-256，Windows 下存在失败风险。
+- `/publication-healthz` 不返回版本/构建标识，部署验证仍需服务端 SHA/marker 辅助。
+
+**错误 / 异常**
+- GitHub Release 旧下载路径曾出现低速超时、Broken pipe、HTTP/2 协议错误。
+- v2 完整分块测试中一个分块明显较慢，但四路并行最终约 75 秒完成真实 41MB+ 包；可见进度避免误判为卡死。
+
+**结果**
+- 当前生产状态健康，`gateway-v61` 已明确核实。
+- 已建立可恢复的备份基线和经过实包验证的 updater v2 行为基线。
+- 下一阶段应回到源码修复/回归，而不是继续在生产服务器试错。
+
+**下一步**
+- Codex 按 `ROADMAP.md` 的“Codex 当前执行顺序”修复客户端 updater、COS timeout、锁范围、health 版本信息，并把 updater v2 纳入源码管理。
+- 源码和 CI 通过后按 `DEPLOYMENT_POLICY.md` 生成新的服务器部署交接单。
+
+---
 
 ### 2026-09-29 10:53 — 建立统一操作记录制度
 
