@@ -110,15 +110,16 @@ The current systemd release-check service still points to the older production s
 
 These are source-code tasks for Codex, not OS-reinstall tasks:
 
-1. **Client update file-handle bug — P0 source fix complete on 2026-09-30**
-   - `UpdateService.DownloadAsync` now flushes and disposes the exclusive output stream before SHA-256 and PE validation.
-   - A Windows regression reproduced the original sharing violation before the fix and passed afterward.
-   - Hash mismatch rejection and staging-file cleanup are covered. Acceptance with a real published client package remains pending.
+1. **Client update file-handle bug — P0**
+   - `UpdateService.DownloadAsync` creates the destination with `FileShare.None`.
+   - The code calls `ContentHash.FileSha256Async(destination)` before the output stream has left scope.
+   - On Windows this can prevent reopening the downloaded file for SHA-256 verification.
+   - Fix by flushing/disposing the output stream before reopening for hash verification, with regression coverage.
 
-2. **COS request timeout policy — P0 source fix complete on 2026-09-30**
-   - `CosTransport` now applies linked per-operation deadlines: 45 seconds for metadata, 5 minutes for small objects, and 12 hours for large transfers.
-   - The deadline covers response headers, error bodies, and streamed content; tests cover stalls, caller cancellation, large transfers, and safe HTTP 504 mapping.
-   - The shared HTTP client intentionally has no competing global deadline. Production COS acceptance remains pending.
+2. **COS request timeout policy — P0**
+   - `CosTransport` currently uses a static `HttpClient` with `Timeout = Timeout.InfiniteTimeSpan`.
+   - Add an explicit bounded timeout/cancellation strategy appropriate for metadata operations and large package transfers.
+   - Do not replace this with an arbitrarily short global timeout that breaks large uploads/downloads.
 
 3. **Publication lock scope — P0/P1**
    - `PublicationCoordinator` serializes commit/unpublish/restore through one `SemaphoreSlim`, which protects manifest consistency.
@@ -139,8 +140,8 @@ These are source-code tasks for Codex, not OS-reinstall tasks:
 
 Unless the owner gives a newer priority, start in this order:
 
-1. Completed on 2026-09-30: Windows client updater file-handle/SHA-256 fix and regression coverage.
-2. Completed on 2026-09-30: bounded COS request deadlines, cancellation behavior, and regression coverage.
+1. Fix the Windows client updater file-handle/SHA-256 bug and add a regression test.
+2. Add a bounded COS timeout strategy with regression coverage.
 3. Review/narrow publication lock scope while preserving manifest serialization/conflict protection.
 4. Add safe gateway version/build information to the health response and tests.
 5. Bring the validated updater-v2 behavior into the repository as reviewed deployment tooling; do **not** directly change the live systemd timer from Codex.

@@ -56,7 +56,9 @@ SCFA 内容中心是面向《最高指挥官：钢铁联盟》Steam 版玩家的
 
 1. 先读 [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) 的“Verified production state / Source issues / Next action for Codex”。
 2. 再读 [ROADMAP.md](ROADMAP.md) 的“Codex 当前执行顺序”。
-3. 客户端更新文件句柄与 Publication Gateway COS 请求超时问题已于 2026-09-30 完成源码修复和隔离回归验证。接下来依次处理：
+3. 当前优先修复：
+   - 客户端更新下载文件仍被 `FileShare.None` 占用时重新打开做 SHA-256 的问题；
+   - Publication Gateway COS 无限 HTTP timeout；
    - PublicationCoordinator 过大的 manifest 串行锁临界区；
    - healthz 缺少安全版本/构建信息；
    - 将已在生产旁路验证的 updater v2 行为整理为仓库内可评审部署工具。
