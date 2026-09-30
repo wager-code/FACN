@@ -270,6 +270,108 @@ try
     await ExpectInvalidAsync(() => Task.Run(() => ManifestValidator.Validate(
         request with { PackageKey = "scfa/maps/other/overwrite.zip" }, oldManifest, options)),
         "服务端拒绝清单指向不同正式对象");
+    var concurrentOld = JsonNode.Parse(oldManifest)!.AsObject();
+    concurrentOld["maps"]!.AsArray().Add(legacy.DeepClone());
+    var concurrentNext = JsonNode.Parse(nextManifest)!.AsObject();
+    concurrentNext["maps"]!.AsArray().Insert(0, legacy.DeepClone());
+    var concurrentOldText = concurrentOld.ToJsonString();
+    var concurrentNextText = concurrentNext.ToJsonString();
+    var concurrentRequest = request with
+    {
+        OriginalManifestSha256 = CosTransport.Sha256(concurrentOldText),
+        NextManifest = concurrentNextText,
+        NextManifestSha256 = CosTransport.Sha256(concurrentNextText)
+    };
+    var publicationHandler = new InMemoryPublicationCosHandler();
+    publicationHandler.Store(concurrentRequest.ManifestKey, Encoding.UTF8.GetBytes(concurrentOldText));
+    using var publicationHttp = new HttpClient(publicationHandler) { Timeout = Timeout.InfiniteTimeSpan };
+    var publicationCos = new CosTransport(options, publicationHttp, TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10));
+    var coordinator = new PublicationCoordinator(options, store, publicationCos);
+    var admin = new AdminIdentity("concurrency-admin", "admin");
+    var intent = await coordinator.CreateIntentAsync(concurrentRequest, admin, CancellationToken.None);
+    publicationHandler.Store(intent.PackageUploadKey, await File.ReadAllBytesAsync(zipPath));
+    publicationHandler.BlockRead(intent.PackageUploadKey);
+    var commitTask = coordinator.CommitAsync(intent.PublicationId,
+        new PublicationCommitRequest(concurrentRequest.PackageSha256, concurrentRequest.NextManifestSha256),
+        admin, CancellationToken.None);
+    await publicationHandler.BlockedReadStarted.WaitAsync(TimeSpan.FromSeconds(3));
+    var unpublishTask = coordinator.UnpublishAsync(
+        new UnpublishRequest("map", "old_map", "并发下架", "test"), admin, CancellationToken.None);
+    var unpublishFinishedDuringDownload =
+        await Task.WhenAny(unpublishTask, Task.Delay(TimeSpan.FromSeconds(2))) == unpublishTask;
+    publicationHandler.ReleaseBlockedRead();
+    if (!unpublishFinishedDuringDownload)
+    {
+        try { await commitTask; } catch { }
+        try { await unpublishTask; } catch { }
+        Check(false, "慢速发布包下载不应阻塞无关下架");
+    }
+    await unpublishTask;
+    Check(true, "慢速发布包下载不阻塞无关下架");
+    await ExpectInvalidAsync(() => commitTask,
+        "发布准备期间清单变化后，提交前重新读取并拒绝旧清单");
+    var finalManifest = JsonNode.Parse(
+        Encoding.UTF8.GetString(publicationHandler.Read(concurrentRequest.ManifestKey)))!.AsObject();
+    Check(finalManifest["maps"]!.AsArray().Count == 0,
+        "并发冲突不会把已下架内容或旧清单写回正式清单");
+    Check(!publicationHandler.Contains(concurrentRequest.PackageKey),
+        "清单已变化时不提升孤立正式包对象");
+
+    var archiveFixture = Path.Combine(options.DataDirectory, "history", "zz-restore-fixture.json");
+    Directory.CreateDirectory(Path.GetDirectoryName(archiveFixture)!);
+    await File.WriteAllTextAsync(archiveFixture, nextManifest);
+    var restoreHandler = new InMemoryPublicationCosHandler();
+    restoreHandler.Store(request.ManifestKey, Encoding.UTF8.GetBytes(concurrentOldText));
+    restoreHandler.Store(request.PackageKey, await File.ReadAllBytesAsync(zipPath));
+    restoreHandler.BlockRead(request.PackageKey);
+    using var restoreHttp = new HttpClient(restoreHandler) { Timeout = Timeout.InfiniteTimeSpan };
+    var restoreCos = new CosTransport(options, restoreHttp, TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10));
+    var restoreCoordinator = new PublicationCoordinator(options, store, restoreCos);
+    var restoreTask = restoreCoordinator.RestoreAsync(
+        new RestoreRequest("map", folder, request.PackageKey, request.PackageSha256),
+        admin, CancellationToken.None);
+    await restoreHandler.BlockedReadStarted.WaitAsync(TimeSpan.FromSeconds(3));
+    var parallelDownlist = restoreCoordinator.UnpublishAsync(
+        new UnpublishRequest("map", "old_map", "并发下架", "test"), admin, CancellationToken.None);
+    var downlistFinishedDuringVerification =
+        await Task.WhenAny(parallelDownlist, Task.Delay(TimeSpan.FromSeconds(2))) == parallelDownlist;
+    restoreHandler.ReleaseBlockedRead();
+    if (!downlistFinishedDuringVerification)
+    {
+        try { await restoreTask; } catch { }
+        try { await parallelDownlist; } catch { }
+        Check(false, "慢速历史包哈希复核不应阻塞无关下架");
+    }
+    await parallelDownlist;
+    Check(true, "慢速历史包哈希复核不阻塞无关下架");
+    await restoreTask;
+    var restoredManifest = JsonNode.Parse(
+        Encoding.UTF8.GetString(restoreHandler.Read(request.ManifestKey)))!.AsObject();
+    Check(restoredManifest["maps"]!.AsArray().Count == 1 &&
+          restoredManifest["maps"]![0]!["id"]!.GetValue<string>() == folder,
+        "历史恢复使用并发下架后的最新清单，保留双方结果");
+
+    var retryHandler = new InMemoryPublicationCosHandler();
+    retryHandler.Store(request.ManifestKey, Encoding.UTF8.GetBytes(oldManifest));
+    using var retryHttp = new HttpClient(retryHandler) { Timeout = Timeout.InfiniteTimeSpan };
+    var retryCos = new CosTransport(options, retryHttp, TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10));
+    var retryCoordinator = new PublicationCoordinator(options, store, retryCos);
+    var retryIntent = await retryCoordinator.CreateIntentAsync(request, admin, CancellationToken.None);
+    retryHandler.Store(retryIntent.PackageUploadKey, await File.ReadAllBytesAsync(zipPath));
+    var retryConfirmation = new PublicationCommitRequest(request.PackageSha256, request.NextManifestSha256);
+    var duplicateCommits = await Task.WhenAll(
+        retryCoordinator.CommitAsync(retryIntent.PublicationId, retryConfirmation, admin, CancellationToken.None),
+        retryCoordinator.CommitAsync(retryIntent.PublicationId, retryConfirmation, admin, CancellationToken.None));
+    Check(duplicateCommits.All(x => x.ManifestSha256 == request.NextManifestSha256) &&
+          CosTransport.Sha256(retryHandler.Read(request.ManifestKey)) == request.NextManifestSha256,
+        "同一发布任务并发提交保持幂等且正式清单只写入目标版本");
+    Check(!Directory.EnumerateFiles(Path.Combine(options.DataDirectory, "temp"),
+            retryIntent.PublicationId + ".*").Any(),
+        "同一发布任务的并发暂存文件各自清理");
+
     Console.WriteLine("全部服务端隔离回归通过。");
 }
 finally
@@ -288,6 +390,46 @@ static async Task ExpectInvalidAsync(Func<Task> action, string title)
     try { await action(); }
     catch (InvalidDataException) { Console.WriteLine("PASS " + title); return; }
     throw new Exception("FAIL " + title);
+}
+
+sealed class InMemoryPublicationCosHandler : HttpMessageHandler
+{
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> _objects = new(StringComparer.Ordinal);
+    private readonly TaskCompletionSource<bool> _blockedReadStarted =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<bool> _releaseBlockedRead =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private string? _blockedKey;
+
+    public Task BlockedReadStarted => _blockedReadStarted.Task;
+    public void Store(string key, byte[] bytes) => _objects[key] = bytes.ToArray();
+    public byte[] Read(string key) => _objects[key].ToArray();
+    public bool Contains(string key) => _objects.ContainsKey(key);
+    public void BlockRead(string key) => _blockedKey = key;
+    public void ReleaseBlockedRead() => _releaseBlockedRead.TrySetResult(true);
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var key = Uri.UnescapeDataString(request.RequestUri!.AbsolutePath.TrimStart('/'));
+        if (request.Method == HttpMethod.Get && key == _blockedKey)
+        {
+            _blockedReadStarted.TrySetResult(true);
+            await _releaseBlockedRead.Task.WaitAsync(cancellationToken);
+        }
+        if (request.Method == HttpMethod.Head)
+            return new HttpResponseMessage(_objects.ContainsKey(key) ? HttpStatusCode.OK : HttpStatusCode.NotFound);
+        if (request.Method == HttpMethod.Get)
+            return _objects.TryGetValue(key, out var data)
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(data) }
+                : new HttpResponseMessage(HttpStatusCode.NotFound);
+        if (request.Method == HttpMethod.Put)
+        {
+            _objects[key] = await request.Content!.ReadAsByteArrayAsync(cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        }
+        return new HttpResponseMessage(HttpStatusCode.MethodNotAllowed);
+    }
 }
 
 sealed class HangingCosHandler : HttpMessageHandler
