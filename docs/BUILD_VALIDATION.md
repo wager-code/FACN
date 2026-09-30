@@ -86,12 +86,12 @@ The gateway regression suite should continue covering, at minimum:
 - The owner reported a real map publication completed successfully from inside the software.
 - Player install/sync safety has prior real/isolated validation for version protection, duplicate/conflict blocking, same-content skipping, backup, repair, and rollback.
 
-## Source fixes required before final V4.0 acceptance
+## Source reliability progress before final V4.0 acceptance
 
-Before treating the client-update and gateway reliability work as complete, add regression coverage and fix:
+The source reliability checklist currently stands as follows:
 
-1. `UpdateService.DownloadAsync`: dispose/close the `FileShare.None` output stream before reopening the downloaded file for SHA-256.
-2. `CosTransport`: replace infinite request lifetime with an explicit bounded timeout/cancellation strategy that still supports large package transfers.
+1. `UpdateService.DownloadAsync`: completed on 2026-09-30; output is flushed/disposed before SHA-256, and a Windows regression passed after reproducing the sharing violation.
+2. `CosTransport`: completed on 2026-09-30; per-operation deadlines cover headers and streamed bodies, preserve caller cancellation, allow longer large transfers, and map COS timeout to HTTP 504.
 3. `PublicationCoordinator`: review/narrow the shared manifest critical section while preserving final mutation serialization and conflict checks.
 4. Gateway health output: expose a safe version/build identifier.
 5. Updater v2: move the validated behavior into source-controlled tooling and test rollback behavior before production auto-update is enabled.

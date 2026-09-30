@@ -126,6 +126,7 @@ static async Task<IResult> Guard(Func<Task<IResult>> work, ILogger logger)
     catch (UnauthorizedAccessException) { return Results.Forbid(); }
     catch (FileNotFoundException ex) { return Results.NotFound(new { message = ex.Message }); }
     catch (InvalidDataException ex) { return Results.BadRequest(new { message = ex.Message }); }
+    catch (CosTimeoutException ex) { return GatewayErrorResponses.CosTimeout(ex, logger); }
     catch (TimeoutException ex) { return Results.BadRequest(new { message = ex.Message }); }
     catch (CosRequestException ex)
     {

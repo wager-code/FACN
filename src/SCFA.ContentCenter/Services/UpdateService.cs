@@ -15,6 +15,9 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
     private const long MaxUpdateBytes = 1024L * 1024 * 1024;
     private const int MaxManifestBytes = 1024 * 1024;
     private readonly JsonSerializerOptions _json = new() { PropertyNameCaseInsensitive = true };
+    private readonly Func<Uri, HttpClient>? _httpClientFactory;
+    internal UpdateService(ConfigService config, AuthApiClient auth, TaskService tasks, LogService log, Func<Uri, HttpClient> httpClientFactory)
+        : this(config, auth, tasks, log) => _httpClientFactory = httpClientFactory;
     public string StagingRoot { get; } = Path.Combine(ConfigService.ResolveDataDirectory(), "Updates");
 
     public async Task<AppUpdateInfo> CheckAsync(CancellationToken ct = default)
@@ -95,20 +98,23 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
             if (total <= 0 || total > MaxUpdateBytes || (info.Size > 0 && total != info.Size)) throw new InvalidDataException("更新包响应大小与清单不一致");
             EnsureDiskSpace(destination, total);
             await using var input = await response.Content.ReadAsStreamAsync(operationCts.Token);
-            await using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-            var buffer = new byte[128 * 1024];
-            long read = 0;
-            while (true)
+            await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
-                var count = await input.ReadAsync(buffer, operationCts.Token);
-                if (count == 0) break;
-                read += count;
-                if (read > MaxUpdateBytes || read > info.Size) throw new InvalidDataException("更新包超过清单大小");
-                await output.WriteAsync(buffer.AsMemory(0, count), operationCts.Token);
-                task.Progress = (int)Math.Min(95, read * 95d / total);
-                task.Detail = $"正在下载 · {read / 1024d / 1024d:F1} / {total / 1024d / 1024d:F1} MB";
+                var buffer = new byte[128 * 1024];
+                long read = 0;
+                while (true)
+                {
+                    var count = await input.ReadAsync(buffer, operationCts.Token);
+                    if (count == 0) break;
+                    read += count;
+                    if (read > MaxUpdateBytes || read > info.Size) throw new InvalidDataException("更新包超过清单大小");
+                    await output.WriteAsync(buffer.AsMemory(0, count), operationCts.Token);
+                    task.Progress = (int)Math.Min(95, read * 95d / total);
+                    task.Detail = $"正在下载 · {read / 1024d / 1024d:F1} / {total / 1024d / 1024d:F1} MB";
+                }
+                if (read != info.Size) throw new EndOfStreamException($"更新包下载不完整：期望 {info.Size}，实际 {read}");
+                await output.FlushAsync(operationCts.Token);
             }
-            if (read != info.Size) throw new EndOfStreamException($"更新包下载不完整：期望 {info.Size}，实际 {read}");
             task.Detail = "正在校验 SHA-256";
             var hash = await ContentHash.FileSha256Async(destination, operationCts.Token);
             if (!hash.Equals(info.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("更新包 SHA-256 校验失败");
@@ -181,6 +187,7 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
 
     private HttpClient CreateHttpClient(Uri uri)
     {
+        if (_httpClientFactory is not null) return _httpClientFactory(uri);
         var handler = new HttpClientHandler { AllowAutoRedirect = false };
         var apiUri = new Uri(auth.BaseUrl);
         if (uri.Scheme == Uri.UriSchemeHttps && uri.Authority.Equals(apiUri.Authority, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(auth.PinnedCertSha256))

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
@@ -30,6 +31,93 @@ try
     Check(!encryptedText.Contains(credentials.SecretKey, StringComparison.Ordinal), "凭据文件不含 COS 明文密钥");
 
     var cos = new CosTransport(options);
+    using var timeoutHttp = new HttpClient(new HangingCosHandler()) { Timeout = Timeout.InfiniteTimeSpan };
+    var timeoutCos = new CosTransport(options, timeoutHttp, TimeSpan.FromMilliseconds(50),
+        TimeSpan.FromMilliseconds(50), TimeSpan.FromSeconds(1));
+    using var safetyCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+    try
+    {
+        await timeoutCos.ExistsAsync(credentials, "scfa/manifest/latest.json", safetyCancellation.Token);
+        Check(false, "COS 元数据请求在服务端无响应时有明确超时");
+    }
+    catch (TimeoutException)
+    {
+        Check(!safetyCancellation.IsCancellationRequested, "COS 元数据请求在服务端无响应时有明确超时");
+    }
+    catch (OperationCanceledException)
+    {
+        Check(false, "COS 元数据请求在服务端无响应时有明确超时");
+    }
+    using var bodyHttp = new HttpClient(new HangingCosBodyHandler(HttpStatusCode.OK))
+        { Timeout = Timeout.InfiniteTimeSpan };
+    var bodyCos = new CosTransport(options, bodyHttp, TimeSpan.FromMilliseconds(50),
+        TimeSpan.FromMilliseconds(50), TimeSpan.FromSeconds(1));
+    using var bodySafety = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+    try
+    {
+        await bodyCos.GetBytesAsync(credentials, "scfa/manifest/latest.json", 1024, bodySafety.Token);
+        Check(false, "COS 已收到响应头但正文停滞时仍会超时");
+    }
+    catch (CosTimeoutException ex)
+    {
+        Check(ex.Operation == "GET" && !bodySafety.IsCancellationRequested,
+            "COS 已收到响应头但正文停滞时仍会超时");
+    }
+
+    using var callerCancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(30));
+    var cancelCos = new CosTransport(options, timeoutHttp, TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    try
+    {
+        await cancelCos.ExistsAsync(credentials, "scfa/manifest/latest.json", callerCancellation.Token);
+        Check(false, "调用方取消 COS 请求不会被误报为服务端超时");
+    }
+    catch (CosTimeoutException)
+    {
+        Check(false, "调用方取消 COS 请求不会被误报为服务端超时");
+    }
+    catch (OperationCanceledException)
+    {
+        Check(callerCancellation.IsCancellationRequested,
+            "调用方取消 COS 请求不会被误报为服务端超时");
+    }
+
+    var transferPayload = Encoding.UTF8.GetBytes("COS large-transfer deadline regression payload");
+    using var delayedHttp = new HttpClient(new DelayedCosHandler(transferPayload, TimeSpan.FromMilliseconds(120)))
+        { Timeout = Timeout.InfiniteTimeSpan };
+    var transferCos = new CosTransport(options, delayedHttp, TimeSpan.FromMilliseconds(40),
+        TimeSpan.FromMilliseconds(40), TimeSpan.FromSeconds(2));
+    var transferPath = Path.Combine(root, "cos-transfer-policy.bin");
+    await transferCos.DownloadToFileAsync(credentials, "scfa/test/package.zip", transferPath,
+        transferPayload.Length + 1, CancellationToken.None);
+    Check((await File.ReadAllBytesAsync(transferPath)).SequenceEqual(transferPayload),
+        "COS 大包下载使用独立较长期限并保持内容完整");
+    await transferCos.VerifyObjectHashAsync(credentials, "scfa/test/package.zip",
+        transferPayload.Length, CosTransport.Sha256(transferPayload), CancellationToken.None);
+    await transferCos.PutFileAsync(credentials, "scfa/test/package.zip", transferPath, CancellationToken.None);
+    Check(true, "COS 大包复核和上传不受元数据短超时影响");
+
+    using var errorBodyHttp = new HttpClient(new HangingCosBodyHandler(HttpStatusCode.Forbidden))
+        { Timeout = Timeout.InfiniteTimeSpan };
+    var errorBodyCos = new CosTransport(options, errorBodyHttp, TimeSpan.FromMilliseconds(50),
+        TimeSpan.FromMilliseconds(50), TimeSpan.FromSeconds(1));
+    try
+    {
+        await errorBodyCos.GetBytesAsync(credentials, "scfa/manifest/latest.json", 1024, CancellationToken.None);
+        Check(false, "COS 错误正文停滞也会按超时处理");
+    }
+    catch (CosTimeoutException ex)
+    {
+        var context = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        context.RequestServices = new ServiceCollection().AddLogging().AddOptions().BuildServiceProvider();
+        context.Response.Body = new MemoryStream();
+        await GatewayErrorResponses.CosTimeout(ex,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance).ExecuteAsync(context);
+        Check(context.Response.StatusCode == 504 &&
+              !Encoding.UTF8.GetString(((MemoryStream)context.Response.Body).ToArray())
+                  .Contains("scfa/manifest/latest.json", StringComparison.Ordinal),
+            "COS 错误正文停滞返回安全的 HTTP 504");
+    }
     var signed = cos.SignedUrl(credentials, "PUT", "scfa/publication-staging/test/package.zip", 600);
     var url = new Uri(signed);
     Check(url.Scheme == "https" && url.Host == "examplebucket-1250000000.cos.ap-shanghai.myqcloud.com" &&
@@ -200,4 +288,63 @@ static async Task ExpectInvalidAsync(Func<Task> action, string title)
     try { await action(); }
     catch (InvalidDataException) { Console.WriteLine("PASS " + title); return; }
     throw new Exception("FAIL " + title);
+}
+
+sealed class HangingCosHandler : HttpMessageHandler
+{
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        throw new InvalidOperationException("The test COS request unexpectedly completed.");
+    }
+}
+sealed class HangingCosBodyHandler(HttpStatusCode status) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken) =>
+        Task.FromResult(new HttpResponseMessage(status)
+        {
+            Content = new StreamContent(new HangingReadStream())
+        });
+}
+
+sealed class DelayedCosHandler(byte[] payload, TimeSpan delay) : HttpMessageHandler
+{
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        await Task.Delay(delay, cancellationToken);
+        if (request.Method == HttpMethod.Put)
+        {
+            var sent = await request.Content!.ReadAsByteArrayAsync(cancellationToken);
+            if (!sent.SequenceEqual(payload)) throw new InvalidDataException("Test upload payload changed.");
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        }
+        return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(payload) };
+    }
+}
+
+sealed class HangingReadStream : Stream
+{
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => throw new NotSupportedException();
+    public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+    public override void Flush() { }
+    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        return 0;
+    }
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        return 0;
+    }
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }

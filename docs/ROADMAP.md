@@ -33,7 +33,7 @@ SCFA 内容中心面向《最高指挥官：钢铁联盟》Steam 版玩家，目
 
 如果产品负责人没有给出新的更高优先级任务，Codex 从这里开始：
 
-### P0-A：客户端更新下载后的 SHA-256 文件句柄问题
+### P0-A：客户端更新下载后的 SHA-256 文件句柄问题（源码已修复，2026-09-30）
 
 当前 `UpdateService.DownloadAsync` 在输出 `FileStream` 仍以 `FileShare.None` 打开时，就重新打开同一文件计算 SHA-256。
 
@@ -42,11 +42,11 @@ SCFA 内容中心面向《最高指挥官：钢铁联盟》Steam 版玩家，目
 - 明确 flush/dispose 下载输出流后再计算哈希；
 - 保留大小校验、下载进度、取消和失败清理；
 - 添加能复现并防止回归的测试；
-- 不降低现有 PE、路径和 SHA-256 安全校验。
+- 不降低现有 PE、路径和 SHA-256 安全校验。`UpdateService.DownloadAsync` 已在 Windows 上完成“修复前失败、修复后通过”的回归验证；真实发布包的更新验收仍待执行。
 
-### P0-B：Publication Gateway 的 COS 超时策略
+### P0-B：Publication Gateway 的 COS 超时策略（源码已修复，2026-09-30）
 
-当前 `CosTransport` 使用无限 `HttpClient.Timeout`。
+`CosTransport` 的共享 `HttpClient` 仍不设置全局期限；各 COS 操作现在使用覆盖响应头、错误正文和数据流的独立关联期限：元数据 45 秒、小对象 5 分钟、大包 12 小时。超时安全映射为 HTTP 504，调用方取消仍保持取消语义。隔离回归已通过；真实 COS 场景仍待生产验收。
 
 目标：
 

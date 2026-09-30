@@ -7,8 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="SCFA.PublicationGateway.RegressionTests" />
     <PackageReference Include="Tencent.QCloud.Cos.Sdk" Version="5.4.51" />
   </ItemGroup>
 
-  <ItemGroup><Compile Include="../../src/SCFA.ContentCenter/Core/SafeArchive.cs" Link="Shared/SafeArchive.cs" /><Compile Include="../../src/SCFA.ContentCenter/Core/ContentHash.cs" Link="Shared/ContentHash.cs" /></ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="SCFA.PublicationGateway.RegressionTests" /><Compile Include="../../src/SCFA.ContentCenter/Core/SafeArchive.cs" Link="Shared/SafeArchive.cs" /><Compile Include="../../src/SCFA.ContentCenter/Core/ContentHash.cs" Link="Shared/ContentHash.cs" /></ItemGroup>
 </Project>
