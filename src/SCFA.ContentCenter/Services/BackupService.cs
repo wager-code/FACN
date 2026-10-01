@@ -30,7 +30,9 @@ public sealed class BackupService(GamePathService paths, LogService log)
         sourceRoot = Path.GetFullPath(sourceRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (!Directory.Exists(sourceRoot)) throw new DirectoryNotFoundException("备份源目录不存在：" + sourceRoot);
         RejectRootOrLink(sourceRoot, "备份源目录");
-        if (Path.GetFullPath(Root).StartsWith(sourceRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        var backupRoot = Path.GetFullPath(Root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (backupRoot.Equals(sourceRoot, StringComparison.OrdinalIgnoreCase) ||
+            backupRoot.StartsWith(sourceRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("备份目录不能位于备份源目录内部");
         var originalHash = await ContentHash.DirectorySha256Async(sourceRoot, ct);
         var safeId = SafeLabel(string.IsNullOrWhiteSpace(contentId) ? Path.GetFileName(sourceRoot) : contentId);
@@ -154,8 +156,11 @@ public sealed class BackupService(GamePathService paths, LogService log)
             !sourceHash.Equals(entry.ContentHash.Trim(), StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("备份内容 SHA-256 与备份元数据不一致");
 
-        var installRoot = Path.GetFullPath(paths.GetContentDirectory(entry.Kind, create: true)).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var installRoot = Path.GetFullPath(paths.GetContentDirectory(entry.Kind, create: false)).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         RejectRootOrLink(installRoot, "安装目录");
+        if (installRoot.Equals(source, StringComparison.OrdinalIgnoreCase) ||
+            installRoot.StartsWith(source + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("恢复安装目录不能位于原备份内容内部");
         var destination = ResolveDestination(entry, installRoot);
         var workRoot = Path.Combine(installRoot, ".scfa_restore_" + Guid.NewGuid().ToString("N"));
         var staged = Path.Combine(workRoot, folderName);

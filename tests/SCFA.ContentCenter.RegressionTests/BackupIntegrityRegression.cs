@@ -195,6 +195,26 @@ internal static class BackupIntegrityRegression
             var nested = new BackupService(paths, log);
             check(await FailsAsync<InvalidDataException>(() => nested.CreateAsync(source, "MOD", "path_boundary", "path", "1", "test")) &&
                 !Directory.Exists(nested.Root), "备份根目录位于源目录内部时拒绝递归复制且不创建目录");
+            var sameSource = MakeContent(paths, "MOD", "Backups", "same-root");
+            Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR", Path.GetDirectoryName(sameSource));
+            var same = new BackupService(paths, log);
+            check(await FailsAsync<InvalidDataException>(() => same.CreateAsync(sameSource, "MOD", "same", "same", "1", "test")) &&
+                !Directory.Exists(Path.Combine(same.Root, "Mods")), "备份根目录等于源目录时同样拒绝递归复制");
+            try
+            {
+                // A second isolated config points its install root at the backup content itself.
+                var restoreConfig = new ConfigService();
+                restoreConfig.Current.GameRoot = "";
+                restoreConfig.Current.ModsDir = entry.ContentRoot;
+                var restorePaths = new GamePathService(restoreConfig);
+                Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR", previous);
+                var restore = new BackupService(restorePaths, log);
+                check(await FailsAsync<InvalidDataException>(() => restore.RestoreAsync(entry)) &&
+                    !Directory.GetDirectories(entry.ContentRoot, ".scfa_restore_*").Any() &&
+                    await ContentHash.DirectorySha256Async(entry.ContentRoot) == entry.ContentHash,
+                    "恢复安装目录等于原备份内容时拒绝递归复制并保持备份原样");
+            }
+            finally { Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR", Path.GetDirectoryName(sameSource)); }
             Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR", Path.Combine(root, "link-data"));
             var linked = new BackupService(paths, log);
             var kindRoot = Path.Combine(linked.Root, "Mods");
