@@ -12,6 +12,7 @@ var root = Path.Combine(Path.GetTempPath(), "scfa-publication-regression-" + Gui
 Directory.CreateDirectory(root);
 try
 {
+    await GatewayHealthRegression.RunAsync();
     var options = new GatewayOptions
     {
         Bucket = "examplebucket-1250000000",

@@ -1,16 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Version>4.0.0-dev61</Version>
+    <AssemblyVersion>4.0.0.61</AssemblyVersion>
+    <FileVersion>4.0.0.61</FileVersion>
   </PropertyGroup>
-
   <ItemGroup>
+    <AssemblyMetadata Include="GatewayRelease" Value="$(GatewayRelease)" />
+    <AssemblyMetadata Include="GatewayCommit" Value="$(GatewayCommit)" />
     <InternalsVisibleTo Include="SCFA.PublicationGateway.RegressionTests" />
     <PackageReference Include="Tencent.QCloud.Cos.Sdk" Version="5.4.51" />
   </ItemGroup>
-
   <ItemGroup>
-    <InternalsVisibleTo Include="SCFA.PublicationGateway.RegressionTests" /><Compile Include="../../src/SCFA.ContentCenter/Core/SafeArchive.cs" Link="Shared/SafeArchive.cs" /><Compile Include="../../src/SCFA.ContentCenter/Core/ContentHash.cs" Link="Shared/ContentHash.cs" /></ItemGroup>
+    <Compile Include="../../src/SCFA.ContentCenter/Core/SafeArchive.cs" Link="Shared/SafeArchive.cs" />
+    <Compile Include="../../src/SCFA.ContentCenter/Core/ContentHash.cs" Link="Shared/ContentHash.cs" />
+  </ItemGroup>
 </Project>

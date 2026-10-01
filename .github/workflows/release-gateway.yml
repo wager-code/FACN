@@ -21,15 +21,23 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           [[ "$RELEASE_TAG" =~ ^gateway-v[0-9]+$ ]]
+      - name: Verify updater
+        run: |
+          python3 server/SCFA.PublicationGateway/ops/test_updater.py
+          bash -n server/SCFA.PublicationGateway/update-from-release-v2.sh
+          bash -n server/SCFA.PublicationGateway/check-gateway-release-v2.sh
       - name: Verify gateway
         run: dotnet run --project server/SCFA.PublicationGateway.RegressionTests/SCFA.PublicationGateway.RegressionTests.csproj -c Release
       - name: Build Linux gateway
-        run: dotnet publish server/SCFA.PublicationGateway/SCFA.PublicationGateway.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o dist/gateway
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: dotnet publish server/SCFA.PublicationGateway/SCFA.PublicationGateway.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:GatewayRelease="$RELEASE_TAG" -p:GatewayCommit="$GITHUB_SHA" -o dist/gateway
       - name: Package and publish release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
+          python3 server/SCFA.PublicationGateway/ops/package_release.py dist/gateway "$RELEASE_TAG" "$GITHUB_SHA"
           tar -C dist/gateway -czf scfa-publication-linux-x64.tar.gz .
           sha256sum scfa-publication-linux-x64.tar.gz > scfa-publication-linux-x64.tar.gz.sha256
           gh release create "$RELEASE_TAG" scfa-publication-linux-x64.tar.gz scfa-publication-linux-x64.tar.gz.sha256 --target "$GITHUB_SHA" --title "$RELEASE_TAG" --notes "SCFA publication gateway. Server installation is a separate administrator action."

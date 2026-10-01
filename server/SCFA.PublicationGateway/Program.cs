@@ -17,7 +17,7 @@ builder.Services.AddSingleton<CosTransport>();
 builder.Services.AddSingleton<PublicationCoordinator>();
 var app = builder.Build();
 
-app.MapGet("/publication-healthz", () => Results.Ok(new { ok = true, service = "scfa-publication" }));
+app.MapGet("/publication-healthz", GatewayHealth.CreateResult);
 
 app.MapGet("/v1/admin/publications/capabilities",
     async (HttpContext context, AdminAuthenticator auth, CredentialStore credentials, CancellationToken ct) =>

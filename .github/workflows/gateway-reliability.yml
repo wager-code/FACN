@@ -1,0 +1,31 @@
+name: gateway-reliability
+on:
+  pull_request:
+  push:
+    branches: [ main, master ]
+permissions:
+  contents: read
+jobs:
+  gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Verify updater and Linux runtime checks
+        run: |
+          python3 server/SCFA.PublicationGateway/ops/test_updater.py
+          bash -n server/SCFA.PublicationGateway/update-from-release-v2.sh
+          bash -n server/SCFA.PublicationGateway/check-gateway-release-v2.sh
+      - name: Verify stamped gateway build
+        env:
+          SCFA_TEST_HEALTH_VERSION: gateway-v0
+          SCFA_TEST_HEALTH_COMMIT: ${{ github.sha }}
+        run: dotnet run --project server/SCFA.PublicationGateway.RegressionTests/SCFA.PublicationGateway.RegressionTests.csproj -c Release -p:GatewayRelease=gateway-v0 -p:GatewayCommit="$GITHUB_SHA"
+      - name: Verify Linux Release package
+        run: |
+          dotnet publish server/SCFA.PublicationGateway/SCFA.PublicationGateway.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:GatewayRelease=gateway-v0 -p:GatewayCommit="$GITHUB_SHA" -o dist/gateway
+          python3 server/SCFA.PublicationGateway/ops/package_release.py dist/gateway gateway-v0 "$GITHUB_SHA"
+          tar -C dist/gateway -czf gateway-test.tar.gz .
+          PYTHONPATH=server/SCFA.PublicationGateway/ops python3 -c 'from release_source import stage_package; import tempfile; from pathlib import Path; temp = tempfile.TemporaryDirectory(); stage_package(Path("gateway-test.tar.gz"), temp.name, "gateway-v0"); temp.cleanup()'
