@@ -67,7 +67,7 @@ public sealed class ServiceRegistry
         var previousBaseUrl = Auth.BaseUrl;
         var previousFingerprint = Auth.PinnedCertSha256;
         Auth.Reconfigure(endpoint, c.ApiDirectCertSha256);
-        var changed = !string.Equals(previousBaseUrl, Auth.BaseUrl, StringComparison.OrdinalIgnoreCase) ||
+        var changed = !string.Equals(previousBaseUrl, Auth.BaseUrl, StringComparison.Ordinal) ||
                       !string.Equals(previousFingerprint, Auth.PinnedCertSha256, StringComparison.OrdinalIgnoreCase);
         if (changed)
         {

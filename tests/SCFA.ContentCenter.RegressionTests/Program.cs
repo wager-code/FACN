@@ -834,11 +834,13 @@ try
         "云端地图优先显示游戏名称，同时保留云端标题和目录供辨认");
     var log = new LogService();
     var tasks = new TaskService();
+    AuthAuthorityRegression.Run(Check);
     ClientUpdateVersionRegression.Run(Check);
     await UpdateDownloadRegression.RunAsync(config, tasks, log, Check);
     await UpdatePageStateRegression.RunAsync(config, tasks, log, Check);
     await UpdateStartupRegression.RunAsync(configDirectory, Check);
     await UpdateStartupProcessRegression.RunAsync(configDirectory, Check);
+    await BackupIntegrityRegression.RunAsync(configDirectory, log, Check);
     var backups = new BackupService(pathService, log);
     var localContent = new LocalContentService(pathService, log);
     var referencedMap = Path.Combine(mapsRoot, "shared_preview");

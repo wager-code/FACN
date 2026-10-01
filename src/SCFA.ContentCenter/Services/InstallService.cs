@@ -9,7 +9,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
     private const int MaxArchiveEntries = 100000;
     private const long MaxExtractedBytes = 8L * 1024 * 1024 * 1024;
     private const long DiskReserveBytes = 256L * 1024 * 1024;
-    private readonly SemaphoreSlim _operationGate = new(1, 1);
+    private readonly SemaphoreSlim _operationGate = backups.MutationGate;
     private readonly SemaphoreSlim _recentGate = new(1, 1);
 
     public async Task<bool> InstallAsync(CloudContentEntry entry, string? existingRoot = null, CancellationToken ct = default, string? existingVersion = null, bool automatic = false)
@@ -374,7 +374,9 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
                 return (localRoot, false);
         }
 
-        await backups.CreateAsync(localRoot, entry.Kind, entry.Id, entry.Name, existingVersion, $"安装 {entry.Version} 前自动备份", ct);
+        var backup = await backups.CreateAsync(localRoot, entry.Kind, entry.Id, entry.Name, existingVersion, $"安装 {entry.Version} 前自动备份", ct);
+        if (!backup.ContentHash.Equals(await ContentHash.DirectorySha256Async(localRoot, ct), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("本地内容在备份后发生变化，已停止覆盖；请重新扫描后重试");
         ct.ThrowIfCancellationRequested();
 
         // 真正替换前把旧目录在原盘改名暂存。失败时可以立即原地恢复。

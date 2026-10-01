@@ -34,6 +34,9 @@ public sealed class AuthApiClient : IDisposable
         // 普通 JSON API 使用每次请求的短超时；大文件传输依靠任务取消，不受 12 秒全局超时限制。
         var replacement = new HttpClient(handler) { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
         var previous = _http;
+        if (!string.Equals(BaseUrl, normalizedBaseUrl, StringComparison.Ordinal) ||
+            !string.Equals(PinnedCertSha256, normalizedFingerprint, StringComparison.OrdinalIgnoreCase))
+            Token = "";
         BaseUrl = normalizedBaseUrl;
         PinnedCertSha256 = normalizedFingerprint;
         _http = replacement;
@@ -128,12 +131,21 @@ public sealed class AuthApiClient : IDisposable
     public static string NormalizeBaseUrl(string raw)
     {
         if (!Uri.TryCreate(raw?.Trim(), UriKind.Absolute, out var uri)) throw new ArgumentException("API 地址格式无效");
+        if (uri.Scheme is not ("https" or "http") || uri.UserInfo.Length > 0 ||
+            uri.Query.Length > 0 || uri.Fragment.Length > 0)
+            throw new ArgumentException("API 地址必须是无用户信息、查询参数和片段的 HTTP(S) 地址");
         if (uri.Scheme != Uri.UriSchemeHttps)
         {
             var loopback = string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase) || (IPAddress.TryParse(uri.Host, out var ip) && IPAddress.IsLoopback(ip));
             if (!loopback && Environment.GetEnvironmentVariable("SCFA_ALLOW_INSECURE_API") != "1") throw new ArgumentException("非本机账号 API 必须使用 HTTPS");
         }
         return uri.GetLeftPart(UriPartial.Path).TrimEnd('/');
+    }
+
+    internal static bool SameEndpoint(string? left, string? right)
+    {
+        try { return string.Equals(NormalizeBaseUrl(left!), NormalizeBaseUrl(right!), StringComparison.Ordinal); }
+        catch (ArgumentException) { return false; }
     }
 
     public static void ValidateConfiguration(string baseUrl, string fingerprint)

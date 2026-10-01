@@ -23,6 +23,7 @@ try
         MasterKey = RandomNumberGenerator.GetBytes(32)
     };
     options.Validate();
+    await AdminAuthenticationRegression.RunAsync(options);
     var credentials = new CosCredentials("AKIDEXAMPLEID1234", "test-only-secret-key-not-real", DateTimeOffset.UtcNow);
     var store = new CredentialStore(options);
     await store.SaveAsync(credentials);
