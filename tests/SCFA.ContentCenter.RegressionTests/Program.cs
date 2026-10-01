@@ -1,3 +1,4 @@
+using static ContentPackageFixtures;
 using SCFA.ContentCenter.Core;
 using SCFA.ContentCenter.Commands;
 using SCFA.ContentCenter.Models;
@@ -810,9 +811,6 @@ try
     Check(displayMap.DisplayName == "游戏大厅名称" && displayMap.NameContextText.Contains("云端目录标题") &&
           displayMap.NameContextText.Contains("preview_fixture"),
         "云端地图优先显示游戏名称，同时保留云端标题和目录供辨认");
-    var packagePayload = CreateMapPackage("recent_map");
-    using var packageClient = new HttpClient(new StaticPackageHandler(packagePayload)) { Timeout = Timeout.InfiniteTimeSpan };
-    var packageCloud = new CloudCatalogService(config, packageClient);
     var log = new LogService();
     var tasks = new TaskService();
     await UpdateDownloadRegression.RunAsync(config, tasks, log, Check);
@@ -845,267 +843,9 @@ try
     Check(!missingSharedMap.IsSharedMap && !missingSharedMap.Valid,
         "共用的 .scmap 消失后，场景会重新标记为真正需要检查");
     Directory.Delete(scenarioOnlyMap, recursive: true);
-    var installer = new InstallService(packageCloud, pathService, localContent, backups, tasks, log, config);
-    await installer.InstallAsync(new CloudContentEntry
-    {
-        Kind = "地图",
-        Id = "recent-map",
-        Name = "最近安装测试地图",
-        Version = "1",
-        File = "packages/recent-map.zip",
-        FolderName = "recent_map",
-        Size = packagePayload.Length
-    });
-    Check(Directory.Exists(Path.Combine(mapsRoot, "recent_map")), "云端内容包可安装到玩家地图目录");
-    Check(config.Current.RecentContentKeys.FirstOrDefault() == "地图:recent-map", "成功安装后自动写入最近内容记录");
-
-    var installedRecentMap = Path.Combine(mapsRoot, "recent_map");
-    var expectedContentHash = await ContentHash.DirectorySha256Async(installedRecentMap);
-    var extraFile = Path.Combine(installedRecentMap, "player_extra.lua");
-    await File.WriteAllTextAsync(extraFile, "extra file must be removed by strict repair");
-    Check(!string.Equals(await ContentHash.DirectorySha256Async(installedRecentMap), expectedContentHash, StringComparison.OrdinalIgnoreCase), "同版本目录多出一个文件会改变完整内容指纹");
-    await installer.InstallAsync(new CloudContentEntry
-    {
-        Kind = "地图",
-        Id = "recent-map",
-        Name = "严格一致性测试地图",
-        Version = "1",
-        File = "packages/recent-map.zip",
-        FolderName = "recent_map",
-        Size = packagePayload.Length,
-        ContentSha256 = expectedContentHash
-    }, installedRecentMap, existingVersion: "1");
-    Check(!File.Exists(extraFile) && string.Equals(await ContentHash.DirectorySha256Async(installedRecentMap), expectedContentHash, StringComparison.OrdinalIgnoreCase), "严格修复采用整目录替换并删除活动目录中的多余文件");
-    var strictRepairBackup = (await backups.ListAsync()).FirstOrDefault(x => x.Name == "严格一致性测试地图");
-    Check(strictRepairBackup is not null && File.Exists(Path.Combine(strictRepairBackup.ContentRoot, "player_extra.lua")), "严格修复前备份仍保留被移出的多余文件以便回滚");
-
-    var syncPackage = CreateMapPackage("sync_map");
-    var syncPackagePath = Path.Combine(configDirectory, "sync-package.zip");
-    await File.WriteAllBytesAsync(syncPackagePath, syncPackage);
-    var syncSource = Path.Combine(configDirectory, "sync-package-content");
-    ZipFile.ExtractToDirectory(syncPackagePath, syncSource);
-    var syncContentHash = await ContentHash.DirectorySha256Async(Path.Combine(syncSource, "sync_map"));
-    var syncEntry = new CloudContentEntry
-    {
-        Kind = "地图",
-        Id = "sync-map",
-        Name = "同步回归地图",
-        Version = "1",
-        FolderName = "sync_map",
-        File = "packages/sync-map.zip",
-        Size = syncPackage.Length,
-        Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(syncPackage)),
-        ContentSha256 = syncContentHash
-    };
-    using var syncClient = new HttpClient(new CatalogPackageHandler(new MapManifest { ManifestVersion = 1, Maps = [syncEntry] }, syncPackage))
-    { Timeout = Timeout.InfiniteTimeSpan };
-    var syncCloud = new CloudCatalogService(config, syncClient);
-    var syncInstaller = new InstallService(syncCloud, pathService, localContent, backups, tasks, log, config);
-    var syncService = new SyncService(syncCloud, localContent, syncInstaller, log);
-    var syncRoot = Path.Combine(mapsRoot, "sync_map");
-    var firstSync = await syncService.SyncAllAsync(["地图"]);
-    Check(firstSync.Installed == 1 && firstSync.Failed == 0 && Directory.Exists(syncRoot), "一键同步会从云端清单安装缺失地图");
-    var unchangedSync = await syncService.SyncAllAsync(["地图"]);
-    Check(unchangedSync.Skipped == 1 && unchangedSync.Installed == 0, "一键同步对内容指纹一致的地图不会重复安装");
-    var activeAccount = "test-server|player-a";
-    var syncPreferences = new SyncPreferenceService(() => activeAccount);
-    await syncPreferences.SetExcludedAsync(syncEntry, true);
-    Check(await new SyncPreferenceService(() => activeAccount).IsExcludedAsync(syncEntry), "不喜欢标记重新启动后仍保留");
-    activeAccount = "test-server|player-b";
-    Check(!await syncPreferences.IsExcludedAsync(syncEntry), "不同登录账号不会共享不喜欢列表");
-    activeAccount = "test-server|player-a";
-    var preferredInstaller = new InstallService(syncCloud, pathService, localContent, backups, tasks, log, config, syncPreferences);
-    var preferredSync = new SyncService(syncCloud, localContent, preferredInstaller, log, syncPreferences);
-    Directory.Delete(syncRoot, recursive: true);
-    var excludedSync = await preferredSync.SyncAllAsync(["地图"]);
-    Check(excludedSync.Skipped == 1 && excludedSync.Installed == 0 && excludedSync.Failed == 0 &&
-          !Directory.Exists(syncRoot) && excludedSync.Messages.Any(x => x.Contains("不喜欢")),
-        "玩家删除已标记不喜欢的地图后，一键同步不会重新安装");
-    await preferredInstaller.InstallAsync(syncEntry);
-    Check(Directory.Exists(syncRoot) && await syncPreferences.IsExcludedAsync(syncEntry),
-        "玩家仍可手动安装不喜欢的内容，且手动安装不会取消跳过设置");
-    await syncPreferences.SetExcludedAsync(syncEntry, false);
-    Check(!await syncPreferences.IsExcludedAsync(syncEntry), "再次点击可恢复自动同步");
-    var alternatePackage = CreateMapPackage("sync_map_v2");
-    var alternatePackagePath = Path.Combine(configDirectory, "alternate-map.zip");
-    await File.WriteAllBytesAsync(alternatePackagePath, alternatePackage);
-    ZipFile.ExtractToDirectory(alternatePackagePath, mapsRoot);
-    var alternateRoot = Path.Combine(mapsRoot, "sync_map_v2");
-    var ambiguousEntry = new CloudContentEntry
-    {
-        Kind = "地图", Id = "sync_map", Name = syncEntry.Name, Version = syncEntry.Version,
-        FolderName = syncEntry.FolderName, File = syncEntry.File, Size = syncEntry.Size,
-        Sha256 = syncEntry.Sha256, ContentSha256 = syncEntry.ContentSha256
-    };
-    Check(ContentIdentity.FindBestResult((await localContent.ScanAsync("地图")).ToArray(), ambiguousEntry).Ambiguous,
-        "两个地图版本共享同一 ID 时会识别为多个候选目录");
-    var ambiguousLocals = (await localContent.ScanAsync("地图")).ToArray();
-    var verifiedDuplicate = await ContentIdentity.FindVerifiedCopyAsync(ambiguousLocals, ambiguousEntry,
-        ContentIdentity.FindBestResult(ambiguousLocals, ambiguousEntry).Score);
-    Check(verifiedDuplicate is not null && verifiedDuplicate.Root == syncRoot,
-        "多个本地版本中已存在云端指纹一致的副本时可识别为已安装");
-    var mismatchedDuplicate = new CloudContentEntry
-    {
-        Kind = "地图", Id = ambiguousEntry.Id, Name = ambiguousEntry.Name, Version = ambiguousEntry.Version,
-        FolderName = ambiguousEntry.FolderName, ContentSha256 = new string('0', 64), Aliases = ambiguousEntry.Aliases
-    };
-    Check(await ContentIdentity.FindVerifiedCopyAsync(ambiguousLocals, mismatchedDuplicate,
-          ContentIdentity.FindBestResult(ambiguousLocals, mismatchedDuplicate).Score) is null,
-        "多个本地目录都不符合云端内容指纹时仍拒绝擅自选择覆盖目标");
-    using var ambiguousClient = new HttpClient(new CatalogPackageHandler(new MapManifest { ManifestVersion = 1, Maps = [ambiguousEntry] }, syncPackage))
-    { Timeout = Timeout.InfiniteTimeSpan };
-    var ambiguousCloud = new CloudCatalogService(config, ambiguousClient);
-    var ambiguousSync = new SyncService(ambiguousCloud, localContent,
-        new InstallService(ambiguousCloud, pathService, localContent, backups, tasks, log, config), log);
-    var beforeAmbiguousBackupCount = (await backups.ListAsync()).Count;
-    var verifiedAmbiguous = await ambiguousSync.SyncAllAsync(["地图"]);
-    Check(verifiedAmbiguous.Skipped == 1 && verifiedAmbiguous.Failed == 0 &&
-          verifiedAmbiguous.Messages.Any(x => x.Contains("其他本地副本保留")) &&
-          Directory.Exists(alternateRoot) && (await backups.ListAsync()).Count == beforeAmbiguousBackupCount,
-        "多个同 ID 地图中已有云端指纹一致的版本时保留全部副本且不重复覆盖");
-    var conflictCandidates = ambiguousLocals.Where(x => ContentIdentity.MatchScore(x, ambiguousEntry) ==
-        ContentIdentity.FindBestResult(ambiguousLocals, ambiguousEntry).Score).ToArray();
-    var conflictInstaller = new InstallService(ambiguousCloud, pathService, localContent, backups, tasks, log, config);
-    var wrongVersionConflict = new CloudContentEntry
-    {
-        Kind = "地图", Id = ambiguousEntry.Id, Name = ambiguousEntry.Name, Version = "999",
-        FolderName = ambiguousEntry.FolderName, File = ambiguousEntry.File, Size = ambiguousEntry.Size,
-        Sha256 = ambiguousEntry.Sha256, ContentSha256 = ambiguousEntry.ContentSha256
-    };
-    var rejectedConflictPackage = false;
-    try { await conflictInstaller.ReplaceConflictsAsync(wrongVersionConflict, conflictCandidates); }
-    catch (InvalidDataException) { rejectedConflictPackage = true; }
-    Check(rejectedConflictPackage && Directory.Exists(syncRoot) && Directory.Exists(alternateRoot),
-        "清理冲突前先校验云端包内版本，异常包不会删除本地目录");
-    await conflictInstaller.ReplaceConflictsAsync(ambiguousEntry, conflictCandidates);
-    var conflictBackups = (await backups.ListAsync()).Where(x => x.Reason == "清理重复版本并安装云端内容前自动备份").ToArray();
-    Check(Directory.Exists(syncRoot) && !Directory.Exists(alternateRoot) &&
-          string.Equals(await ContentHash.DirectorySha256Async(syncRoot), syncContentHash, StringComparison.OrdinalIgnoreCase) &&
-          conflictBackups.Length == 2 && conflictBackups.All(x => Directory.Exists(x.ContentRoot)) &&
-          conflictBackups.Any(x => x.OriginalRoot == syncRoot) && conflictBackups.Any(x => x.OriginalRoot == alternateRoot),
-        "手动清理重复目录会安装经校验的云端版本，并保存两个原目录的历史备份");
-    var syncExtraFile = Path.Combine(syncRoot, "player_extra.lua");
-    await File.WriteAllTextAsync(syncExtraFile, "local change for rollback");
-    var repairSync = await syncService.SyncAllAsync(["地图"]);
-    Check(repairSync.Installed == 1 && !File.Exists(syncExtraFile) &&
-          string.Equals(await ContentHash.DirectorySha256Async(syncRoot), syncContentHash, StringComparison.OrdinalIgnoreCase),
-        "一键同步会备份并修复同版本内容差异");
-    var syncRepairBackup = (await backups.ListAsync()).FirstOrDefault(x => x.Name == "同步回归地图");
-    Check(syncRepairBackup is not null && File.Exists(Path.Combine(syncRepairBackup.ContentRoot, "player_extra.lua")),
-        "同步修复前的玩家文件仍可从备份取回");
-    if (syncRepairBackup is not null)
-    {
-        await backups.RestoreAsync(syncRepairBackup);
-        Check(File.Exists(syncExtraFile), "历史回滚可把同步修复前的文件恢复到玩家目录");
-    }
-    var syncScenario = Path.Combine(syncRoot, "sync_map_scenario.lua");
-    await File.WriteAllTextAsync(syncScenario, (await File.ReadAllTextAsync(syncScenario)).Replace("map_version = 1", "map_version = 9"));
-    var newerSync = await syncService.SyncAllAsync(["地图"]);
-    Check(newerSync.Skipped == 1 && newerSync.Installed == 0 && (await File.ReadAllTextAsync(syncScenario)).Contains("map_version = 9"),
-        "一键同步保护玩家目录中较新的地图版本");
-
-    var duplicateEntry = new CloudContentEntry
-    {
-        Id = "other-sync-map", Name = "重复目录地图", Version = "1", FolderName = "sync_map",
-        File = syncEntry.File, Size = syncEntry.Size, Sha256 = syncEntry.Sha256, ContentSha256 = syncEntry.ContentSha256
-    };
-    using var duplicateClient = new HttpClient(new CatalogPackageHandler(new MapManifest { ManifestVersion = 1, Maps = [syncEntry, duplicateEntry] }, syncPackage))
-    { Timeout = Timeout.InfiniteTimeSpan };
-    var duplicateCloud = new CloudCatalogService(config, duplicateClient);
-    var duplicateSync = new SyncService(duplicateCloud, localContent,
-        new InstallService(duplicateCloud, pathService, localContent, backups, tasks, log, config), log);
-    var duplicateBlocked = false;
-    try { await duplicateSync.SyncAllAsync(["地图"]); }
-    catch (InvalidDataException ex) when (ex.Message.Contains("重复目标目录")) { duplicateBlocked = true; }
-    Check(duplicateBlocked && (await File.ReadAllTextAsync(syncScenario)).Contains("map_version = 9"),
-        "云端清单目标目录重复时整批停止，任何玩家目录均不会先被覆盖");
-
-    var nestedParent = Path.Combine(mapsRoot, "wrapper");
-    ZipFile.ExtractToDirectory(syncPackagePath, nestedParent);
-    var nestedRoot = Path.Combine(nestedParent, "sync_map");
-    var nestedBlocked = false;
-    try { await syncInstaller.InstallAsync(syncEntry, nestedRoot, existingVersion: "1"); }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("直接子文件夹")) { nestedBlocked = true; }
-    Check(nestedBlocked && Directory.Exists(nestedRoot), "自动更新不会覆盖嵌套在包装目录中的玩家内容");
-
-    var modsRoot = Path.Combine(configDirectory, "player", "Mods");
-    Directory.CreateDirectory(modsRoot);
-    config.Current.ModsDir = modsRoot;
-    var modPackage = CreateModPackage("sync_mod");
-    var modEntry = new CloudContentEntry
-    {
-        Kind = "MOD", Id = "sync-mod", Name = "同步回归 MOD", Version = "1",
-        FolderName = "sync_mod", File = "packages/sync-mod.zip", Size = modPackage.Length,
-        Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(modPackage))
-    };
-    using var modClient = new HttpClient(new ModCatalogPackageHandler(
-        new ModManifest { ManifestVersion = 1, Mods = [modEntry] }, modPackage))
-    { Timeout = Timeout.InfiniteTimeSpan };
-    var modCloud = new CloudCatalogService(config, modClient);
-    var modInstaller = new InstallService(modCloud, pathService, localContent, backups, tasks, log, config);
-    var modSync = new SyncService(modCloud, localContent, modInstaller, log);
-    var modRoot = Path.Combine(modsRoot, "sync_mod");
-    await syncPreferences.SetExcludedAsync(modEntry, true);
-    var preferredModSync = new SyncService(modCloud, localContent,
-        new InstallService(modCloud, pathService, localContent, backups, tasks, log, config, syncPreferences), log, syncPreferences);
-    var excludedModSync = await preferredModSync.SyncAllAsync(["MOD"]);
-    Check(excludedModSync.Skipped == 1 && excludedModSync.Installed == 0 && !Directory.Exists(modRoot),
-        "不喜欢的云端 MOD 也不会被一键同步自动安装");
-    await syncPreferences.SetExcludedAsync(modEntry, false);
-    var firstModSync = await modSync.SyncAllAsync(["MOD"]);
-    Check(firstModSync.Installed == 1 && firstModSync.Failed == 0 && File.Exists(Path.Combine(modRoot, "mod_info.lua")),
-        "一键同步会安装并识别有效 MOD");
-    var modBackupsBeforeRepeat = (await backups.ListAsync()).Count;
-    var repeatedModSync = await modSync.SyncAllAsync(["MOD"]);
-    Check(repeatedModSync.Skipped == 1 && repeatedModSync.Installed == 0 &&
-          (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
-        "无内容指纹的同版本 MOD 再次同步不会重复安装或创建备份");
-    var repeatedManualMod = await modInstaller.InstallAsync(modEntry, modRoot, existingVersion: "1");
-    Check(!repeatedManualMod && (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
-        "手动再次安装完全相同的 MOD 包不会重复覆盖或备份");
-    var releaseLabeledMod = new CloudContentEntry
-    {
-        Kind = "MOD", Id = modEntry.Id, Name = modEntry.Name, Version = "2026.08.15", GameVersion = "1",
-        FolderName = modEntry.FolderName, File = modEntry.File, Size = modEntry.Size, Sha256 = modEntry.Sha256
-    };
-    var releaseLabeledInstall = await modInstaller.InstallAsync(releaseLabeledMod, modRoot, existingVersion: "1");
-    Check(!releaseLabeledInstall && (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
-        "发布版本是日期但包内游戏版本一致时能安全验包且不重复覆盖");
-    var changedVersionBlocked = false;
-    try { await modInstaller.InstallAsync(modEntry, modRoot, existingVersion: "0"); }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("版本在安装期间发生变化")) { changedVersionBlocked = true; }
-    Check(changedVersionBlocked && File.Exists(Path.Combine(modRoot, "mod_info.lua")) &&
-          (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
-        "安装前复核本地版本，版本已变化时不覆盖玩家 MOD");
-    var wrongModVersion = new CloudContentEntry
-    {
-        Kind = "MOD", Id = modEntry.Id, Name = modEntry.Name, Version = "2",
-        FolderName = modEntry.FolderName, File = modEntry.File, Size = modEntry.Size, Sha256 = modEntry.Sha256
-    };
-    var wrongPackageBlocked = false;
-    try { await modInstaller.InstallAsync(wrongModVersion, modRoot, existingVersion: "1"); }
-    catch (InvalidDataException ex) when (ex.Message.Contains("版本不一致")) { wrongPackageBlocked = true; }
-    Check(wrongPackageBlocked && File.Exists(Path.Combine(modRoot, "mod_info.lua")) &&
-          (await backups.ListAsync()).Count == modBackupsBeforeRepeat,
-        "云端标注版本与 MOD 包内真实版本不一致时保留玩家原文件");
-    var scannedMod = (await localContent.ScanAsync("MOD")).Single(x => x.Root == modRoot);
-    Check(scannedMod.Valid && scannedMod.Id == "sync_mod" && scannedMod.Version == "1", "安装后的 MOD 可被本地扫描识别");
-    var modExtra = Path.Combine(modRoot, "player_extra.lua");
-    await File.WriteAllTextAsync(modExtra, "player mod change");
-    var editedModSync = await modSync.SyncAllAsync(["MOD"]);
-    Check(editedModSync.Skipped == 1 && File.Exists(modExtra),
-        "缺少云端内容指纹时不会擅自覆盖同版本 MOD 的玩家改动");
-    await modInstaller.UninstallAsync(scannedMod);
-    Check(!Directory.Exists(modRoot), "MOD 安全卸载会移除目标目录");
-    var modBackup = (await backups.ListAsync()).FirstOrDefault(x => x.Name == scannedMod.Name);
-    Check(modBackup is not null && File.Exists(Path.Combine(modBackup.ContentRoot, "player_extra.lua")),
-        "MOD 卸载前会保留玩家文件备份");
-    if (modBackup is not null)
-    {
-        await backups.RestoreAsync(modBackup);
-        Check(File.Exists(modExtra) && (await localContent.AnalyzeDirectoryAsync(modRoot)).Valid,
-            "MOD 历史备份可恢复为有效内容");
-    }
+    await InstallSyncRegression.RunAsync(configDirectory, mapsRoot, config, pathService, localContent, backups, tasks, log, Check);
+    await InstallTransactionRegression.RunAsync(configDirectory, Check);
+    var installer = new InstallService(cloud, pathService, localContent, backups, tasks, log, config);
 
     var legacyMapRoot = Path.Combine(mapsRoot, "legacy_map");
     Directory.CreateDirectory(legacyMapRoot);
@@ -1381,25 +1121,6 @@ void CheckDirectoryThrows(Action action, string name)
     }
 }
 
-byte[] CreateMapPackage(string folder)
-{
-    using var output = new MemoryStream();
-    using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
-    {
-        AddText(archive, $"{folder}/{folder}.scmap", "map-bytes");
-        AddText(archive, $"{folder}/{folder}_save.lua", "Scenario = {}");
-        AddText(archive, $"{folder}/{folder}_script.lua", "function OnPopulate() end");
-        AddText(archive, $"{folder}/{folder}_scenario.lua", $"""
-name = "Regression Map"
-map_version = 1
-map = "/maps/{folder}/{folder}.scmap"
-save = "/maps/{folder}/{folder}_save.lua"
-script = "/maps/{folder}/{folder}_script.lua"
-""");
-    }
-    return output.ToArray();
-}
-
 byte[] CreatePreviewMapBytes()
 {
     var bytes = new byte[34 + 128 + 16 + 4];
@@ -1418,24 +1139,6 @@ byte[] CreatePreviewMapBytes()
     BitConverter.GetBytes(0xFF000000u).CopyTo(bytes, 34 + 104);
     for (var i = 0; i < 4; i++) new byte[] { 0, 0, 255, 255 }.CopyTo(bytes, 34 + 128 + i * 4);
     return bytes;
-}
-
-byte[] CreateModPackage(string folder)
-{
-    using var output = new MemoryStream();
-    using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
-    {
-        AddText(archive, $"{folder}/mod_info.lua", "name = \"Regression Mod\"\nuid = \"sync_mod\"\nversion = 1\n");
-        AddText(archive, $"{folder}/hook/units.lua", "return {}\n");
-    }
-    return output.ToArray();
-}
-
-void AddText(ZipArchive archive, string path, string content)
-{
-    var entry = archive.CreateEntry(path, CompressionLevel.Fastest);
-    using var writer = new StreamWriter(entry.Open());
-    writer.Write(content);
 }
 
 void CreatePreviewPng(string path, int width, int height)
@@ -1488,46 +1191,6 @@ sealed class ResumeDownloadHandler(byte[] payload, int interruptAfter) : HttpMes
         resumed.Headers.ETag = new EntityTagHeaderValue("\"package-v1\"");
         resumed.Content.Headers.ContentRange = new ContentRangeHeaderValue(from, payload.Length - 1, payload.Length);
         return Task.FromResult(resumed);
-    }
-}
-
-sealed class StaticPackageHandler(byte[] payload) : HttpMessageHandler
-{
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(payload) };
-        response.Headers.ETag = new EntityTagHeaderValue("\"static-package-v1\"");
-        return Task.FromResult(response);
-    }
-}
-
-sealed class CatalogPackageHandler(MapManifest manifest, byte[] package) : HttpMessageHandler
-{
-    private readonly byte[] _manifest = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(manifest));
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        var path = request.RequestUri?.AbsolutePath ?? "";
-        if (path.EndsWith("/manifest/latest.json", StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(_manifest) });
-        if (path.EndsWith("/packages/sync-map.zip", StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(package) });
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-    }
-}
-
-sealed class ModCatalogPackageHandler(ModManifest manifest, byte[] package) : HttpMessageHandler
-{
-    private readonly byte[] _manifest = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(manifest));
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        var path = request.RequestUri?.AbsolutePath ?? "";
-        if (path.EndsWith("/manifest/mods.json", StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(_manifest) });
-        if (path.EndsWith("/packages/sync-mod.zip", StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(package) });
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 }
 
