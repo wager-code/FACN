@@ -16,8 +16,14 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
     private const int MaxManifestBytes = 1024 * 1024;
     private readonly JsonSerializerOptions _json = new() { PropertyNameCaseInsensitive = true };
     private readonly Func<Uri, HttpClient>? _httpClientFactory;
-    internal UpdateService(ConfigService config, AuthApiClient auth, TaskService tasks, LogService log, Func<Uri, HttpClient> httpClientFactory)
-        : this(config, auth, tasks, log) => _httpClientFactory = httpClientFactory;
+    private readonly string _currentVersion = AppVersion.Informational;
+    private readonly SemaphoreSlim _downloadGate = new(1, 1);
+    internal UpdateService(ConfigService config, AuthApiClient auth, TaskService tasks, LogService log, Func<Uri, HttpClient> httpClientFactory, string? currentVersion = null)
+        : this(config, auth, tasks, log)
+    {
+        _httpClientFactory = httpClientFactory;
+        _currentVersion = currentVersion ?? AppVersion.Informational;
+    }
     public string StagingRoot { get; } = Path.Combine(ConfigService.ResolveDataDirectory(), "Updates");
 
     public async Task<AppUpdateInfo> CheckAsync(CancellationToken ct = default)
@@ -48,8 +54,8 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
         if (string.IsNullOrWhiteSpace(manifest.Version)) return Empty(channel, "更新服务正常，当前通道尚未发布客户端版本");
         if (!string.IsNullOrWhiteSpace(manifest.Channel) && !NormalizeChannel(manifest.Channel).Equals(channel, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException($"更新清单通道 {manifest.Channel} 与当前通道 {channel} 不一致");
-        var comparison = ContentIdentity.CompareVersions(AppVersion.Informational, manifest.Version);
-        if (!comparison.Ordered) throw new InvalidDataException($"无法安全比较客户端版本 {AppVersion.Informational} 与 {manifest.Version}");
+        var comparison = ClientVersion.Compare(_currentVersion, manifest.Version);
+        if (!comparison.Ordered) throw new InvalidDataException($"无法安全比较客户端版本 {_currentVersion} 与 {manifest.Version}");
         var available = comparison.Compare < 0;
         var metadataComplete = IsSha256(manifest.Sha256) && manifest.Size is > 0 and <= MaxUpdateBytes && IsSafeDownloadUri(manifest.Url);
         var status = available
@@ -57,7 +63,7 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
             : comparison.Compare == 0 ? "当前已是最新版本" : "当前客户端高于更新通道版本";
         return new AppUpdateInfo
         {
-            CurrentVersion = AppVersion.Informational,
+            CurrentVersion = _currentVersion,
             LatestVersion = manifest.Version.Trim(),
             Channel = channel,
             DownloadUrl = manifest.Url.Trim(),
@@ -73,14 +79,31 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
 
     public async Task<string> DownloadAsync(AppUpdateInfo info, CancellationToken ct = default)
     {
+        await _downloadGate.WaitAsync(ct);
+        try { return await DownloadCoreAsync(info, ct); }
+        finally { _downloadGate.Release(); }
+    }
+
+    private async Task<string> DownloadCoreAsync(AppUpdateInfo info, CancellationToken ct)
+    {
         if (!info.Available || !info.MetadataComplete) throw new InvalidOperationException("当前没有可安全下载的客户端更新");
+        if (info.Size is <= 0 or > MaxUpdateBytes || !IsSha256(info.Sha256))
+            throw new InvalidDataException("更新大小或 SHA-256 元数据无效");
         var versionDirectory = Path.Combine(StagingRoot, SafeLabel(info.LatestVersion));
         var destination = Path.Combine(versionDirectory, "SCFA内容中心.exe");
+        EnsureUnderStaging(Path.GetFullPath(destination));
         Directory.CreateDirectory(versionDirectory);
         if (File.Exists(destination))
         {
-            var existingHash = await ContentHash.FileSha256Async(destination, ct);
-            if (existingHash.Equals(info.Sha256, StringComparison.OrdinalIgnoreCase)) return destination;
+            if (new FileInfo(destination).Length == info.Size)
+            {
+                var existingHash = await ContentHash.FileSha256Async(destination, ct);
+                if (existingHash.Equals(info.Sha256.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    ValidatePortableExecutable(destination);
+                    return destination;
+                }
+            }
             File.Delete(destination);
         }
 
@@ -205,7 +228,7 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
     private static bool IsSafeDownloadUri(string raw) => Uri.TryCreate(raw, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && string.IsNullOrEmpty(uri.UserInfo);
     private static bool IsSha256(string value) => !string.IsNullOrWhiteSpace(value) && value.Trim().Length == 64 && value.Trim().All(Uri.IsHexDigit);
     private static string NormalizeChannel(string value) => value.Trim().ToLowerInvariant() switch { "developer" or "dev" => "developer", "beta" => "beta", _ => "stable" };
-    private static AppUpdateInfo Empty(string channel, string status) => new() { CurrentVersion = AppVersion.Informational, Channel = channel, Status = status };
+    private AppUpdateInfo Empty(string channel, string status) => new() { CurrentVersion = _currentVersion, Channel = channel, Status = status };
     private static string SafeLabel(string value) => new(value.Select(c => char.IsLetterOrDigit(c) || c is '-' or '.' or '_' ? c : '_').Take(80).ToArray());
     private void EnsureUnderStaging(string path)
     {

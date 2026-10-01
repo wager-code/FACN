@@ -35,6 +35,20 @@ async Task CheckThrowsAsync<TException>(Func<Task> action, string name) where TE
     catch (TException) { Check(true, name); }
 }
 
+if (args.FirstOrDefault() == "--packaged-update-worker")
+{
+    try { await PackagedUpdateRegression.RunWorkerAsync(args); }
+    catch (Exception ex) { Console.Error.WriteLine(ex); Environment.ExitCode = 1; }
+    return;
+}
+if (args.FirstOrDefault() == "--packaged-update-smoke")
+{
+    if (args.Length != 3) throw new ArgumentException("Expected candidate and baseline executable paths");
+    await PackagedUpdateRegression.RunAsync(args[1], args[2], Check);
+    Environment.ExitCode = failures.Count == 0 ? 0 : 1;
+    return;
+}
+
 if (args.Contains("--login-ui-preview", StringComparer.OrdinalIgnoreCase))
 {
     var width = args.Length > 1 && double.TryParse(args[^2], out var parsedWidth) ? parsedWidth : 1040;
@@ -813,6 +827,7 @@ try
         "云端地图优先显示游戏名称，同时保留云端标题和目录供辨认");
     var log = new LogService();
     var tasks = new TaskService();
+    ClientUpdateVersionRegression.Run(Check);
     await UpdateDownloadRegression.RunAsync(config, tasks, log, Check);
     await UpdateStartupRegression.RunAsync(configDirectory, Check);
     await UpdateStartupProcessRegression.RunAsync(configDirectory, Check);
