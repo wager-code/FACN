@@ -16,6 +16,7 @@ jobs:
       - run: dotnet build SCFA.ContentCenter.sln -c Release --no-restore
       - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build
       - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --profile-ui-smoke
+      - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --login-account-ui-smoke
       - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --archive-ui-smoke
       - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --update-ui-smoke
       - run: dotnet run --project server/SCFA.PublicationGateway.RegressionTests/SCFA.PublicationGateway.RegressionTests.csproj -c Release

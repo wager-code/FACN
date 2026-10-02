@@ -15,10 +15,15 @@ public partial class LoginWindow : Window
     private bool _updatingOptions;
     private bool _syncingPasswordVisibility;
     private string _lastLoadedAccount = "";
+    private readonly LoginAccountHistoryService _accountHistory;
+    private bool _deletingAccount;
     public LoginWindow()
     {
+        _accountHistory = new LoginAccountHistoryService(App.Services.Config, App.Services.Session);
         InitializeComponent();
         LoadRememberedCredentials();
+        AccountBox.AddHandler(System.Windows.Controls.TextBox.TextChangedEvent,
+            new System.Windows.Controls.TextChangedEventHandler(AccountBox_TextChanged), true);
         OfflineButton.Visibility = App.Services.Config.Current.OfflineAllowed ? Visibility.Visible : Visibility.Collapsed;
         if (!string.IsNullOrWhiteSpace(App.Services.Config.LoadWarning)) SetStatus(App.Services.Config.LoadWarning);
         Loaded += LoginWindow_Loaded;
@@ -89,7 +94,7 @@ public partial class LoginWindow : Window
     {
         var account = AccountBox.Text.Trim(); var password = PasswordBox.Password;
         if (account.Length == 0 || password.Length == 0) { SetStatus("请输入账号和密码。"); return; }
-        SubmitButton.IsEnabled = false; SetStatus(_registerMode ? "正在注册…" : "正在连接账号服务器…");
+        SetLoginEnabled(false); SetStatus(_registerMode ? "正在注册…" : "正在连接账号服务器…");
         try
         {
             App.Services.ReconfigureAuth();
@@ -115,7 +120,7 @@ public partial class LoginWindow : Window
             App.OpenMainWindow();
         }
         catch (Exception ex) { App.Services.Auth.SetToken(""); SetStatus(ex.Message); App.Services.Log.Error("登录失败", ex); }
-        finally { SubmitButton.IsEnabled = true; }
+        finally { SetLoginEnabled(true); }
     }
 
     private void SwitchButton_Click(object sender, RoutedEventArgs e) { _registerMode = !_registerMode; ApplyMode(); SetStatus(""); }
@@ -137,7 +142,6 @@ public partial class LoginWindow : Window
         VisiblePasswordBox.IsEnabled = enabled;
         PasswordVisibilityButton.IsEnabled = enabled;
         EmailBox.IsEnabled = enabled;
-        RememberAccountBox.IsEnabled = enabled;
         RememberPasswordBox.IsEnabled = enabled;
         AutoLoginBox.IsEnabled = enabled;
         SubmitButton.IsEnabled = enabled;
@@ -161,58 +165,63 @@ public partial class LoginWindow : Window
         var accounts = config.LoginAccounts ??= [];
         _loadingAccounts = true;
         AccountBox.ItemsSource = accounts.OrderByDescending(x => x.LastUsedAt).Select(x => x.Account).ToList();
-        var preferred = config.RememberLoginAccount ? config.LastLoginAccount : "";
-        if (config.RememberLoginAccount && string.IsNullOrWhiteSpace(preferred)) preferred = accounts.OrderByDescending(x => x.LastUsedAt).Select(x => x.Account).FirstOrDefault() ?? "";
+        var preferred = config.LastLoginAccount;
+        if (string.IsNullOrWhiteSpace(preferred)) preferred = accounts.OrderByDescending(x => x.LastUsedAt).Select(x => x.Account).FirstOrDefault() ?? "";
         AccountBox.Text = preferred;
         _loadingAccounts = false;
-        RememberAccountBox.IsChecked = config.RememberLoginAccount;
         LoadPasswordForAccount(preferred, config.RememberLoginPassword, config.AutoLogin);
     }
 
     private async Task SaveRememberedCredentialsAsync(string account, string password)
     {
-        var config = App.Services.Config.Current;
-        var rememberAccount = RememberAccountBox.IsChecked == true;
-        var rememberPassword = rememberAccount && RememberPasswordBox.IsChecked == true;
-        var autoLogin = rememberPassword && AutoLoginBox.IsChecked == true;
-        var records = config.LoginAccounts ??= [];
-        var existing = records.FirstOrDefault(x => string.Equals(x.Account, account, StringComparison.OrdinalIgnoreCase));
-        if (rememberAccount)
-        {
-            existing ??= new Models.LoginAccountRecord { Account = account };
-            existing.Account = account;
-            existing.PasswordEncrypted = rememberPassword ? LoginCredentialProtector.Protect(password) : "";
-            existing.LastUsedAt = DateTimeOffset.UtcNow;
-            records.RemoveAll(x => string.Equals(x.Account, account, StringComparison.OrdinalIgnoreCase));
-            records.Insert(0, existing);
-            if (records.Count > 8) records.RemoveRange(8, records.Count - 8);
-        }
-        else records.RemoveAll(x => string.Equals(x.Account, account, StringComparison.OrdinalIgnoreCase));
-        config.RememberLoginAccount = rememberAccount;
-        config.RememberLoginPassword = rememberPassword;
-        config.AutoLogin = autoLogin;
-        config.LastLoginAccount = rememberAccount ? account : "";
-        config.LoginPasswordEncrypted = rememberPassword ? existing?.PasswordEncrypted ?? "" : "";
-        await App.Services.Config.SaveAsync();
+        await _accountHistory.SaveAsync(account, password,
+            RememberPasswordBox.IsChecked == true, AutoLoginBox.IsChecked == true);
         _lastLoadedAccount = account;
+    }
+
+    private async void DeleteAccountButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (_deletingAccount || sender is not System.Windows.Controls.Button { Tag: string account }) return;
+        _deletingAccount = true;
+        var currentInput = AccountBox.Text;
+        var removingCurrent = string.Equals(currentInput.Trim(), account, StringComparison.OrdinalIgnoreCase);
+        AccountBox.IsDropDownOpen = false;
+        SetLoginEnabled(false);
+        try
+        {
+            await _accountHistory.DeleteAsync(account);
+            _loadingAccounts = true;
+            try
+            {
+                AccountBox.ItemsSource = App.Services.Config.Current.LoginAccounts
+                    .OrderByDescending(x => x.LastUsedAt).Select(x => x.Account).ToList();
+                AccountBox.SelectedItem = null;
+                AccountBox.Text = removingCurrent ? "" : currentInput;
+            }
+            finally { _loadingAccounts = false; }
+            if (removingCurrent) LoadPasswordForAccount("", false, false);
+            SetStatus("已删除该账号的本机记录和保存密码，服务器账号不受影响。");
+        }
+        catch (Exception ex)
+        {
+            SetStatus("删除本机账号记录失败，请重试。");
+            App.Services.Log.Error("删除本机账号记录失败", ex);
+        }
+        finally
+        {
+            _deletingAccount = false;
+            SetLoginEnabled(true);
+        }
     }
 
     private void RememberOption_Changed(object sender, RoutedEventArgs e)
     {
         if (_updatingOptions) return;
         _updatingOptions = true;
-        if (ReferenceEquals(sender, RememberPasswordBox) && RememberPasswordBox.IsChecked == true && RememberAccountBox.IsChecked != true)
-            RememberAccountBox.IsChecked = true;
-        else if (ReferenceEquals(sender, RememberAccountBox) && RememberAccountBox.IsChecked == false && RememberPasswordBox.IsChecked == true)
-            RememberPasswordBox.IsChecked = false;
         if (ReferenceEquals(sender, AutoLoginBox) && AutoLoginBox.IsChecked == true)
-        {
-            RememberAccountBox.IsChecked = true;
             RememberPasswordBox.IsChecked = true;
-        }
         if (ReferenceEquals(sender, RememberPasswordBox) && RememberPasswordBox.IsChecked != true)
-            AutoLoginBox.IsChecked = false;
-        if (ReferenceEquals(sender, RememberAccountBox) && RememberAccountBox.IsChecked != true)
             AutoLoginBox.IsChecked = false;
         _updatingOptions = false;
     }

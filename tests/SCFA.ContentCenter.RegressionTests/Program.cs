@@ -49,6 +49,21 @@ if (args.FirstOrDefault() == "--update-http-smoke")
     return;
 }
 
+if (args.FirstOrDefault() == "--login-account-smoke")
+{
+    var root = Path.Combine(Path.GetTempPath(), "scfa_login_accounts_" + Guid.NewGuid().ToString("N"));
+    await LoginAccountRegression.RunAsync(root, Check);
+    Environment.ExitCode = failures.Count == 0 ? 0 : 1;
+    return;
+}
+
+if (args.FirstOrDefault() == "--login-account-ui-smoke")
+{
+    LoginAccountRegression.RunUiSmoke(Check);
+    Environment.ExitCode = failures.Count == 0 ? 0 : 1;
+    return;
+}
+
 if (args.FirstOrDefault() == "--mod-icon-smoke")
 {
     var root = Path.Combine(Path.GetTempPath(), "scfa_mod_icons_" + Guid.NewGuid().ToString("N"));
@@ -102,7 +117,6 @@ if (args.Contains("--login-ui-preview", StringComparer.OrdinalIgnoreCase))
             var window = new SCFA.ContentCenter.Views.LoginWindow();
             ((System.Windows.Controls.ComboBox)window.FindName("AccountBox")).Text = "player@example.com";
             ((System.Windows.Controls.PasswordBox)window.FindName("PasswordBox")).Password = "Preview-Password-123";
-            ((System.Windows.Controls.CheckBox)window.FindName("RememberAccountBox")).IsChecked = true;
             ((System.Windows.Controls.CheckBox)window.FindName("RememberPasswordBox")).IsChecked = false;
             ((System.Windows.Controls.CheckBox)window.FindName("AutoLoginBox")).IsChecked = false;
             var root = (System.Windows.FrameworkElement)window.Content;
@@ -568,7 +582,7 @@ Check(mainWindowXaml.Contains("Opacity=\"0.72\"", StringComparison.Ordinal) && m
       appXaml.Contains("#B80E1B2B", StringComparison.Ordinal) && appXaml.Contains("#C213243A", StringComparison.Ordinal),
       "背景图片和主要卡片采用兼顾可读性的半透明层级");
 var loginXaml = await File.ReadAllTextAsync(Path.Combine(uiRoot, "Views", "LoginWindow.xaml"));
-Check(loginXaml.Contains("RememberAccountBox", StringComparison.Ordinal) && loginXaml.Contains("RememberPasswordBox", StringComparison.Ordinal) && loginXaml.Contains("AutoLoginBox", StringComparison.Ordinal) && loginXaml.Contains("IsDefault=\"True\"", StringComparison.Ordinal), "登录页提供记住账号、记住密码、自动登录和回车提交");
+Check(!loginXaml.Contains("RememberAccountBox", StringComparison.Ordinal) && loginXaml.Contains("DeleteAccountButton_Click", StringComparison.Ordinal) && loginXaml.Contains("RememberPasswordBox", StringComparison.Ordinal) && loginXaml.Contains("AutoLoginBox", StringComparison.Ordinal) && loginXaml.Contains("IsDefault=\"True\"", StringComparison.Ordinal), "登录页默认记住账号，提供删除记录、记住密码、自动登录和回车提交");
 Check(loginXaml.Contains("ComboBox x:Name=\"AccountBox\"", StringComparison.Ordinal) && loginXaml.Contains("TabIndex=\"0\"", StringComparison.Ordinal) && loginXaml.Contains("TabIndex=\"8\"", StringComparison.Ordinal) && loginXaml.Contains("PreviewKeyDown", StringComparison.Ordinal), "登录页支持多个账号下拉切换和完整键盘导航");
 var syncHistorySource = await File.ReadAllTextAsync(Path.Combine(uiRoot, "Services", "SyncHistoryService.cs"));
 var syncHistoryModel = await File.ReadAllTextAsync(Path.Combine(uiRoot, "Models", "SyncHistoryModels.cs"));
@@ -867,6 +881,7 @@ try
     await UpdateStartupProcessRegression.RunAsync(configDirectory, Check);
     await BackupIntegrityRegression.RunAsync(configDirectory, log, Check);
     await ModPreviewRegression.RunAsync(configDirectory, log, Check);
+    await LoginAccountRegression.RunAsync(Path.Combine(configDirectory, "login-accounts"), Check);
     var backups = new BackupService(pathService, log);
     var localContent = new LocalContentService(pathService, log);
     var referencedMap = Path.Combine(mapsRoot, "shared_preview");

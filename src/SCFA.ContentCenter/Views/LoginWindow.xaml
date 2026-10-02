@@ -175,7 +175,36 @@
                             <TextBlock Text="账号或邮箱地址" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,7"/>
                             <ComboBox x:Name="AccountBox" Height="44" FontSize="14" IsEditable="True" IsTextSearchEnabled="True" StaysOpenOnEdit="True" TabIndex="0"
                                       PreviewKeyDown="AccountBox_PreviewKeyDown" SelectionChanged="AccountBox_SelectionChanged"
-                                      ToolTip="可输入新账号，也可以从已保存的账号中选择"/>
+                                      ToolTip="可输入新账号，也可以从已保存的账号中选择">
+                                <ComboBox.ItemContainerStyle>
+                                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ComboBoxItem">
+                                                    <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                          VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ComboBox.ItemContainerStyle>
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,10,0"/>
+                                            <Button Grid.Column="1" Content="×" Tag="{Binding}" Click="DeleteAccountButton_Click"
+                                                    Style="{StaticResource LoginLinkButton}" Width="28" Height="28" MinHeight="28"
+                                                    FontSize="20" FontWeight="Normal" Padding="0" IsDefault="False"
+                                                    ToolTip="删除此账号的本机记录和保存密码"
+                                                    AutomationProperties.Name="{Binding StringFormat=删除账号 {0} 的本机记录}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
 
                             <StackPanel x:Name="EmailPanel" Visibility="Collapsed" Margin="0,14,0,0">
                                 <TextBlock Text="联系邮箱（可选）" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,7"/>
@@ -198,18 +227,17 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <CheckBox x:Name="RememberAccountBox" Content="记住账号" TabIndex="3"
-                                          Checked="RememberOption_Changed" Unchecked="RememberOption_Changed"/>
-                                <CheckBox x:Name="RememberPasswordBox" Grid.Column="1" Content="记住密码" TabIndex="4"
+                                <CheckBox x:Name="RememberPasswordBox" Content="记住密码" TabIndex="3"
+                                          HorizontalAlignment="Left"
                                           Checked="RememberOption_Changed" Unchecked="RememberOption_Changed"
                                           ToolTip="密码仅加密保存在这台电脑上"/>
-                                <CheckBox x:Name="AutoLoginBox" Grid.Column="2" Content="自动登录" TabIndex="5"
+                                <CheckBox x:Name="AutoLoginBox" Grid.Column="1" Content="自动登录" TabIndex="4"
+                                          HorizontalAlignment="Right"
                                           Checked="RememberOption_Changed" Unchecked="RememberOption_Changed"
                                           ToolTip="下次打开软件时自动验证并登录当前账号"/>
                             </Grid>
-                            <TextBlock x:Name="RememberHint" Text="可保存多个账号，密码仅加密保存在本机。"
+                            <TextBlock x:Name="RememberHint" Text="账号默认记住，可在账号列表中点击 × 删除本机记录。"
                                        Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,-1,0,0" TextWrapping="Wrap"/>
 
                             <Border x:Name="StatusPanel" Background="#D62C231B" BorderBrush="#B365452A" BorderThickness="1"

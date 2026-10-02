@@ -116,6 +116,8 @@ public sealed class ConfigService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(50)
             .ToList();
+        // Retain the legacy field for config compatibility; accounts are always remembered.
+        c.RememberLoginAccount = true;
         c.LoginAccounts = (c.LoginAccounts ?? [])
             .Where(x => x is not null && !string.IsNullOrWhiteSpace(x.Account) && x.Account.Trim().Length <= 200)
             .Select(x => new LoginAccountRecord
@@ -127,7 +129,6 @@ public sealed class ConfigService
             .GroupBy(x => x.Account, StringComparer.OrdinalIgnoreCase)
             .Select(x => x.OrderByDescending(item => item.LastUsedAt).First())
             .OrderByDescending(x => x.LastUsedAt)
-            .Take(8)
             .ToList();
         c.LocalUserProfiles = (c.LocalUserProfiles ?? [])
             .Where(x => x is not null && !string.IsNullOrWhiteSpace(x.UserKey) && x.UserKey.Trim().Length <= 200)
