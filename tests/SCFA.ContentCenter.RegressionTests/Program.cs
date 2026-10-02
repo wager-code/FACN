@@ -630,7 +630,9 @@ Check(dev18Pages[0].Contains("InstallStateCode", StringComparison.Ordinal) && de
       dev18Pages[3].Contains("RunningCount", StringComparison.Ordinal) && dev18Pages[3].Contains("TaskState", StringComparison.Ordinal),
       "云端、本地、同步和下载页面均使用真实状态与统计绑定");
 Check(dev18Pages[0].Contains("PreviewSource", StringComparison.Ordinal) && dev18Pages[0].Contains("InstallPath", StringComparison.Ordinal) && dev18Pages[0].Contains("TagsText", StringComparison.Ordinal), "云端地图与 MOD 详情显示真实预览、安装路径和标签");
-Check(appXaml.Contains("<Setter Property=\"IsReadOnly\" Value=\"True\"/>", StringComparison.Ordinal) &&
+Check(dictionarySources.Select(XDocument.Load).SelectMany(d => d.Descendants())
+      .Where(e => e.Name.LocalName == "Style" && (string?)e.Attribute("TargetType") == "DataGrid")
+      .SelectMany(e => e.Elements()).Any(e => (string?)e.Attribute("Property") == "IsReadOnly" && (string?)e.Attribute("Value") == "True") &&
       dev18Pages[0].Contains("<DataGridTemplateColumn Header=\"选择\"", StringComparison.Ordinal) &&
       dev18Pages[0].Contains("IsSelected, Mode=TwoWay", StringComparison.Ordinal),
       "展示表格统一只读且云端批量勾选仍可操作");
