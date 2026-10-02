@@ -54,10 +54,10 @@ public sealed class UpdatesPageViewModel : ViewModelBase
     public AppUpdateInfo? Info { get => _info; private set { if (Set(ref _info, value)) { DownloadCommand.RaiseCanExecuteChanged(); ApplyCommand.RaiseCanExecuteChanged(); NotifyUpdateState(); } } }
     public string StagedPath { get => _stagedPath; private set { if (Set(ref _stagedPath, value)) { ApplyCommand.RaiseCanExecuteChanged(); NotifyUpdateState(); } } }
     public string CurrentVersion => AppVersion.Informational;
-    public string ChannelDisplay => SelectedChannel switch { "developer" => "Developer · 开发预览", "beta" => "Beta · 测试通道", _ => "Stable · 稳定通道" };
+    public string ChannelDisplay => SelectedChannel switch { "developer" => "开发版 · 开发通道", "beta" => "测试版 · 测试通道", _ => "稳定版 · 稳定通道" };
     public string LatestVersionDisplay => Info?.LatestVersion ?? "尚未检查";
     public string UpdateStateLabel => Info?.Status ?? "等待检查";
-    public string SecurityStateLabel => Info is null ? "等待发布元数据" : Info.MetadataComplete ? "大小、PE 与 SHA-256 校验就绪" : "发布元数据不完整";
+    public string SecurityStateLabel => Info is null ? "等待发布元数据" : Info.MetadataComplete ? "下载校验信息已就绪" : "发布元数据不完整";
     public string StageStateLabel => File.Exists(StagedPath) ? "安装包已下载并验证" : "尚未暂存安装包";
     public AsyncRelayCommand CheckCommand { get; }
     public AsyncRelayCommand DownloadCommand { get; }
@@ -75,7 +75,7 @@ public sealed class UpdatesPageViewModel : ViewModelBase
         {
             _config.Current.UpdateChannel = SelectedChannel;
             await _config.SaveAsync();
-            Status = $"正在检查 {SelectedChannel} 通道…";
+            Status = $"正在检查{ChannelDisplay}…";
             var next = await _updates.CheckAsync();
             Info = next;
             if (IsSamePackage(previous, next) && File.Exists(previousPath)) StagedPath = previousPath;
@@ -97,7 +97,7 @@ public sealed class UpdatesPageViewModel : ViewModelBase
         {
             Status = $"正在下载客户端 {info.LatestVersion}…";
             StagedPath = await _updates.DownloadAsync(info);
-            Status = "更新已下载并通过 SHA-256 校验，可以安装。";
+            Status = "更新已下载并通过完整性校验，可以安装。";
         }
         catch (OperationCanceledException) { Status = "更新下载已取消。"; }
         catch (Exception ex)

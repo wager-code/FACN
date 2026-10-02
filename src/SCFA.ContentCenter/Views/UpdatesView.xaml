@@ -11,9 +11,9 @@
         <Grid Margin="0,0,0,18">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="UPDATE CONTROL" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="Bold"/>
+                <TextBlock Text="软件更新管理" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="Bold"/>
                 <TextBlock Text="客户端更新" FontSize="30" FontWeight="SemiBold" Margin="0,3,0,0"/>
-                <TextBlock Text="选择发布通道，安全下载并校验安装包；只有通过大小、PE 格式和 SHA-256 校验后才能安装。"
+                <TextBlock Text="选择更新版本，下载后核对安装包大小、格式和文件完整性；校验通过后才能安装。"
                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
             </StackPanel>
             <Border Grid.Column="1" Style="{StaticResource PillBorder}" Margin="18,4,0,0" VerticalAlignment="Top">
@@ -39,7 +39,23 @@
                             <TextBlock Text="{Binding SecurityStateLabel}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"/>
                         </Border>
                     </DockPanel>
-                    <ComboBox Grid.Row="1" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel}" IsEnabled="{Binding IsChannelSelectionEnabled}" Margin="0,16,0,0" MinWidth="190" HorizontalAlignment="Left"/>
+                    <ComboBox Grid.Row="1" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel}" IsEnabled="{Binding IsChannelSelectionEnabled}" Margin="0,16,0,0" MinWidth="190" HorizontalAlignment="Left">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock>
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="稳定版"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding}" Value="beta"><Setter Property="Text" Value="测试版"/></DataTrigger>
+                                                <DataTrigger Binding="{Binding}" Value="developer"><Setter Property="Text" Value="开发版"/></DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                     <WrapPanel Grid.Row="2" Margin="0,14,0,0">
                         <Button Style="{StaticResource PrimaryButton}" Content="检查更新" Command="{Binding CheckCommand}" Margin="0,0,8,8"/>
                         <Button Style="{StaticResource SecondaryButton}" Content="打开暂存目录" Command="{Binding OpenFolderCommand}" Margin="0,0,0,8"/>
@@ -83,7 +99,7 @@
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                     <StackPanel><TextBlock Text="发布时间" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding Info.PublishedAt, TargetNullValue=—}" Margin="0,6,0,0"/></StackPanel>
                     <StackPanel Grid.Column="1"><TextBlock Text="安装包大小" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding Info.SizeText, TargetNullValue=—}" Margin="0,6,0,0"/></StackPanel>
-                    <StackPanel Grid.Column="2"><TextBlock Text="安全校验" Style="{StaticResource FieldLabel}"/><TextBlock Text="大小 + PE + SHA-256" Margin="0,6,0,0"/></StackPanel>
+                    <StackPanel Grid.Column="2"><TextBlock Text="安全校验" Style="{StaticResource FieldLabel}"/><TextBlock Text="大小、格式和文件完整性" Margin="0,6,0,0"/></StackPanel>
                 </Grid>
 
                 <Border Grid.Row="2" Style="{StaticResource InsetBorder}" Margin="0,18,0,0" Padding="15" MinHeight="96">

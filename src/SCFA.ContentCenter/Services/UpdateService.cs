@@ -60,7 +60,7 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
 
         if (string.IsNullOrWhiteSpace(manifest.Version)) return Empty(channel, "更新服务正常，当前通道尚未发布客户端版本");
         if (!string.IsNullOrWhiteSpace(manifest.Channel) && !NormalizeChannel(manifest.Channel).Equals(channel, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException($"更新清单通道 {manifest.Channel} 与当前通道 {channel} 不一致");
+            throw new InvalidDataException($"更新清单属于{ChannelName(manifest.Channel)}，当前选择{ChannelName(channel)}；请选择匹配的更新通道。");
         var comparison = ClientVersion.Compare(_currentVersion, manifest.Version);
         if (!comparison.Ordered) throw new InvalidDataException($"无法安全比较客户端版本 {_currentVersion} 与 {manifest.Version}");
         var available = comparison.Compare < 0;
@@ -246,6 +246,8 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
 
     private static bool IsSafeDownloadUri(string raw) => Uri.TryCreate(raw, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && string.IsNullOrEmpty(uri.UserInfo);
     private static bool IsSha256(string value) => !string.IsNullOrWhiteSpace(value) && value.Trim().Length == 64 && value.Trim().All(Uri.IsHexDigit);
+    private static string ChannelName(string channel) => NormalizeChannel(channel) switch { "developer" => "开发版", "beta" => "测试版", _ => "稳定版" };
+
     private static string NormalizeChannel(string value) => value.Trim().ToLowerInvariant() switch { "developer" or "dev" => "developer", "beta" => "beta", _ => "stable" };
     private AppUpdateInfo Empty(string channel, string status) => new() { CurrentVersion = _currentVersion, Channel = channel, Status = status };
     private static string SafeLabel(string value) => new(value.Select(c => char.IsLetterOrDigit(c) || c is '-' or '.' or '_' ? c : '_').Take(80).ToArray());
