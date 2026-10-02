@@ -8,4 +8,5 @@
 <CornerRadius x:Key="RadiusControl">8</CornerRadius>
 <CornerRadius x:Key="RadiusCard">12</CornerRadius>
 <CornerRadius x:Key="RadiusLarge">16</CornerRadius>
+<sys:Double x:Key="RadiusValueM">8</sys:Double>
 </ResourceDictionary>

@@ -2,8 +2,8 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:core="clr-namespace:SCFA.ContentCenter.Core" xmlns:ui="clr-namespace:SCFA.ContentCenter.DesignSystem"
  xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
- Title="SCFA 内容中心" Width="1280" Height="720" MinWidth="900" MinHeight="640" WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResize">
- <shell:WindowChrome.WindowChrome><shell:WindowChrome CaptionHeight="48" ResizeBorderThickness="7" CornerRadius="{StaticResource RadiusM}" GlassFrameThickness="0" UseAeroCaptionButtons="False"/></shell:WindowChrome.WindowChrome>
+ Title="SCFA 内容中心" Width="{StaticResource LayoutSize1280}" Height="{StaticResource LayoutSize720}" MinWidth="{StaticResource LayoutSize900}" MinHeight="{StaticResource LayoutSize640}" WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResize">
+ <shell:WindowChrome.WindowChrome><shell:WindowChrome CaptionHeight="{StaticResource LayoutSize48}" ResizeBorderThickness="{StaticResource ShellBorderThickness7}" CornerRadius="{StaticResource RadiusM}" GlassFrameThickness="0" UseAeroCaptionButtons="False"/></shell:WindowChrome.WindowChrome>
  <Border Background="{StaticResource BackgroundDeepBrush}" CornerRadius="{StaticResource RadiusM}">
   <Grid ClipToBounds="True">
    <!-- Layer 0: art; layer 1: separate copy/form/footer safe-area masks; layer 2: content. -->

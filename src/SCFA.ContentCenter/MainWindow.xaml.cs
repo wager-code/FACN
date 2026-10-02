@@ -39,7 +39,7 @@ public partial class MainWindow : Window
         LogoutButton.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         UserCard.Padding = (Thickness)FindResource("CompactPadding");
         UserCard.HorizontalAlignment = compact ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
-        UserCard.Width = compact ? 58 : double.NaN;
+        UserCard.Width = compact ? (double)FindResource("CompactUserCardWidth") : double.NaN;
         foreach (var button in _navButtons)
         {
             button.HorizontalContentAlignment = compact ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;

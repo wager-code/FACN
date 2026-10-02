@@ -61,4 +61,26 @@
 <Thickness x:Key="ControlPadding16_8">16,8</Thickness>
 <Thickness x:Key="ControlMargin0_0_4_0">0,0,4,0</Thickness>
 <Thickness x:Key="ControlPadding8_4">8,4</Thickness>
+<GridLength x:Key="LayoutGrid244">244</GridLength>
+<GridLength x:Key="LayoutGrid56">56</GridLength>
+<GridLength x:Key="LayoutGrid84">84</GridLength>
+<GridLength x:Key="LayoutGrid116">116</GridLength>
+<GridLength x:Key="LayoutGrid48">48</GridLength>
+<GridLength x:Key="LayoutGrid28">28</GridLength>
+<sys:Double x:Key="LayoutSize1586">1586</sys:Double>
+<sys:Double x:Key="LayoutSize992">992</sys:Double>
+<sys:Double x:Key="LayoutSize980">980</sys:Double>
+<sys:Double x:Key="LayoutSize680">680</sys:Double>
+<sys:Double x:Key="LayoutSize56">56</sys:Double>
+<sys:Double x:Key="LayoutSize44">44</sys:Double>
+<sys:Double x:Key="LayoutSize7">7</sys:Double>
+<sys:Double x:Key="LayoutSize8">8</sys:Double>
+<sys:Double x:Key="LayoutSize40">40</sys:Double>
+<sys:Double x:Key="LayoutSize6">6</sys:Double>
+<sys:Double x:Key="LayoutSize1280">1280</sys:Double>
+<sys:Double x:Key="LayoutSize720">720</sys:Double>
+<sys:Double x:Key="LayoutSize900">900</sys:Double>
+<sys:Double x:Key="LayoutSize640">640</sys:Double>
+<sys:Double x:Key="LayoutSize48">48</sys:Double>
+<sys:Double x:Key="CompactUserCardWidth">58</sys:Double>
 </ResourceDictionary>
