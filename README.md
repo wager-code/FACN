@@ -117,15 +117,22 @@
 
 项目目前仍在持续开发中。
 
-当前客户端版本：**V4.0.0-dev62**（开发版，已公开发行）。
+当前客户端版本：**V4.0.0-rc1**（正式候选测试版，已公开发行）。
 
-现有发行基线：**V4.0.0-dev62**。当前仍是开发版，去掉 `dev` 前需要完成实际更新通道与发布验收。
+现有客户端发行基线：**V4.0.0-rc1**。完成实际客户端更新通道验收后准备 **V4.0.0 正式版**。
 
 ### V4.0.0 正式版收尾
 
-PR #7 的更新网络修复已合并。当前源码为 **4.0.0-rc1 正式候选**，保持功能冻结；公开客户端仍 dev62。候选通过实际更新通道与服务器验收后再发布 V4.0.0。
+PR #7、#8 已合并；**4.0.0-rc1 正式候选测试版**已公开发行，保持功能冻结。复用 gateway-v62，实际客户端更新通道验收后再发布 V4.0.0。
 
 发布材料使用 scripts/Prepare-ClientRelease.ps1 统一核对源码/PE版本并生成SHA-256、来源身份、动态发布说明和清单：dev为developer，rc/beta为beta，正式版为stable。草稿清单明确不作为上线清单。
+
+### 4.0.0-rc1 测试版（2026-10-02，已发行）
+
+- [下载客户端 RC1](https://github.com/wager-code/FACN/releases/tag/4.0.0-rc1)：Windows x64 自包含单文件便携包，GitHub 标记为 prerelease。
+- 附件包含程序、SHA-256、release-info.json 和 [beta 通道更新清单](https://github.com/wager-code/FACN/releases/download/4.0.0-rc1/update-manifest.json)。beta 清单需配合对应客户端通道配置。
+- 来源提交 `1007a6ac298a131711ee76772d33e2a01c899a47`，文件版本 `4.0.0.64`；[发行流程](https://github.com/wager-code/FACN/actions/runs/36966800429)、同提交 Windows/Linux CI 全部通过。
+- 本次仅发布客户端，复用 [gateway-v62](https://github.com/wager-code/FACN/releases/tag/gateway-v62)。dev62 下载保留为历史发行。
 
 ### 更新网络修复（PR #7 已合并）
 
@@ -161,7 +168,7 @@ PR #7 的更新网络修复已合并。当前源码为 **4.0.0-rc1 正式候选*
 
 自动验证涵盖客户端核心回归、资料/档案页和更新页 WPF smoke、真实客户端更新启动/失败场景、网关回归以及 updater 的安装与回滚测试。Windows CI 还构建自包含单文件候选包，使用独立更新进程验证替换、初始化失败回滚及重试；CI 的旧版夹具来自同一源码的较低版本构建。隔离包测试使用模拟传输，实际线上更新通道需另行验收。进度以 [GitHub Actions](https://github.com/wager-code/FACN/actions) 和 PR 状态为准。
 
-**dev61 首次迁移：** 旧客户端的版本判断无法识别 `dev61 → dev62`，因此首次需要关闭旧客户端、备份原程序并手动替换为新版。新版修复后可正确比较后续开发版更新。
+**旧版首次迁移：** dev61 无法正确比较开发版标签，首次请关闭旧客户端、备份原程序并手动替换为 RC1，保留配置、内容目录和备份。dev62 的 GitHub 附件 302 更新失败由 RC1 修复；已有该问题时也可手动迁移。
 
 ---
 
