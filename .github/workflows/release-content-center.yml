@@ -15,6 +15,8 @@ jobs:
     outputs:
       client_tag: ${{ steps.config.outputs.client_tag }}
       gateway_tag: ${{ steps.config.outputs.gateway_tag }}
+      prerelease: ${{ steps.config.outputs.prerelease }}
+      publish_gateway: ${{ steps.config.outputs.publish_gateway }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -23,18 +25,7 @@ jobs:
       - name: Validate release request and source version
         id: config
         shell: pwsh
-        run: |
-          $release = Get-Content .github/releases/release.json -Raw | ConvertFrom-Json
-          if ($release.client_tag -notmatch '^\d+\.\d+\.\d+-dev\d+$' -or
-              $release.client_tag -ne $release.client_version -or
-              $release.gateway_tag -notmatch '^gateway-v\d+$' -or
-              $release.file_version -notmatch '^\d+\.\d+\.\d+\.\d+$' -or
-              $release.client_asset -notmatch '^SCFA-ContentCenter-[A-Za-z0-9-]+\.exe$') { throw 'Invalid release configuration.' }
-          [xml]$project = Get-Content src/SCFA.ContentCenter/SCFA.ContentCenter.csproj
-          if ($project.Project.PropertyGroup.InformationalVersion -ne $release.client_version -or
-              $project.Project.PropertyGroup.FileVersion -ne $release.file_version) { throw 'Release version differs from source.' }
-          "client_tag=$($release.client_tag)" >> $env:GITHUB_OUTPUT
-          "gateway_tag=$($release.gateway_tag)" >> $env:GITHUB_OUTPUT
+        run: ./scripts/Prepare-ClientRelease.ps1 -Mode Validate -RequestPath .github/releases/release.json
       - run: dotnet restore SCFA.ContentCenter.sln
       - run: dotnet build SCFA.ContentCenter.sln -c Release --no-restore
       - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build
@@ -49,44 +40,7 @@ jobs:
         run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --packaged-update-smoke "artifacts/release-client/SCFA内容中心.exe" "artifacts/update-baseline/SCFA内容中心.exe"
       - name: Prepare checked public assets and manifest
         shell: pwsh
-        run: |
-          $release = Get-Content .github/releases/release.json -Raw | ConvertFrom-Json
-          $output = New-Item -ItemType Directory -Path dist/client -Force
-          $asset = Join-Path $output.FullName $release.client_asset
-          Copy-Item -LiteralPath 'artifacts/release-client/SCFA内容中心.exe' -Destination $asset
-          $file = Get-Item -LiteralPath $asset
-          if ($file.VersionInfo.ProductVersion.Split('+')[0] -ne $release.client_version -or
-              $file.VersionInfo.FileVersion -ne $release.file_version) { throw 'Published PE version differs from release.' }
-          $hash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant()
-          $utf8 = [Text.UTF8Encoding]::new($false)
-          [IO.File]::WriteAllText($asset + '.sha256', $hash + '  ' + $release.client_asset + [Environment]::NewLine, $utf8)
-          $manifest = @{
-            version=$release.client_version; channel='developer'
-            url="https://github.com/$env:GITHUB_REPOSITORY/releases/download/$($release.client_tag)/$($release.client_asset)"
-            sha256=$hash; size=$file.Length; published_at=[DateTimeOffset]::UtcNow.ToString('o')
-            notes='dev62：更新校验与启动回滚、备份恢复和账号边界修复。dev61首次需手动替换程序。'
-          }
-          [IO.File]::WriteAllText((Join-Path $output.FullName 'update-manifest.json'), ($manifest | ConvertTo-Json), $utf8)
-          $identity = @{
-            source_commit=$env:GITHUB_SHA; version=$release.client_version
-            file_version=$release.file_version; product_version=$file.VersionInfo.ProductVersion
-            size=$file.Length; sha256=$hash; self_contained=$true; single_file=$true
-          }
-          [IO.File]::WriteAllText((Join-Path $output.FullName 'release-info.json'), ($identity | ConvertTo-Json), $utf8)
-          $notes = @(
-            '# SCFA 内容中心 4.0.0-dev62'
-            ''
-            'Windows x64 自包含单文件便携包，无需预装 .NET。'
-            ''
-            '修复更新校验、开发版比较、更新页状态、初始化失败回滚、备份恢复与账号连接边界。'
-            '核心/WPF/实际单文件更新与回滚门槛通过后发布，SHA-256 和来源提交见附件。'
-            ''
-            'dev61首次迁移：关闭程序、备份原exe、核对新包后手动替换；保留配置、Maps/Mods及备份。'
-            '这是开发版发行，实际线上更新通道与新网关部署仍需验收。'
-            ''
-            "Source commit: $env:GITHUB_SHA"
-          )
-          [IO.File]::WriteAllText((Join-Path $output.FullName 'release-notes.md'), [string]::Join([Environment]::NewLine, $notes), $utf8)
+        run: ./scripts/Prepare-ClientRelease.ps1 -Mode Prepare -RequestPath .github/releases/release.json -PackagePath 'artifacts/release-client/SCFA内容中心.exe' -OutputDirectory dist/client -SourceCommit $env:GITHUB_SHA -Repository $env:GITHUB_REPOSITORY
       - uses: actions/upload-artifact@v4
         with:
           name: content-center-release-client
@@ -94,21 +48,26 @@ jobs:
           if-no-files-found: error
   gateway:
     needs: client
+    if: needs.client.outputs.publish_gateway == 'true'
     uses: ./.github/workflows/release-gateway.yml
     with:
       tag: ${{ needs.client.outputs.gateway_tag }}
   publish-client:
     needs: [client, gateway]
+    if: always() && needs.client.result == 'success' && (needs.gateway.result == 'success' || needs.gateway.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: content-center-release-client
           path: dist/client
-      - name: Publish developer client release
+      - name: Publish verified client release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.client.outputs.client_tag }}
+          PRERELEASE: ${{ needs.client.outputs.prerelease }}
         run: |
-          gh release create "$RELEASE_TAG" dist/client/*.exe dist/client/*.sha256 dist/client/update-manifest.json dist/client/release-info.json --target "$GITHUB_SHA" --prerelease --latest=false --title "SCFA 内容中心 $RELEASE_TAG" --notes-file dist/client/release-notes.md
+          flags=(--latest=false)
+          if [[ "$PRERELEASE" == "true" ]]; then flags+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" dist/client/*.exe dist/client/*.sha256 dist/client/update-manifest.json dist/client/release-info.json --target "$GITHUB_SHA" "${flags[@]}" --title "SCFA 内容中心 $RELEASE_TAG" --notes-file dist/client/release-notes.md
