@@ -18,11 +18,18 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
     private readonly Func<Uri, HttpClient>? _httpClientFactory;
     private readonly string _currentVersion = AppVersion.Informational;
     private readonly SemaphoreSlim _downloadGate = new(1, 1);
-    internal UpdateService(ConfigService config, AuthApiClient auth, TaskService tasks, LogService log, Func<Uri, HttpClient> httpClientFactory, string? currentVersion = null)
+    private readonly TimeSpan _manifestTimeout = TimeSpan.FromSeconds(30);
+    private readonly TimeSpan _packageTimeout = TimeSpan.FromHours(2);
+    internal UpdateService(ConfigService config, AuthApiClient auth, TaskService tasks, LogService log, Func<Uri, HttpClient> httpClientFactory, string? currentVersion = null, TimeSpan? requestTimeout = null)
         : this(config, auth, tasks, log)
     {
         _httpClientFactory = httpClientFactory;
         _currentVersion = currentVersion ?? AppVersion.Informational;
+        if (requestTimeout is { } timeout)
+        {
+            _manifestTimeout = timeout;
+            _packageTimeout = timeout;
+        }
     }
     public string StagingRoot { get; } = Path.Combine(ConfigService.ResolveDataDirectory(), "Updates");
 
@@ -114,30 +121,31 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
         {
             task.Status = "运行中";
             var uri = ResolveDownloadUri(info.DownloadUrl);
-            using var client = CreateHttpClient(uri);
-            using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, operationCts.Token);
-            response.EnsureSuccessStatusCode();
-            var total = response.Content.Headers.ContentLength ?? info.Size;
-            if (total <= 0 || total > MaxUpdateBytes || (info.Size > 0 && total != info.Size)) throw new InvalidDataException("更新包响应大小与清单不一致");
-            EnsureDiskSpace(destination, total);
-            await using var input = await response.Content.ReadAsStreamAsync(operationCts.Token);
-            await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            await ReadResponseAsync(uri, _packageTimeout, async (response, token) =>
             {
-                var buffer = new byte[128 * 1024];
-                long read = 0;
-                while (true)
+                var total = response.Content.Headers.ContentLength ?? info.Size;
+                if (total <= 0 || total > MaxUpdateBytes || (info.Size > 0 && total != info.Size)) throw new InvalidDataException("更新包响应大小与清单不一致");
+                EnsureDiskSpace(destination, total);
+                await using var input = await response.Content.ReadAsStreamAsync(token);
+                await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
                 {
-                    var count = await input.ReadAsync(buffer, operationCts.Token);
-                    if (count == 0) break;
-                    read += count;
-                    if (read > MaxUpdateBytes || read > info.Size) throw new InvalidDataException("更新包超过清单大小");
-                    await output.WriteAsync(buffer.AsMemory(0, count), operationCts.Token);
-                    task.Progress = (int)Math.Min(95, read * 95d / total);
-                    task.Detail = $"正在下载 · {read / 1024d / 1024d:F1} / {total / 1024d / 1024d:F1} MB";
+                    var buffer = new byte[128 * 1024];
+                    long read = 0;
+                    while (true)
+                    {
+                        var count = await input.ReadAsync(buffer, token);
+                        if (count == 0) break;
+                        read += count;
+                        if (read > MaxUpdateBytes || read > info.Size) throw new InvalidDataException("更新包超过清单大小");
+                        await output.WriteAsync(buffer.AsMemory(0, count), token);
+                        task.Progress = (int)Math.Min(95, read * 95d / total);
+                        task.Detail = $"正在下载 · {read / 1024d / 1024d:F1} / {total / 1024d / 1024d:F1} MB";
+                    }
+                    if (read != info.Size) throw new EndOfStreamException($"更新包下载不完整：期望 {info.Size}，实际 {read}");
+                    await output.FlushAsync(token);
                 }
-                if (read != info.Size) throw new EndOfStreamException($"更新包下载不完整：期望 {info.Size}，实际 {read}");
-                await output.FlushAsync(operationCts.Token);
-            }
+                return true;
+            }, operationCts.Token);
             task.Detail = "正在校验 SHA-256";
             var hash = await ContentHash.FileSha256Async(destination, operationCts.Token);
             if (!hash.Equals(info.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("更新包 SHA-256 校验失败");
@@ -188,34 +196,45 @@ public sealed class UpdateService(ConfigService config, AuthApiClient auth, Task
         log.Info($"已启动客户端更新应用: {info.LatestVersion}");
     }
 
-    private async Task<AppUpdateManifest> FetchManifestAsync(string rawUrl, CancellationToken ct)
+    private Task<AppUpdateManifest> FetchManifestAsync(string rawUrl, CancellationToken ct)
     {
         var uri = ResolveDownloadUri(rawUrl);
-        using var client = CreateHttpClient(uri);
-        using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
-        if (response.Content.Headers.ContentLength is > MaxManifestBytes) throw new InvalidDataException("更新清单超过 1MB 安全上限");
-        await using var input = await response.Content.ReadAsStreamAsync(ct);
-        using var output = new MemoryStream();
-        var buffer = new byte[32 * 1024];
-        while (true)
+        return ReadResponseAsync(uri, _manifestTimeout, async (response, token) =>
         {
-            var count = await input.ReadAsync(buffer, ct);
-            if (count == 0) break;
-            if (output.Length + count > MaxManifestBytes) throw new InvalidDataException("更新清单超过 1MB 安全上限");
-            output.Write(buffer, 0, count);
-        }
-        return JsonSerializer.Deserialize<AppUpdateManifest>(output.ToArray(), _json) ?? throw new InvalidDataException("更新清单 JSON 无效");
+            if (response.Content.Headers.ContentLength is > MaxManifestBytes) throw new InvalidDataException("更新清单超过 1MB 安全上限");
+            await using var input = await response.Content.ReadAsStreamAsync(token);
+            using var output = new MemoryStream();
+            var buffer = new byte[32 * 1024];
+            while (true)
+            {
+                var count = await input.ReadAsync(buffer, token);
+                if (count == 0) break;
+                if (output.Length + count > MaxManifestBytes) throw new InvalidDataException("更新清单超过 1MB 安全上限");
+                output.Write(buffer, 0, count);
+            }
+            return JsonSerializer.Deserialize<AppUpdateManifest>(output.ToArray(), _json) ?? throw new InvalidDataException("更新清单 JSON 无效");
+        }, ct);
     }
 
-    private HttpClient CreateHttpClient(Uri uri)
+    private Task<T> ReadResponseAsync<T>(Uri uri, TimeSpan timeout,
+        Func<HttpResponseMessage, CancellationToken, Task<T>> read, CancellationToken ct)
+    {
+        var accountAuthority = new Uri(auth.BaseUrl).Authority;
+        var expectedPin = auth.PinnedCertSha256;
+        var pinAuthority = !string.IsNullOrWhiteSpace(expectedPin) &&
+            uri.Authority.Equals(accountAuthority, StringComparison.OrdinalIgnoreCase);
+        return UpdateHttpTransport.ReadAsync(uri, target => CreateHttpClient(target, accountAuthority, expectedPin),
+            target => !pinAuthority || target.Authority.Equals(uri.Authority, StringComparison.OrdinalIgnoreCase),
+            timeout, read, ct);
+    }
+
+    private HttpClient CreateHttpClient(Uri uri, string accountAuthority, string expectedPin)
     {
         if (_httpClientFactory is not null) return _httpClientFactory(uri);
         var handler = new HttpClientHandler { AllowAutoRedirect = false };
-        var apiUri = new Uri(auth.BaseUrl);
-        if (uri.Scheme == Uri.UriSchemeHttps && uri.Authority.Equals(apiUri.Authority, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(auth.PinnedCertSha256))
-            handler.ServerCertificateCustomValidationCallback = (_, certificate, _, _) => ValidatePinnedCertificate(certificate, auth.PinnedCertSha256);
-        return new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(10) };
+        if (uri.Scheme == Uri.UriSchemeHttps && uri.Authority.Equals(accountAuthority, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(expectedPin))
+            handler.ServerCertificateCustomValidationCallback = (_, certificate, _, _) => ValidatePinnedCertificate(certificate, expectedPin);
+        return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
     }
 
     private Uri ResolveDownloadUri(string raw)

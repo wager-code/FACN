@@ -35,6 +35,20 @@ async Task CheckThrowsAsync<TException>(Func<Task> action, string name) where TE
     catch (TException) { Check(true, name); }
 }
 
+if (args.FirstOrDefault() == "--update-http-public-smoke")
+{
+    await UpdateHttpRegression.RunIsolatedAsync(Check, publicManifestOnly: true);
+    Environment.ExitCode = failures.Count == 0 ? 0 : 1;
+    return;
+}
+
+if (args.FirstOrDefault() == "--update-http-smoke")
+{
+    await UpdateHttpRegression.RunIsolatedAsync(Check);
+    Environment.ExitCode = failures.Count == 0 ? 0 : 1;
+    return;
+}
+
 if (args.FirstOrDefault() == "--update-ui-smoke")
 {
     UpdatePageStateRegression.RunUiSmoke(Check);
@@ -837,6 +851,7 @@ try
     AuthAuthorityRegression.Run(Check);
     ClientUpdateVersionRegression.Run(Check);
     await UpdateDownloadRegression.RunAsync(config, tasks, log, Check);
+    await UpdateHttpRegression.RunAsync(config, tasks, log, Check);
     await UpdatePageStateRegression.RunAsync(config, tasks, log, Check);
     await UpdateStartupRegression.RunAsync(configDirectory, Check);
     await UpdateStartupProcessRegression.RunAsync(configDirectory, Check);
