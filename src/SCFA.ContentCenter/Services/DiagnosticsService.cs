@@ -30,9 +30,20 @@ public sealed class DiagnosticsService(
 
         try
         {
-            var saved = await session.LoadAsync();
-            Add(items, "账号", "本地安全会话", saved is not null && !saved.IsExpired,
-                saved is null ? "未保存登录会话" : saved.IsExpired ? "会话已过期" : $"{saved.User.Username} · {saved.User.RoleLabel}");
+            if (!config.Current.AutoLogin)
+            {
+                Add(items, "账号", "本地安全会话", true, "未启用自动登录，无需保存本地登录会话");
+            }
+            else
+            {
+                var saved = await session.LoadAsync();
+                var matches = saved?.MatchesAuthority(auth.BaseUrl, auth.PinnedCertSha256) == true;
+                Add(items, "账号", "本地安全会话", saved is not null && !saved.IsExpired && matches,
+                    saved is null ? "已启用自动登录，但未保存登录会话，请重新登录"
+                    : saved.IsExpired ? "自动登录会话已过期，请重新登录"
+                    : !matches ? "保存的会话与当前登录服务不匹配，请重新登录"
+                    : $"自动登录会话已保存 · {saved.User.Username} · {saved.User.RoleLabel}");
+            }
         }
         catch (Exception ex)
         {
