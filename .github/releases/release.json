@@ -1,7 +1,9 @@
 {
-  "client_tag": "4.0.0-dev62",
   "gateway_tag": "gateway-v62",
-  "client_version": "4.0.0-dev62",
-  "file_version": "4.0.0.62",
-  "client_asset": "SCFA-ContentCenter-dev62-win-x64.exe"
+  "client_version": "4.0.0-rc1",
+  "client_asset": "SCFA-ContentCenter-4.0.0-rc1-win-x64.exe",
+  "file_version": "4.0.0.64",
+  "client_channel": "beta",
+  "client_tag": "4.0.0-rc1",
+  "publish_gateway": false
 }
