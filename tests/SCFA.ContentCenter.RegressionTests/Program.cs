@@ -592,10 +592,15 @@ Check(!mainWindowXaml.Contains("<Canvas", StringComparison.Ordinal) &&
       mainWindowXaml.Contains("ContentMaxWidth", StringComparison.Ordinal),
       "管理工作区使用安静背景且主内容受最大宽度约束");
 var loginVisualSource = File.ReadAllText(Path.Combine(uiRoot, "Views", "LoginWindow.xaml"));
-Check(loginVisualSource.Contains("command_deck_background.png", StringComparison.Ordinal) &&
-      File.Exists(Path.Combine(uiRoot, "Assets", "command_deck_background.png")) &&
+var loginScene = XDocument.Parse(loginVisualSource).Descendants().First(e => e.Name.LocalName == "Image")
+    .Attribute("Source")!.Value.Split(";component/", StringSplitOptions.None).Last();
+var registeredScenes = XDocument.Load(Path.Combine(uiRoot, "SCFA.ContentCenter.csproj")).Descendants()
+    .Where(e => e.Name.LocalName == "Resource").Select(e => e.Attribute("Include")?.Value.Replace('\\','/')).ToArray();
+Check(loginScene.StartsWith("Assets/", StringComparison.Ordinal) &&
+      File.Exists(Path.Combine(uiRoot, loginScene.Replace('/', Path.DirectorySeparatorChar))) &&
+      registeredScenes.Contains(loginScene) &&
       new[] {"LoginCopyOverlayBrush","LoginFormOverlayBrush","LoginFooterOverlayBrush"}.All(loginVisualSource.Contains),
-      "登录图像使用按内容区域设置的局部遮罩");
+      "登录图像引用真实打包资源并使用按内容区域设置的局部遮罩");
 Check(appXaml.Contains("CardSurfaceBrush", StringComparison.Ordinal) &&
       appXaml.Contains("DialogSurfaceBrush", StringComparison.Ordinal) &&
       appXaml.Contains("AccentRailWidth", StringComparison.Ordinal) &&
