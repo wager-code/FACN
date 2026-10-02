@@ -16,7 +16,7 @@ public sealed record SavedUserSession(
 
     public bool MatchesAuthority(string authority, string certFingerprint) =>
         !string.IsNullOrWhiteSpace(Authority) &&
-        string.Equals(Authority, authority, StringComparison.OrdinalIgnoreCase) &&
+        AuthApiClient.SameEndpoint(Authority, authority) &&
         string.Equals(CertFingerprint, certFingerprint, StringComparison.OrdinalIgnoreCase);
 }
 

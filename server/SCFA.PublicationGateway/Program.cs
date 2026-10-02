@@ -17,7 +17,7 @@ builder.Services.AddSingleton<CosTransport>();
 builder.Services.AddSingleton<PublicationCoordinator>();
 var app = builder.Build();
 
-app.MapGet("/publication-healthz", () => Results.Ok(new { ok = true, service = "scfa-publication" }));
+app.MapGet("/publication-healthz", GatewayHealth.CreateResult);
 
 app.MapGet("/v1/admin/publications/capabilities",
     async (HttpContext context, AdminAuthenticator auth, CredentialStore credentials, CancellationToken ct) =>
@@ -126,6 +126,7 @@ static async Task<IResult> Guard(Func<Task<IResult>> work, ILogger logger)
     catch (UnauthorizedAccessException) { return Results.Forbid(); }
     catch (FileNotFoundException ex) { return Results.NotFound(new { message = ex.Message }); }
     catch (InvalidDataException ex) { return Results.BadRequest(new { message = ex.Message }); }
+    catch (CosTimeoutException ex) { return GatewayErrorResponses.CosTimeout(ex, logger); }
     catch (TimeoutException ex) { return Results.BadRequest(new { message = ex.Message }); }
     catch (CosRequestException ex)
     {

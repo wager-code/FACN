@@ -9,6 +9,13 @@ public sealed class BackupService(GamePathService paths, LogService log)
     private const int MaxBackupFiles = 100000;
     private const string MetadataName = "backup.json";
     private readonly JsonSerializerOptions _json = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
+    internal enum Checkpoint { Copied, Restored, MetadataRead }
+    private readonly Func<Checkpoint, string, CancellationToken, Task>? _checkpoint;
+    internal SemaphoreSlim MutationGate { get; } = new(1, 1);
+    internal BackupService(GamePathService paths, LogService log,
+        Func<Checkpoint, string, CancellationToken, Task> checkpoint) : this(paths, log) => _checkpoint = checkpoint;
+    private Task ProbeAsync(Checkpoint checkpoint, string path, CancellationToken ct) =>
+        _checkpoint?.Invoke(checkpoint, path, ct) ?? Task.CompletedTask;
     public string Root { get; } = Path.Combine(ConfigService.ResolveDataDirectory(), "Backups");
 
     public async Task<ContentBackupEntry> CreateAsync(
@@ -23,14 +30,25 @@ public sealed class BackupService(GamePathService paths, LogService log)
         sourceRoot = Path.GetFullPath(sourceRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (!Directory.Exists(sourceRoot)) throw new DirectoryNotFoundException("备份源目录不存在：" + sourceRoot);
         RejectRootOrLink(sourceRoot, "备份源目录");
+        var backupRoot = Path.GetFullPath(Root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (backupRoot.Equals(sourceRoot, StringComparison.OrdinalIgnoreCase) ||
+            backupRoot.StartsWith(sourceRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("备份目录不能位于备份源目录内部");
+        var originalHash = await ContentHash.DirectorySha256Async(sourceRoot, ct);
         var safeId = SafeLabel(string.IsNullOrWhiteSpace(contentId) ? Path.GetFileName(sourceRoot) : contentId);
         var revisionRoot = Path.Combine(Root, KindDirectory(kind), safeId, DateTime.Now.ToString("yyyyMMdd_HHmmss.fff") + "_" + Guid.NewGuid().ToString("N")[..6]);
         var contentRoot = Path.Combine(revisionRoot, Path.GetFileName(sourceRoot));
+        EnsureUnderRoot(revisionRoot);
         try
         {
             Directory.CreateDirectory(revisionRoot);
             var (files, bytes) = await CopyDirectoryNoLinksAsync(sourceRoot, contentRoot, ct);
+            await ProbeAsync(Checkpoint.Copied, contentRoot, ct);
             var hash = await ContentHash.DirectorySha256Async(contentRoot, ct);
+            var currentHash = await ContentHash.DirectorySha256Async(sourceRoot, ct);
+            if (!hash.Equals(originalHash, StringComparison.OrdinalIgnoreCase) ||
+                !currentHash.Equals(originalHash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("备份源目录在复制期间发生变化，已停止操作；请关闭正在修改内容的程序后重试");
             var metadata = new ContentBackupMetadata
             {
                 Kind = kind,
@@ -61,19 +79,24 @@ public sealed class BackupService(GamePathService paths, LogService log)
     {
         if (!Directory.Exists(Root)) return [];
         var result = new List<ContentBackupEntry>();
-        foreach (var kindDirectory in Directory.EnumerateDirectories(Root).Take(3))
+        RejectRootOrLink(Root, "备份根目录");
+        foreach (var kindDirectory in new[] { Path.Combine(Root, "Maps"), Path.Combine(Root, "Mods") }.Where(Directory.Exists))
         {
             ct.ThrowIfCancellationRequested();
+            RejectRootOrLink(kindDirectory, "备份分类目录");
             var kind = Path.GetFileName(kindDirectory).Equals("Maps", StringComparison.OrdinalIgnoreCase) ? "地图" : "MOD";
             foreach (var idDirectory in Directory.EnumerateDirectories(kindDirectory).Take(20000))
             {
+                RejectRootOrLink(idDirectory, "备份内容索引目录");
                 foreach (var revisionRoot in Directory.EnumerateDirectories(idDirectory).Take(20000))
                 {
                     ct.ThrowIfCancellationRequested();
                     try
                     {
+                        EnsureUnderRoot(revisionRoot);
                         var contentRoot = Directory.EnumerateDirectories(revisionRoot).SingleOrDefault();
                         if (contentRoot is null) continue;
+                        RejectRootOrLink(contentRoot, "备份内容目录");
                         var metadataPath = Path.Combine(revisionRoot, MetadataName);
                         ContentBackupMetadata metadata;
                         if (File.Exists(metadataPath))
@@ -96,8 +119,11 @@ public sealed class BackupService(GamePathService paths, LogService log)
                                 Reason = "旧版自动备份"
                             };
                         }
+                        await ProbeAsync(Checkpoint.MetadataRead, revisionRoot, ct);
+                        ct.ThrowIfCancellationRequested();
                         result.Add(ToEntry(metadata, revisionRoot, contentRoot));
                     }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                     catch (Exception ex)
                     {
                         log.Error("读取内容备份失败: " + revisionRoot, ex);
@@ -105,27 +131,37 @@ public sealed class BackupService(GamePathService paths, LogService log)
                 }
             }
         }
+        ct.ThrowIfCancellationRequested();
         return result.OrderByDescending(x => x.CreatedAt).ToArray();
     }
 
     public async Task RestoreAsync(ContentBackupEntry entry, CancellationToken ct = default)
+    {
+        await MutationGate.WaitAsync(ct);
+        try { await RestoreCoreAsync(entry, ct); }
+        finally { MutationGate.Release(); }
+    }
+
+    private async Task RestoreCoreAsync(ContentBackupEntry entry, CancellationToken ct)
     {
         var revisionRoot = EnsureUnderRoot(entry.RevisionRoot);
         var source = Path.GetFullPath(entry.ContentRoot);
         if (!string.Equals(Path.GetDirectoryName(source), revisionRoot, StringComparison.OrdinalIgnoreCase) || !Directory.Exists(source))
             throw new InvalidDataException("备份内容目录无效");
         RejectRootOrLink(source, "备份内容目录");
+        _ = KindDirectory(entry.Kind);
         var folderName = ValidateFolderName(entry.FolderName);
+        var sourceHash = await ContentHash.DirectorySha256Async(source, ct);
+        if (!string.IsNullOrWhiteSpace(entry.ContentHash) &&
+            !sourceHash.Equals(entry.ContentHash.Trim(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("备份内容 SHA-256 与备份元数据不一致");
 
-        var installRoot = Path.GetFullPath(paths.GetContentDirectory(entry.Kind, create: true)).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var installRoot = Path.GetFullPath(paths.GetContentDirectory(entry.Kind, create: false)).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         RejectRootOrLink(installRoot, "安装目录");
+        if (installRoot.Equals(source, StringComparison.OrdinalIgnoreCase) ||
+            installRoot.StartsWith(source + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("恢复安装目录不能位于原备份内容内部");
         var destination = ResolveDestination(entry, installRoot);
-        ContentBackupEntry? safetyBackup = null;
-        if (Directory.Exists(destination))
-        {
-            safetyBackup = await CreateAsync(destination, entry.Kind, entry.ContentId, entry.Name, "", "恢复历史版本前安全备份", ct);
-        }
-
         var workRoot = Path.Combine(installRoot, ".scfa_restore_" + Guid.NewGuid().ToString("N"));
         var staged = Path.Combine(workRoot, folderName);
         var old = destination + ".scfa_before_restore_" + Guid.NewGuid().ToString("N");
@@ -133,24 +169,31 @@ public sealed class BackupService(GamePathService paths, LogService log)
         {
             Directory.CreateDirectory(workRoot);
             await CopyDirectoryNoLinksAsync(source, staged, ct);
-            if (!string.IsNullOrWhiteSpace(entry.ContentHash))
-            {
-                var stagedHash = await ContentHash.DirectorySha256Async(staged, ct);
-                if (!stagedHash.Equals(entry.ContentHash, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("恢复暂存内容 SHA-256 与备份元数据不一致");
-            }
+            await ProbeAsync(Checkpoint.Copied, staged, ct);
+            var stagedHash = await ContentHash.DirectorySha256Async(staged, ct);
+            if (!stagedHash.Equals(sourceHash, StringComparison.OrdinalIgnoreCase) ||
+                !sourceHash.Equals(await ContentHash.DirectorySha256Async(source, ct), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("恢复暂存内容与原备份指纹不一致，已停止替换");
             ValidateContentRoot(staged, entry.Kind);
-            ct.ThrowIfCancellationRequested();
-            if (Directory.Exists(destination)) Directory.Move(destination, old);
-            try
+
+            ContentBackupEntry? safetyBackup = null;
+            var replacements = new List<(string Original, string Retired)>();
+            if (Directory.Exists(destination))
             {
-                Directory.Move(staged, destination);
+                safetyBackup = await CreateAsync(destination, entry.Kind, entry.ContentId, entry.Name, "", "恢复历史版本前安全备份", ct);
+                if (!safetyBackup.ContentHash.Equals(await ContentHash.DirectorySha256Async(destination, ct), StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("当前目录在恢复准备期间变化，已停止覆盖");
+                replacements.Add((destination, old));
             }
-            catch
+            await ContentInstallTransaction.ReplaceAsync(staged, destination, replacements, async token =>
             {
-                if (Directory.Exists(old) && !Directory.Exists(destination)) Directory.Move(old, destination);
-                throw;
-            }
-            try { if (Directory.Exists(old)) Directory.Delete(old, true); } catch { }
+                await ProbeAsync(Checkpoint.Restored, destination, token);
+                token.ThrowIfCancellationRequested();
+                ValidateContentRoot(destination, entry.Kind);
+                var installedHash = await ContentHash.DirectorySha256Async(destination, token);
+                if (!installedHash.Equals(stagedHash, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("恢复后的内容指纹与已验证备份不一致");
+            }, ct, () => { });
             log.Info($"已恢复内容备份: {entry.Kind} {entry.Name} {entry.SourceVersion} -> {destination}; safety={safetyBackup?.RevisionRoot}");
         }
         finally
@@ -159,12 +202,16 @@ public sealed class BackupService(GamePathService paths, LogService log)
         }
     }
 
-    public Task DeleteAsync(ContentBackupEntry entry)
+    public async Task DeleteAsync(ContentBackupEntry entry)
     {
-        var revisionRoot = EnsureUnderRoot(entry.RevisionRoot);
-        if (Directory.Exists(revisionRoot)) Directory.Delete(revisionRoot, true);
-        log.Info("已删除内容备份: " + revisionRoot);
-        return Task.CompletedTask;
+        await MutationGate.WaitAsync();
+        try
+        {
+            var revisionRoot = EnsureUnderRoot(entry.RevisionRoot);
+            if (Directory.Exists(revisionRoot)) Directory.Delete(revisionRoot, true);
+            log.Info("已删除内容备份: " + revisionRoot);
+        }
+        finally { MutationGate.Release(); }
     }
 
     private string ResolveDestination(ContentBackupEntry entry, string installRoot)
@@ -184,7 +231,10 @@ public sealed class BackupService(GamePathService paths, LogService log)
         var full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (!full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("备份路径越界");
         var relative = Path.GetRelativePath(root, full).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (relative.Length < 3 || relative.Any(x => x is "" or "." or "..")) throw new InvalidOperationException("备份修订目录层级无效");
+        if (relative.Length != 3 || relative.Any(x => x is "" or "." or "..") ||
+            !(relative[0].Equals("Maps", StringComparison.OrdinalIgnoreCase) || relative[0].Equals("Mods", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("备份修订目录层级无效");
+        RejectLinkedAncestors(full);
         return full;
     }
 
@@ -253,7 +303,14 @@ public sealed class BackupService(GamePathService paths, LogService log)
         var full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var root = Path.GetPathRoot(full)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (string.Equals(full, root, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException(label + "不能是磁盘根目录");
-        if ((File.GetAttributes(full) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException(label + "是符号链接/重解析点");
+        RejectLinkedAncestors(full);
+    }
+
+    private static void RejectLinkedAncestors(string path)
+    {
+        for (var directory = new DirectoryInfo(path); directory is not null; directory = directory.Parent)
+            if (Directory.Exists(directory.FullName) && (File.GetAttributes(directory.FullName) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("备份操作路径包含符号链接/重解析点：" + directory.FullName);
     }
 
     private static void ValidateContentRoot(string root, string kind)

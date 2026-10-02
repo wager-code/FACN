@@ -39,7 +39,7 @@
                             <TextBlock Text="{Binding SecurityStateLabel}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"/>
                         </Border>
                     </DockPanel>
-                    <ComboBox Grid.Row="1" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel}" Margin="0,16,0,0" MinWidth="190" HorizontalAlignment="Left"/>
+                    <ComboBox Grid.Row="1" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel}" IsEnabled="{Binding IsChannelSelectionEnabled}" Margin="0,16,0,0" MinWidth="190" HorizontalAlignment="Left"/>
                     <WrapPanel Grid.Row="2" Margin="0,14,0,0">
                         <Button Style="{StaticResource PrimaryButton}" Content="检查更新" Command="{Binding CheckCommand}" Margin="0,0,8,8"/>
                         <Button Style="{StaticResource SecondaryButton}" Content="打开暂存目录" Command="{Binding OpenFolderCommand}" Margin="0,0,0,8"/>

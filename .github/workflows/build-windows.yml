@@ -17,7 +17,11 @@ jobs:
       - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build
       - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --profile-ui-smoke
       - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --archive-ui-smoke
-      - run: dotnet publish src/SCFA.ContentCenter/SCFA.ContentCenter.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=None -o artifacts/win-x64
+      - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --update-ui-smoke
+      - run: dotnet run --project server/SCFA.PublicationGateway.RegressionTests/SCFA.PublicationGateway.RegressionTests.csproj -c Release
+      - run: dotnet publish src/SCFA.ContentCenter/SCFA.ContentCenter.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=None -p:Version=4.0.0.61 -p:FileVersion=4.0.0.61 -p:InformationalVersion=4.0.0-dev61 -o artifacts/update-baseline
+      - run: dotnet publish src/SCFA.ContentCenter/SCFA.ContentCenter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o artifacts/win-x64
+      - run: dotnet run --project tests/SCFA.ContentCenter.RegressionTests/SCFA.ContentCenter.RegressionTests.csproj -c Release --no-build -- --packaged-update-smoke "artifacts/win-x64/SCFA内容中心.exe" "artifacts/update-baseline/SCFA内容中心.exe"
       - uses: actions/upload-artifact@v4
         with:
           name: SCFA-ContentCenter-win-x64

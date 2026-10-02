@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Threading;
 using SCFA.ContentCenter.Services;
 using SCFA.ContentCenter.Views;
 
@@ -19,11 +20,9 @@ public partial class App : Application
             Shutdown();
             return;
         }
-        if (e.Args.FirstOrDefault() == "--cleanup-update")
-        {
-            try { await UpdateApplier.CleanupAsync(e.Args); }
-            catch (Exception ex) { LogService.Bootstrap("清理更新临时文件失败", ex); }
-        }
+        var updateStartup = e.Args.FirstOrDefault() == "--cleanup-update";
+        var updateStartupSmoke = updateStartup && e.Args.Contains("--update-startup-smoke", StringComparer.Ordinal);
+        var startupArgs = updateStartupSmoke ? e.Args.Where(x => x != "--update-startup-smoke").ToArray() : e.Args;
         LogService.Bootstrap("应用启动，开始初始化服务");
         DispatcherUnhandledException += (_, args) =>
         {
@@ -47,13 +46,32 @@ public partial class App : Application
                 return;
             }
             LogService.Bootstrap("服务初始化完成，准备创建登录窗口");
-            OpenLoginWindow();
+            OpenLoginWindow(updateStartupSmoke);
             LogService.Bootstrap($"登录窗口创建完成；窗口数={Current.Windows.Count}，可见={Current.MainWindow?.IsVisible}");
+            if (updateStartup)
+            {
+                try
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (Current.MainWindow is not { IsVisible: true })
+                            throw new InvalidOperationException("新客户端登录窗口尚未就绪");
+                        Current.MainWindow.UpdateLayout();
+                    }, DispatcherPriority.ContextIdle);
+                    await UpdateApplier.CleanupAsync(startupArgs);
+                    if (updateStartupSmoke) Shutdown(0);
+                }
+                catch (Exception ex)
+                {
+                    LogService.Bootstrap("确认更新启动或清理临时文件失败", ex);
+                    if (startupArgs.Length == 6 || updateStartupSmoke) Shutdown(-1);
+                }
+            }
         }
         catch (Exception ex)
         {
             LogService.Bootstrap("应用启动失败", ex);
-            if (mainWindowSmoke) { Shutdown(-1); return; }
+            if (mainWindowSmoke || updateStartup) { Shutdown(-1); return; }
             MessageBox.Show(ex.Message, "SCFA 内容中心启动失败", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(-1);
         }
@@ -70,10 +88,13 @@ public partial class App : Application
         old?.Close();
     }
 
-    public static void OpenLoginWindow()
+    public static void OpenLoginWindow() => OpenLoginWindow(false);
+
+    private static void OpenLoginWindow(bool hidden)
     {
         var old = Current.MainWindow;
         var login = new LoginWindow();
+        if (hidden) { login.Opacity = 0; login.ShowInTaskbar = false; }
         Current.MainWindow = login;
         login.Show();
         if (old is LoginWindow oldLogin) oldLogin.PrepareForWindowHandoff();

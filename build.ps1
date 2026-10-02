@@ -1,4 +1,4 @@
-param([string]$Configuration = "Release")
+param([string]$Configuration = "Release", [string]$OutputDirectory = ".\artifacts\win-x64")
 $ErrorActionPreference = "Stop"
 $dotnetCommand = Get-Command dotnet -ErrorAction SilentlyContinue
 $dotnet = if ($dotnetCommand) { $dotnetCommand.Source } else { "C:\Program Files\dotnet\dotnet.exe" }
@@ -14,6 +14,6 @@ Push-Location $root
 try {
   Invoke-DotNet @("restore", ".\SCFA.ContentCenter.sln")
   Invoke-DotNet @("build", ".\SCFA.ContentCenter.sln", "-c", $Configuration, "--no-restore")
-  Invoke-DotNet @("publish", ".\src\SCFA.ContentCenter\SCFA.ContentCenter.csproj", "-c", $Configuration, "-r", "win-x64", "--self-contained", "false", "-p:PublishSingleFile=true", "-p:DebugType=None", "-o", ".\artifacts\win-x64")
-  Write-Host "Build completed: $root\artifacts\win-x64" -ForegroundColor Green
+  Invoke-DotNet @("publish", ".\src\SCFA.ContentCenter\SCFA.ContentCenter.csproj", "-c", $Configuration, "-r", "win-x64", "--self-contained", "true", "-p:PublishSingleFile=true", "-p:IncludeNativeLibrariesForSelfExtract=true", "-p:DebugType=None", "-o", $OutputDirectory)
+  Write-Host "Build completed: $([IO.Path]::GetFullPath($OutputDirectory))" -ForegroundColor Green
 } finally { Pop-Location }

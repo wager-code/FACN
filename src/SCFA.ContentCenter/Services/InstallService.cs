@@ -9,7 +9,7 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
     private const int MaxArchiveEntries = 100000;
     private const long MaxExtractedBytes = 8L * 1024 * 1024 * 1024;
     private const long DiskReserveBytes = 256L * 1024 * 1024;
-    private readonly SemaphoreSlim _operationGate = new(1, 1);
+    private readonly SemaphoreSlim _operationGate = backups.MutationGate;
     private readonly SemaphoreSlim _recentGate = new(1, 1);
 
     public async Task<bool> InstallAsync(CloudContentEntry entry, string? existingRoot = null, CancellationToken ct = default, string? existingVersion = null, bool automatic = false)
@@ -298,46 +298,11 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
 
         var retiredRoot = Path.Combine(workRoot, "retired");
         Directory.CreateDirectory(retiredRoot);
-        var moved = new List<(string Original, string Retired)>();
-        var installed = false;
-        try
-        {
-            for (var i = 0; i < roots.Length; i++)
-            {
-                var retired = Path.Combine(retiredRoot, i.ToString("D4") + "_" + Path.GetFileName(roots[i]));
-                Directory.Move(roots[i], retired);
-                moved.Add((roots[i], retired));
-            }
-            Directory.Move(source, destination);
-            installed = true;
-            await VerifyInstalledAsync(destination, entry, ct);
-            return (destination, true);
-        }
-        catch (Exception installError)
-        {
-            var restoreErrors = new List<string>();
-            if (installed && Directory.Exists(destination))
-            {
-                try { Directory.Delete(destination, true); }
-                catch (Exception ex) { restoreErrors.Add("移除未完成的新目录失败：" + ex.Message); }
-            }
-            foreach (var (original, retired) in moved.AsEnumerable().Reverse())
-            {
-                try
-                {
-                    if (Directory.Exists(original)) throw new IOException("原目录已被其他程序占用：" + original);
-                    Directory.Move(retired, original);
-                }
-                catch (Exception ex) { restoreErrors.Add("恢复 " + original + " 失败：" + ex.Message); }
-            }
-            if (restoreErrors.Count > 0)
-            {
-                preserveWorkRoot();
-                throw new IOException("云端安装失败，部分原目录未能自动恢复；旧文件仍保留在 " + retiredRoot + "，且有独立备份。" +
-                    string.Join("；", restoreErrors), installError);
-            }
-            throw new IOException("云端安装失败，原有地图/MOD目录已恢复：" + installError.Message, installError);
-        }
+        var replacements = roots.Select((root, i) =>
+            (Original: root, Retired: Path.Combine(retiredRoot, i.ToString("D4") + "_" + Path.GetFileName(root)))).ToArray();
+        await ContentInstallTransaction.ReplaceAsync(source, destination, replacements,
+            token => VerifyInstalledAsync(destination, entry, token), ct, preserveWorkRoot);
+        return (destination, true);
     }
 
     private async Task<(string Destination, bool Changed)> InstallFreshAsync(string source, string installRoot, string top, CloudContentEntry entry, CancellationToken ct)
@@ -409,32 +374,15 @@ public sealed class InstallService(CloudCatalogService cloud, GamePathService pa
                 return (localRoot, false);
         }
 
-        await backups.CreateAsync(localRoot, entry.Kind, entry.Id, entry.Name, existingVersion, $"安装 {entry.Version} 前自动备份", ct);
+        var backup = await backups.CreateAsync(localRoot, entry.Kind, entry.Id, entry.Name, existingVersion, $"安装 {entry.Version} 前自动备份", ct);
+        if (!backup.ContentHash.Equals(await ContentHash.DirectorySha256Async(localRoot, ct), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("本地内容在备份后发生变化，已停止覆盖；请重新扫描后重试");
         ct.ThrowIfCancellationRequested();
 
         // 真正替换前把旧目录在原盘改名暂存。失败时可以立即原地恢复。
         var old = localRoot + ".scfa_old_" + Guid.NewGuid().ToString("N");
-        Directory.Move(localRoot, old);
-        try
-        {
-            Directory.Move(source, destination);
-            await VerifyInstalledAsync(destination, entry, ct);
-        }
-        catch (Exception installError)
-        {
-            try
-            {
-                if (Directory.Exists(destination)) Directory.Delete(destination, true);
-                Directory.Move(old, localRoot);
-            }
-            catch (Exception restoreError)
-            {
-                throw new IOException($"安装新内容失败，且自动恢复失败（旧版仍保留在 {old}）：安装错误={installError.Message}；恢复错误={restoreError.Message}", installError);
-            }
-            throw new IOException("安装新内容失败，旧版已恢复：" + installError.Message, installError);
-        }
-
-        try { if (Directory.Exists(old)) Directory.Delete(old, true); } catch { }
+        await ContentInstallTransaction.ReplaceAsync(source, destination, [(localRoot, old)],
+            token => VerifyInstalledAsync(destination, entry, token), ct, () => { });
         return (destination, true);
     }
 
