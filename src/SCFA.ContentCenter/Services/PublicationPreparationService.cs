@@ -79,7 +79,7 @@ public sealed class PublicationPreparationService(LocalContentService local)
 
             var packageKey = $"{root}/{(refreshed.Kind == "地图" ? "maps" : "mods")}/{refreshed.Id}/{packageName}";
             string? thumbnailKey = null;
-            if (refreshed.Kind == "地图" && TryWriteThumbnail(refreshed.Root, thumbnailPath))
+            if (TryWriteThumbnail(refreshed.Kind, refreshed.Root, thumbnailPath))
                 thumbnailKey = $"{root}/thumbnails/{refreshed.Id}-{release}-{contentHash[..12]}.png";
 
             var old = replaceIndex >= 0 ? (JsonObject)entries[replaceIndex]!.DeepClone() : new JsonObject();
@@ -234,9 +234,9 @@ public sealed class PublicationPreparationService(LocalContentService local)
         return files.OrderBy(file => file.FullName, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    private static bool TryWriteThumbnail(string root, string output)
+    private static bool TryWriteThumbnail(string kind, string root, string output)
     {
-        var bitmap = MapPreviewService.TryLoad(root);
+        var bitmap = kind == "地图" ? MapPreviewService.TryLoad(root) : ModPreviewService.TryLoad(root);
         if (bitmap is null) return false;
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));

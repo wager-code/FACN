@@ -49,6 +49,16 @@ if (args.FirstOrDefault() == "--update-http-smoke")
     return;
 }
 
+if (args.FirstOrDefault() == "--mod-icon-smoke")
+{
+    var root = Path.Combine(Path.GetTempPath(), "scfa_mod_icons_" + Guid.NewGuid().ToString("N"));
+    Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_CONFIG_DIR", root);
+    Environment.SetEnvironmentVariable("SCFA_CONTENT_HUB_DATA_DIR", Path.Combine(root, "data"));
+    await ModPreviewRegression.RunAsync(root, new LogService(), Check);
+    Environment.ExitCode = failures.Count == 0 ? 0 : 1;
+    return;
+}
+
 if (args.FirstOrDefault() == "--update-ui-smoke")
 {
     UpdatePageStateRegression.RunUiSmoke(Check);
@@ -856,6 +866,7 @@ try
     await UpdateStartupRegression.RunAsync(configDirectory, Check);
     await UpdateStartupProcessRegression.RunAsync(configDirectory, Check);
     await BackupIntegrityRegression.RunAsync(configDirectory, log, Check);
+    await ModPreviewRegression.RunAsync(configDirectory, log, Check);
     var backups = new BackupService(pathService, log);
     var localContent = new LocalContentService(pathService, log);
     var referencedMap = Path.Combine(mapsRoot, "shared_preview");

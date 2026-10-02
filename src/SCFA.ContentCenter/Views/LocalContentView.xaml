@@ -56,7 +56,7 @@
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <Border Width="48" Height="44" Margin="0,0,8,0" Background="#0A1727" BorderBrush="#29415D" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
-                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Kind}" Value="地图"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding Preview}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger><DataTrigger Binding="{Binding Kind}" Value="地图"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
                                             <Image Source="{Binding Preview, Mode=OneWay}" Stretch="Uniform"/>
                                         </Border>
                                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
@@ -91,7 +91,7 @@
         <Border Grid.Row="3" Style="{StaticResource CardBorder}" Margin="0,12,0,0" Padding="16">
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="1.5*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <Border Width="112" Height="96" CornerRadius="9" Background="#0A1727" BorderBrush="#29415D" BorderThickness="1" ClipToBounds="True" Margin="0,0,16,0" Visibility="{Binding MapPreviewVisibility}">
+                <Border Width="112" Height="96" CornerRadius="9" Background="#0A1727" BorderBrush="#29415D" BorderThickness="1" ClipToBounds="True" Margin="0,0,16,0" Visibility="{Binding ContentPreviewVisibility}">
                     <Grid>
                         <Image Source="{Binding SelectedPreview, Mode=OneWay}" Stretch="Uniform"/>
                         <TextBlock Text="{Binding PreviewStateText}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="90">

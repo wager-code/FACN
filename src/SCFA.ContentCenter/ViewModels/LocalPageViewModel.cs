@@ -21,6 +21,7 @@ public sealed class LocalPageViewModel : ViewModelBase
     public string Subtitle => Kind == "地图" ? "管理本机地图；可在列表中直接删除，删除前自动备份。" : "管理本机 MOD；可在列表中直接删除，删除前自动备份。";
     public string LibraryLabel => Kind == "地图" ? "LOCAL MAPS" : "LOCAL MODS";
     public Visibility MapPreviewVisibility => Kind == "地图" ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ContentPreviewVisibility => Visibility.Visible;
     public ObservableCollection<LocalContentEntry> Items { get; } = [];
     public ICollectionView ItemsView { get; }
     public string Status { get => _status; set => Set(ref _status, value); }
@@ -32,7 +33,7 @@ public sealed class LocalPageViewModel : ViewModelBase
     public int IssueCount => Items.Count(x => !x.Valid && !x.IsSharedMap);
     public string SelectedState => SelectedItem is null ? "尚未选择内容" : SelectedItem.IsSharedMap ? "共用地形 · 游戏可读取" : SelectedItem.Valid ? "结构校验通过" : "需要检查";
     public BitmapSource? SelectedPreview { get => _selectedPreview; private set { if (Set(ref _selectedPreview, value)) OnPropertyChanged(nameof(PreviewStateText)); } }
-    public string PreviewStateText => SelectedPreview is not null ? "游戏地图预览" : SelectedItem is null ? "选择地图查看预览" : "该地图暂无可用预览图";
+    public string PreviewStateText => SelectedPreview is not null ? Kind == "MOD" ? "游戏 MOD 图标" : "游戏地图预览" : SelectedItem is null ? "选择内容查看预览" : Kind == "MOD" ? "该 MOD 暂无可用图标" : "该地图暂无可用预览图";
     public LocalContentEntry? SelectedItem
     {
         get => _selected;
@@ -41,7 +42,7 @@ public sealed class LocalPageViewModel : ViewModelBase
             if (!Set(ref _selected, value)) return;
             OnPropertyChanged(nameof(SelectedState));
             SelectedPreview = value?.Preview;
-            if (Kind == "地图" && value is not null && value.Preview is null)
+            if (value is not null && value.Preview is null)
                 _ = LoadSelectedPreviewAsync(value);
             OnPropertyChanged(nameof(PreviewStateText));
             OpenFolderCommand.RaiseCanExecuteChanged();
@@ -84,7 +85,7 @@ public sealed class LocalPageViewModel : ViewModelBase
 
     private async Task LoadSelectedPreviewAsync(LocalContentEntry item)
     {
-        var preview = await Task.Run(() => MapPreviewService.TryLoad(item.Root));
+        var preview = await Task.Run(() => Kind == "地图" ? MapPreviewService.TryLoad(item.Root) : ModPreviewService.TryLoad(item.Root));
         if (!ReferenceEquals(SelectedItem, item)) return;
         item.Preview = preview;
         SelectedPreview = preview;
@@ -130,9 +131,10 @@ public sealed class LocalPageViewModel : ViewModelBase
         {
             Status = "正在扫描真实游戏目录…";
             var items = await App.Services.Local.ScanAsync(Kind);
-            if (Kind == "地图") await Task.Run(() =>
+            await Task.Run(() =>
             {
-                foreach (var item in items) item.Preview = MapPreviewService.TryLoad(item.Root);
+                foreach (var item in items) item.Preview = Kind == "地图"
+                    ? MapPreviewService.TryLoad(item.Root) : ModPreviewService.TryLoad(item.Root);
             });
             SelectedItem = null; Items.Clear(); foreach (var x in items) Items.Add(x);
             ItemsView.Refresh();

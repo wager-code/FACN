@@ -71,7 +71,9 @@ public sealed class CloudContentEntry : INotifyPropertyChanged
     [JsonIgnore] public BitmapSource? MapPreview { get => _mapPreview; set { Set(ref _mapPreview, value); NotifyPreviewChanged(); } }
     [JsonIgnore] public object? DisplayPreviewSource => (object?)MapPreview ?? (string.IsNullOrWhiteSpace(PreviewSource) ? null : PreviewSource);
     [JsonIgnore] public bool HasPreview => MapPreview is not null || !string.IsNullOrWhiteSpace(PreviewSource);
-    [JsonIgnore] public string PreviewStateText => HasPreview ? MapPreview is not null ? "游戏地图预览" : "内容预览" : Kind == "地图" ? "该地图暂无预览图" : "该 MOD 暂无预览图";
+    [JsonIgnore] public string PreviewStateText => !HasPreview
+        ? Kind == "地图" ? "该地图暂无预览图" : "该 MOD 暂无预览图"
+        : MapPreview is null ? "内容预览" : Kind == "MOD" ? "游戏 MOD 图标" : "游戏地图预览";
     [JsonIgnore] public string HistoryState { get; set; } = "";
     [JsonIgnore] public string AuthorText => string.IsNullOrWhiteSpace(Author) ? "未提供" : Author.Trim();
     [JsonIgnore] public string CategoryText => string.IsNullOrWhiteSpace(Category) ? "未分类" : Category.Trim();
