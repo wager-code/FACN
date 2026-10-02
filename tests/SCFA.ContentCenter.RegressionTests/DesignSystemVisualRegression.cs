@@ -95,6 +95,33 @@ internal static class DesignSystemVisualRegression
                             "首页保留命令可用性："+name);
                     }
                     ComponentGallery(output,check);
+                    var loginOutput=Path.Combine(Directory.GetCurrentDirectory(),"artifacts","login-cinematic-review","after");
+                    Directory.CreateDirectory(loginOutput);
+                    foreach(var (w,h) in new[]{(1280,720),(1366,768),(1440,900),(1575,999),(1920,1080),(2560,1440)})
+                    {
+                        Capture(login,w,h,Path.Combine(loginOutput,$"login-{w}x{h}.png"));
+                        var root=(FrameworkElement)login.Content;
+                        var version=(TextBlock)login.FindName("VersionText");
+                        var versionPoint=version.TranslatePoint(new Point(),root);
+                        check(version.Text==SCFA.ContentCenter.Core.AppVersion.Display && versionPoint.X<w/2 &&
+                            versionPoint.Y>h*0.8 && versionPoint.Y+version.ActualHeight<=h,
+                            $"真实版本在{w}x{h}左下角完整可见");
+                        var account=(ComboBox)login.FindName("AccountBox");
+                        var offline=(Button)login.FindName("OfflineButton");
+                        var p=offline.TranslatePoint(new Point(),root);
+                        check(account.ActualWidth>=280 && p.Y>=0 && p.Y+offline.ActualHeight<=h,
+                            $"账号输入和离线操作在{w}x{h}完整可用");
+                    }
+                    ((Button)login.FindName("SwitchButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    Capture(login,1280,720,Path.Combine(loginOutput,"login-register-1280x720.png"));
+                    check(((StackPanel)login.FindName("EmailPanel")).Visibility==Visibility.Visible &&
+                        ((TextBlock)login.FindName("ModeTitle")).Text=="注册 SCFA 账号",
+                        "视觉改造保留原注册表单切换");
+                    ((Button)login.FindName("SwitchButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    ((TextBlock)login.FindName("StatusText")).Text="登录失败：网络连接不可用，请稍后重试。";
+                    ((Border)login.FindName("StatusPanel")).Visibility=Visibility.Visible;
+                    Capture(login,1280,720,Path.Combine(loginOutput,"login-error-1280x720.png"));
+                    ((Border)login.FindName("StatusPanel")).Visibility=Visibility.Collapsed;
                     var servicesConfig = ConfigService.Clone(services.Config.Current);
                     foreach(var size in new[]{(1280,720),(2560,1440)})
                         check(((FrameworkElement)main.FindName("ContentHost")).MaxWidth==1560, "宽屏最大内容宽度保持1560");

@@ -36,4 +36,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SCFA-DesignSystem-Review
-          path: artifacts/design-system-review/after/*.png
+          path: |
+            artifacts/design-system-review/after/*.png
+            artifacts/login-cinematic-review/after/*.png

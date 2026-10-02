@@ -54,8 +54,8 @@
 <LinearGradientBrush x:Key="HeroGradientBrush" StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#C0081626" Offset="0"/><GradientStop Color="#78081626" Offset="1"/></LinearGradientBrush>
 <RadialGradientBrush x:Key="GlowBrush"><GradientStop Color="#0B668EFF" Offset="0"/><GradientStop Color="#00668EFF" Offset="1"/></RadialGradientBrush>
 <!-- Local overlays establish safe copy/form areas without dimming the entire image. -->
-<LinearGradientBrush x:Key="LoginCopyOverlayBrush" StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#BE070C13" Offset="0"/><GradientStop Color="#64070C13" Offset="0.46"/><GradientStop Color="#00070C13" Offset="0.65"/></LinearGradientBrush>
-<LinearGradientBrush x:Key="LoginFormOverlayBrush" StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#00070C13" Offset="0.3"/><GradientStop Color="#E0070C13" Offset="0.62"/><GradientStop Color="#FA070C13" Offset="1"/></LinearGradientBrush>
+<LinearGradientBrush x:Key="LoginCopyOverlayBrush" StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#70070C13" Offset="0"/><GradientStop Color="#30070C13" Offset="0.46"/><GradientStop Color="#00070C13" Offset="0.65"/></LinearGradientBrush>
+<LinearGradientBrush x:Key="LoginFormOverlayBrush" StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#00070C13" Offset="0.5"/><GradientStop Color="#10070C13" Offset="0.75"/><GradientStop Color="#30070C13" Offset="1"/></LinearGradientBrush>
 <LinearGradientBrush x:Key="LoginFooterOverlayBrush" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#00070C13" Offset="0.7"/><GradientStop Color="#B0070C13" Offset="1"/></LinearGradientBrush>
 <SolidColorBrush x:Key="CompatibilityTint00" Color="#07111E"/>
 <SolidColorBrush x:Key="CompatibilityTint01" Color="#0A1727"/>
@@ -87,4 +87,5 @@
 <SolidColorBrush x:Key="CompatibilityTint27" Color="#FFDDE0"/>
 
 <SolidColorBrush x:Key="ShellTint0D1D30" Color="#0D1D30"/>
+<SolidColorBrush x:Key="LoginSurfaceBrush" Color="#E6081626"/><SolidColorBrush x:Key="LoginBorderBrush" Color="#2882B4DC"/>
 </ResourceDictionary>

@@ -19,6 +19,7 @@
     <InternalsVisibleTo Include="SCFA.ContentCenter.RegressionTests" />
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\command_deck_background.png" />
+    <Resource Include="Assets\login_mech_battlefield.png" />
     <Resource Include="Assets\Fluent\*.png" />
   </ItemGroup>
 </Project>

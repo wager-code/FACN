@@ -7,7 +7,7 @@
  <Border Background="{StaticResource BackgroundDeepBrush}" CornerRadius="{StaticResource RadiusM}">
   <Grid ClipToBounds="True">
    <!-- Layer 0: art; layer 1: separate copy/form/footer safe-area masks; layer 2: content. -->
-   <Image Source="/SCFA内容中心;component/Assets/command_deck_background.png" Stretch="UniformToFill" IsHitTestVisible="False"/>
+   <Image Source="/SCFA内容中心;component/Assets/login_mech_battlefield.png" Stretch="UniformToFill" IsHitTestVisible="False"/>
    <Border Background="{StaticResource LoginCopyOverlayBrush}" IsHitTestVisible="False"/>
    <Border Background="{StaticResource LoginFormOverlayBrush}" IsHitTestVisible="False"/>
    <Border Background="{StaticResource LoginFooterOverlayBrush}" IsHitTestVisible="False"/>
@@ -15,25 +15,35 @@
     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
     <Grid Margin="{StaticResource GapRight40}">
      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-     <StackPanel><TextBlock Text="SCFA 内容中心" Style="{StaticResource TypeCardTitle}"/><TextBlock Text="{x:Static core:AppVersion.Display}" Style="{StaticResource TypeMicro}" Margin="{StaticResource GapAbove4}"/></StackPanel>
+     
      <StackPanel Grid.Row="1" VerticalAlignment="Center">
       <TextBlock Text="内容管理平台" Style="{StaticResource TypeCaption}" Foreground="{StaticResource AccentBrush}" Margin="{StaticResource GapBelow12}"/>
-      <TextBlock Text="战场内容，尽在掌控" Style="{StaticResource TypeDisplay}"/>
-      <TextBlock Text="地图、模组、版本与备份，一处掌握。" Style="{StaticResource TypeSecondary}" Margin="{StaticResource GapAbove16}"/>
+      <TextBlock Text="战场内容，尽在掌控" Style="{StaticResource TypeCinematicDisplay}"/>
+      <TextBlock Text="同步地图与模组，安全管理版本和本地备份。" Style="{StaticResource TypeSecondary}" Margin="{StaticResource GapAbove16}"/>
       <StackPanel Margin="{StaticResource GapAbove40}">
-       <StackPanel Orientation="Horizontal" Margin="{StaticResource GapBelow16}"><Border Style="{StaticResource FeatureIcon}"><Border.OpacityMask><ImageBrush ImageSource="/SCFA内容中心;component/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border><TextBlock Text="地图与模组快速同步" Style="{StaticResource TypeBody}" VerticalAlignment="Center"/></StackPanel>
-       <StackPanel Orientation="Horizontal" Margin="{StaticResource GapBelow16}"><Border Style="{StaticResource FeatureIcon}"><Border.OpacityMask><ImageBrush ImageSource="/SCFA内容中心;component/Assets/Fluent/shield_regular.png"/></Border.OpacityMask></Border><TextBlock Text="安装前备份，内容安全校验" Style="{StaticResource TypeBody}" VerticalAlignment="Center"/></StackPanel>
-       <StackPanel Orientation="Horizontal"><Border Style="{StaticResource FeatureIcon}"><Border.OpacityMask><ImageBrush ImageSource="/SCFA内容中心;component/Assets/Fluent/history_regular.png"/></Border.OpacityMask></Border><TextBlock Text="地图与模组版本管理" Style="{StaticResource TypeBody}" VerticalAlignment="Center"/></StackPanel>
+       <StackPanel Orientation="Horizontal" Margin="{StaticResource GapBelow16}">
+        <Border Style="{StaticResource LoginFeatureTile}"><Border Style="{StaticResource LoginFeatureGlyph}"><Border.OpacityMask><ImageBrush ImageSource="/SCFA内容中心;component/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border></Border>
+        <StackPanel VerticalAlignment="Center"><TextBlock Text="地图与模组快速同步" Style="{StaticResource TypeCardTitle}"/><TextBlock Text="高效稳定地同步玩家内容" Style="{StaticResource TypeSecondary}" Margin="{StaticResource GapAbove4}"/></StackPanel>
+       </StackPanel>
+       <StackPanel Orientation="Horizontal" Margin="{StaticResource GapBelow16}">
+        <Border Style="{StaticResource LoginFeatureTile}"><Border Style="{StaticResource LoginFeatureGlyph}"><Border.OpacityMask><ImageBrush ImageSource="/SCFA内容中心;component/Assets/Fluent/shield_regular.png"/></Border.OpacityMask></Border></Border>
+        <StackPanel VerticalAlignment="Center"><TextBlock Text="安装前备份，内容安全校验" Style="{StaticResource TypeCardTitle}"/><TextBlock Text="自动备份并校验，保障内容安全可靠" Style="{StaticResource TypeSecondary}" Margin="{StaticResource GapAbove4}"/></StackPanel>
+       </StackPanel>
+       <StackPanel Orientation="Horizontal">
+        <Border Style="{StaticResource LoginFeatureTile}"><Border Style="{StaticResource LoginFeatureGlyph}"><Border.OpacityMask><ImageBrush ImageSource="/SCFA内容中心;component/Assets/Fluent/people_regular.png"/></Border.OpacityMask></Border></Border>
+        <StackPanel VerticalAlignment="Center"><TextBlock Text="地图与模组版本管理" Style="{StaticResource TypeCardTitle}"/><TextBlock Text="查看云端内容并安全同步到游戏目录" Style="{StaticResource TypeSecondary}" Margin="{StaticResource GapAbove4}"/></StackPanel>
+       </StackPanel>
       </StackPanel>
      </StackPanel>
-     <TextBlock Grid.Row="2" Text="安全连接 · 本机会话加密" Style="{StaticResource TypeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+     <StackPanel Grid.Row="2"><TextBlock Text="安全连接 · 本机会话加密" Style="{StaticResource TypeCaption}" Foreground="{StaticResource SuccessBrush}"/><TextBlock x:Name="VersionText" Text="{x:Static core:AppVersion.Display}" Style="{StaticResource TypeCaption}" Margin="{StaticResource GapAbove8}"/></StackPanel>
     </Grid>
-    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" VerticalAlignment="Center">
-     <Border Style="{StaticResource CardBorder}" Padding="{StaticResource LoginFormPadding}" MaxWidth="{StaticResource LoginFormMaxWidth}" HorizontalAlignment="Right">
-      <StackPanel KeyboardNavigation.TabNavigation="Continue">
-       <TextBlock Text="账号登录" Style="{StaticResource TypeCaption}" Foreground="{StaticResource TextSecondaryBrush}" Margin="{StaticResource GapBelow8}"/>
-       <TextBlock x:Name="ModeTitle" Text="登录 SCFA 内容中心" Style="{StaticResource TypePageTitle}"/>
+    <Border Grid.Column="1" x:Name="LoginSurface" Height="{Binding ActualHeight,RelativeSource={RelativeSource AncestorType=Grid}}" Style="{StaticResource LoginSurface}" MaxWidth="{StaticResource LoginFormMaxWidth}" MaxHeight="{StaticResource LoginFormMaxHeight}" HorizontalAlignment="Stretch" VerticalAlignment="Center"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+     <Border Background="Transparent">
+      <Grid KeyboardNavigation.TabNavigation="Continue" MinHeight="{Binding ViewportHeight,RelativeSource={RelativeSource AncestorType=ScrollViewer}}"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/><RowDefinition Height="2*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><StackPanel Grid.Row="0">
+       <TextBlock Text="欢迎回来" Style="{StaticResource TypeCardTitle}" Foreground="{StaticResource PrimaryBrightBrush}" Margin="{StaticResource GapBelow8}"/>
+       <TextBlock x:Name="ModeTitle" Text="登录 SCFA 内容中心" Style="{StaticResource TypeDisplay}" TextWrapping="Wrap"/>
        <TextBlock x:Name="ModeSubtitle" Text="继续管理地图与模组" Style="{StaticResource TypeSecondary}" Margin="{StaticResource GapAbove8}"/>
+      </StackPanel><StackPanel Grid.Row="2">
        <TextBlock Text="账号或邮箱地址" Style="{StaticResource FieldLabel}" Margin="{StaticResource GapAbove24}"/>
        <ComboBox x:Name="AccountBox" Height="{StaticResource InputHeight}" Margin="{StaticResource GapAbove8}" IsEditable="True" IsTextSearchEnabled="True" StaysOpenOnEdit="True" TabIndex="0"
         ItemContainerStyle="{StaticResource AccountDropdownItem}" PreviewKeyDown="AccountBox_PreviewKeyDown" SelectionChanged="AccountBox_SelectionChanged" ToolTip="可输入新账号，也可以从已保存的账号中选择">
@@ -59,15 +69,18 @@
        <Border x:Name="StatusPanel" Visibility="Collapsed" Margin="{StaticResource GapAbove16}">
         <Grid><TextBlock x:Name="StatusText" Visibility="Collapsed"/><ui:StateNotice Message="{Binding Text,ElementName=StatusText}" State="{Binding Text,ElementName=StatusText,Converter={StaticResource MessageStateConverter}}"/></Grid>
        </Border>
+      </StackPanel><StackPanel Grid.Row="4">
        <Button x:Name="SubmitButton" Style="{StaticResource PrimaryButton}" Content="登录" Margin="{StaticResource GapAbove24}" Height="{StaticResource InputHeight}" Click="SubmitButton_Click" IsDefault="True" TabIndex="6"/>
        <Button x:Name="OfflineButton" Style="{StaticResource SecondaryButton}" Content="离线使用" Margin="{StaticResource GapAbove8}" Height="{StaticResource InputHeight}" Click="OfflineButton_Click" TabIndex="7"/>
+      </StackPanel><StackPanel Grid.Row="6">
        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="{StaticResource GapAbove16}">
         <TextBlock x:Name="AccountPrompt" Text="还没有账号？" Style="{StaticResource TypeCaption}" VerticalAlignment="Center"/>
         <Button x:Name="SwitchButton" Style="{StaticResource LoginLinkButton}" Content="立即注册" Click="SwitchButton_Click" TabIndex="8"/>
        </StackPanel>
-      </StackPanel>
+       <TextBlock Text="账号信息仅用于本软件" Style="{StaticResource TypeMicro}" HorizontalAlignment="Center" Margin="{StaticResource GapAbove16}"/>
+      </StackPanel></Grid>
      </Border>
-    </ScrollViewer>
+    </ScrollViewer></Border>
    </Grid>
    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" shell:WindowChrome.IsHitTestVisibleInChrome="True">
     <Button Style="{StaticResource LoginWindowControl}" Content="&#xE921;" Click="MinimizeButton_Click" ToolTip="最小化"/>

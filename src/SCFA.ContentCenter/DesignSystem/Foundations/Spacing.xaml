@@ -12,9 +12,9 @@
 <Thickness x:Key="ButtonPadding">16,8</Thickness><Thickness x:Key="InputPadding">12,0</Thickness><Thickness x:Key="RowPadding">12,8</Thickness>
 <Thickness x:Key="NavMargin">12,4</Thickness><Thickness x:Key="NavPadding">16,12</Thickness><Thickness x:Key="NavPaddingCompact">12</Thickness>
 <Thickness x:Key="NavGroupMargin">24,24,0,8</Thickness><Thickness x:Key="PasswordPadding">12,0,48,0</Thickness>
-<Thickness x:Key="LoginFramePadding">48</Thickness><Thickness x:Key="LoginFormPadding">40</Thickness><Thickness x:Key="MetricPadding">0,16,24,16</Thickness>
+<Thickness x:Key="LoginFramePadding">48</Thickness><Thickness x:Key="LoginFormPadding">40,32</Thickness><Thickness x:Key="MetricPadding">0,16,24,16</Thickness>
 <Thickness x:Key="ColumnGap">32,0,0,0</Thickness><GridLength x:Key="SectionGapColumn">32</GridLength>
-<sys:Double x:Key="ContentMaxWidth">1560</sys:Double><sys:Double x:Key="LoginMaxWidth">1440</sys:Double><sys:Double x:Key="LoginFormMaxWidth">440</sys:Double>
+<sys:Double x:Key="ContentMaxWidth">1560</sys:Double><sys:Double x:Key="LoginMaxWidth">1440</sys:Double><sys:Double x:Key="LoginFormMaxWidth">600</sys:Double>
 <sys:Double x:Key="SidebarExpandedWidth">244</sys:Double><sys:Double x:Key="SidebarCompactWidth">82</sys:Double><sys:Double x:Key="SidebarBreakpoint">1160</sys:Double>
 <sys:Double x:Key="ControlHeight">40</sys:Double><sys:Double x:Key="InputHeight">48</sys:Double>
 <sys:Double x:Key="RowHeightComfortable">48</sys:Double><sys:Double x:Key="RowHeightDefault">40</sys:Double><sys:Double x:Key="RowHeightCompact">32</sys:Double>
@@ -83,4 +83,5 @@
 <sys:Double x:Key="LayoutSize640">640</sys:Double>
 <sys:Double x:Key="LayoutSize48">48</sys:Double>
 <sys:Double x:Key="CompactUserCardWidth">58</sys:Double>
+<sys:Double x:Key="LoginFormMaxHeight">840</sys:Double>
 </ResourceDictionary>
