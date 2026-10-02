@@ -49,6 +49,13 @@ if (args.FirstOrDefault() == "--update-http-smoke")
     return;
 }
 
+if (args.FirstOrDefault() is "--design-system-ui-smoke" or "--design-system-capture-before")
+{
+    DesignSystemVisualRegression.Run(Check, args[0] == "--design-system-capture-before");
+    Environment.ExitCode = failures.Count == 0 ? 0 : 1;
+    return;
+}
+
 if (args.FirstOrDefault() == "--login-account-smoke")
 {
     var root = Path.Combine(Path.GetTempPath(), "scfa_login_accounts_" + Guid.NewGuid().ToString("N"));
@@ -563,7 +570,12 @@ var xamlFiles = Directory.GetFiles(uiRoot, "*.xaml", SearchOption.AllDirectories
 var parsedXaml = new List<XDocument>();
 try { parsedXaml.AddRange(xamlFiles.Select(XDocument.Load)); Check(xamlFiles.Length >= 18, "全部 WPF 页面与全局资源均为有效 XML"); }
 catch { Check(false, "全部 WPF 页面与全局资源均为有效 XML"); }
-var appXaml = await File.ReadAllTextAsync(Path.Combine(uiRoot, "App.xaml"));
+var appResources = XDocument.Load(Path.Combine(uiRoot, "App.xaml"));
+var dictionarySources = appResources.Descendants().Where(e => e.Name.LocalName == "ResourceDictionary" && e.Attribute("Source") is not null)
+    .Select(e => Path.Combine(uiRoot, e.Attribute("Source")!.Value.Replace('/', Path.DirectorySeparatorChar))).ToArray();
+Check(dictionarySources.Length >= 12 && dictionarySources.All(File.Exists), "全局组件资源通过实际合并字典加载");
+var appXaml = await File.ReadAllTextAsync(Path.Combine(uiRoot, "App.xaml")) +
+    string.Concat(dictionarySources.Select(File.ReadAllText));
 Check(new[] { "PageTitle", "SectionTitle", "CardBorder", "PrimaryButton", "SecondaryButton", "NavRadioButton" }.All(appXaml.Contains), "全局设计系统包含页面、卡片、按钮和导航样式");
 Check(new[] { "ToolbarBorder", "InsetBorder", "PillBorder", "FieldLabel", "MetricValue", "CompactButton" }.All(appXaml.Contains), "内容管理页面具备统一工具栏、统计卡片和紧凑操作样式");
 var mainWindowXaml = await File.ReadAllTextAsync(Path.Combine(uiRoot, "MainWindow.xaml"));
@@ -575,12 +587,20 @@ Check(mainWindowXaml.Contains("SyncBadgeVisibility", StringComparison.Ordinal) &
 Check(!mainWindowXaml.Contains("x:Name=\"SetupButton\"", StringComparison.Ordinal) &&
       mainWindowXaml.Contains("Content=\"退出登录\"", StringComparison.Ordinal),
       "首次设置不再占用常驻导航且账号区提供明确退出按钮");
-Check(!mainWindowXaml.Contains("DrawingBrush", StringComparison.Ordinal) && mainWindowXaml.Contains("C 260,500", StringComparison.Ordinal), "主内容区不显示网格并保留行星弧线与等高线背景");
-Check(mainWindowXaml.Contains("LinearGradientBrush", StringComparison.Ordinal) && mainWindowXaml.Contains("StrokeDashArray", StringComparison.Ordinal) && mainWindowXaml.Contains("RotateTransform", StringComparison.Ordinal), "主内容区背景包含斜向光带、分段航迹和多层空间结构");
-Check(mainWindowXaml.Contains("command_deck_background.png", StringComparison.Ordinal) && File.Exists(Path.Combine(uiRoot, "Assets", "command_deck_background.png")), "主内容区使用确认的图片背景资源");
-Check(mainWindowXaml.Contains("Opacity=\"0.72\"", StringComparison.Ordinal) && mainWindowXaml.Contains("#4D07111C", StringComparison.Ordinal) &&
-      appXaml.Contains("#B80E1B2B", StringComparison.Ordinal) && appXaml.Contains("#C213243A", StringComparison.Ordinal),
-      "背景图片和主要卡片采用兼顾可读性的半透明层级");
+Check(!mainWindowXaml.Contains("<Canvas", StringComparison.Ordinal) &&
+      !mainWindowXaml.Contains("command_deck_background.png", StringComparison.Ordinal) &&
+      mainWindowXaml.Contains("ContentMaxWidth", StringComparison.Ordinal),
+      "管理工作区使用安静背景且主内容受最大宽度约束");
+var loginVisualSource = File.ReadAllText(Path.Combine(uiRoot, "Views", "LoginWindow.xaml"));
+Check(loginVisualSource.Contains("command_deck_background.png", StringComparison.Ordinal) &&
+      File.Exists(Path.Combine(uiRoot, "Assets", "command_deck_background.png")) &&
+      new[] {"LoginCopyOverlayBrush","LoginFormOverlayBrush","LoginFooterOverlayBrush"}.All(loginVisualSource.Contains),
+      "登录图像使用按内容区域设置的局部遮罩");
+Check(appXaml.Contains("CardSurfaceBrush", StringComparison.Ordinal) &&
+      appXaml.Contains("DialogSurfaceBrush", StringComparison.Ordinal) &&
+      appXaml.Contains("AccentRailWidth", StringComparison.Ordinal) &&
+      appXaml.Contains("StateNotice", StringComparison.Ordinal),
+      "统一表面、浮层、导航指示和语义状态资源已加载");
 var loginXaml = await File.ReadAllTextAsync(Path.Combine(uiRoot, "Views", "LoginWindow.xaml"));
 Check(!loginXaml.Contains("RememberAccountBox", StringComparison.Ordinal) && loginXaml.Contains("DeleteAccountButton_Click", StringComparison.Ordinal) && loginXaml.Contains("RememberPasswordBox", StringComparison.Ordinal) && loginXaml.Contains("AutoLoginBox", StringComparison.Ordinal) && loginXaml.Contains("IsDefault=\"True\"", StringComparison.Ordinal), "登录页默认记住账号，提供删除记录、记住密码、自动登录和回车提交");
 Check(loginXaml.Contains("ComboBox x:Name=\"AccountBox\"", StringComparison.Ordinal) && loginXaml.Contains("TabIndex=\"0\"", StringComparison.Ordinal) && loginXaml.Contains("TabIndex=\"8\"", StringComparison.Ordinal) && loginXaml.Contains("PreviewKeyDown", StringComparison.Ordinal), "登录页支持多个账号下拉切换和完整键盘导航");

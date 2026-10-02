@@ -1,6 +1,11 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <CornerRadius x:Key="RadiusSmall">6</CornerRadius>
-    <CornerRadius x:Key="RadiusControl">8</CornerRadius>
-    <CornerRadius x:Key="RadiusCard">12</CornerRadius>
-    <CornerRadius x:Key="RadiusLarge">16</CornerRadius>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=System.Runtime" >
+<CornerRadius x:Key="RadiusXS">4</CornerRadius>
+<CornerRadius x:Key="RadiusS">6</CornerRadius>
+<CornerRadius x:Key="RadiusM">8</CornerRadius>
+<CornerRadius x:Key="RadiusL">12</CornerRadius>
+<CornerRadius x:Key="RadiusXL">16</CornerRadius>
+<CornerRadius x:Key="RadiusSmall">6</CornerRadius>
+<CornerRadius x:Key="RadiusControl">8</CornerRadius>
+<CornerRadius x:Key="RadiusCard">12</CornerRadius>
+<CornerRadius x:Key="RadiusLarge">16</CornerRadius>
 </ResourceDictionary>

@@ -5,79 +5,70 @@
         Title="SCFA 内容中心" Width="1586" Height="992" MinWidth="980" MinHeight="680"
         WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResize">
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="56" ResizeBorderThickness="7" CornerRadius="10" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+        <shell:WindowChrome CaptionHeight="56" ResizeBorderThickness="{StaticResource ShellBorderThickness7}" CornerRadius="{StaticResource RadiusM}" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
-    <Window.Resources>
-        <Style x:Key="NavIcon" TargetType="Border">
-            <Setter Property="Width" Value="20"/><Setter Property="Height" Value="20"/><Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Background" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
-        </Style>
-        <Style x:Key="CloseWindowButton" TargetType="Button" BasedOn="{StaticResource WindowControlButton}">
-            <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#D94A55"/><Setter Property="Foreground" Value="White"/></Trigger></Style.Triggers>
-        </Style>
-    </Window.Resources>
-    <Border Background="{StaticResource BackgroundDeepBrush}" BorderBrush="#304863" BorderThickness="1" CornerRadius="10">
+    <Border Background="{StaticResource BackgroundDeepBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="{StaticResource ShellBorderThickness1}" CornerRadius="{StaticResource RadiusM}">
         <Grid ClipToBounds="True">
             <Grid.ColumnDefinitions><ColumnDefinition x:Name="SidebarColumn" Width="244"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <Grid.RowDefinitions><RowDefinition Height="56"/><RowDefinition Height="*"/></Grid.RowDefinitions>
 
-            <Border Grid.RowSpan="2" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+            <Border Grid.RowSpan="2" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="{StaticResource ShellBorderThickness0_0_1_0}">
                 <Grid>
                     <Grid.RowDefinitions><RowDefinition Height="84"/><RowDefinition Height="*"/><RowDefinition Height="116"/></Grid.RowDefinitions>
-                    <Grid Margin="18,16,14,12">
+                    <Grid Margin="{StaticResource ShellMargin18_16_14_12}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="48"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Width="44" Height="44" CornerRadius="12" Background="{StaticResource PrimaryGradientBrush}" Effect="{StaticResource ActionShadow}">
-                            <Grid><TextBlock Text="S" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/><Border Width="7" Height="7" CornerRadius="4" Background="{StaticResource AccentBrush}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,5,5"/></Grid>
+                        <Border Width="44" Height="44" CornerRadius="{StaticResource RadiusL}" Background="{StaticResource PrimaryGradientBrush}" Effect="{StaticResource ActionShadow}">
+                            <Grid><TextBlock Text="S" FontSize="{StaticResource FontSection}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/><Border Width="7" Height="7" CornerRadius="{StaticResource RadiusXS}" Background="{StaticResource AccentBrush}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="{StaticResource ShellMargin0_0_5_5}"/></Grid>
                         </Border>
-                        <StackPanel x:Name="BrandTextPanel" Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                            <TextBlock Text="SCFA 内容中心" FontSize="16" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding Version}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,3,0,0"/>
+                        <StackPanel x:Name="BrandTextPanel" Grid.Column="1" VerticalAlignment="Center" Margin="{StaticResource ShellMargin10_0_0_0}">
+                            <TextBlock Text="SCFA 内容中心" FontSize="{StaticResource FontCardTitle}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Version}" Foreground="{StaticResource TextMutedBrush}" FontSize="{StaticResource FontMicro}" Margin="{StaticResource ShellMargin0_3_0_0}"/>
                         </StackPanel>
                     </Grid>
 
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,4,0,10">
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="{StaticResource ShellPadding0_4_0_10}">
                         <StackPanel>
                             <RadioButton x:Name="HomeButton" Style="{StaticResource NavRadioButton}" Command="{Binding HomeCommand}" ToolTip="总览">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/home_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="HomeLabel" Grid.Column="1" Text="总览" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
-                            <TextBlock x:Name="CloudGroupLabel" Text="云端内容" Margin="24,18,0,6" Foreground="{StaticResource TextMutedBrush}" FontSize="10" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="CloudGroupLabel" Text="云端内容" Style="{StaticResource NavGroupTitle}"/>
                             <RadioButton x:Name="CloudMapsButton" Style="{StaticResource NavRadioButton}" Command="{Binding CloudMapsCommand}" ToolTip="云端地图">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/map_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="CloudMapsLabel" Grid.Column="1" Text="云端地图" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
                             <RadioButton x:Name="CloudModsButton" Style="{StaticResource NavRadioButton}" Command="{Binding CloudModsCommand}" ToolTip="云端 MOD">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/box_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="CloudModsLabel" Grid.Column="1" Text="云端 MOD" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
-                            <TextBlock x:Name="LocalGroupLabel" Text="本地与同步" Margin="24,18,0,6" Foreground="{StaticResource TextMutedBrush}" FontSize="10" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="LocalGroupLabel" Text="本地与同步" Style="{StaticResource NavGroupTitle}"/>
                             <RadioButton x:Name="LocalMapsButton" Style="{StaticResource NavRadioButton}" Command="{Binding LocalMapsCommand}" ToolTip="本地地图">
-                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/map_filled.png"/></Border.OpacityMask></Border><TextBlock x:Name="LocalMapsLabel" Grid.Column="1" Text="本地地图" VerticalAlignment="Center"/></Grid>
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/map_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="LocalMapsLabel" Grid.Column="1" Text="本地地图" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
                             <RadioButton x:Name="LocalModsButton" Style="{StaticResource NavRadioButton}" Command="{Binding LocalModsCommand}" ToolTip="本地 MOD">
-                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/box_filled.png"/></Border.OpacityMask></Border><TextBlock x:Name="LocalModsLabel" Grid.Column="1" Text="本地 MOD" VerticalAlignment="Center"/></Grid>
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/box_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="LocalModsLabel" Grid.Column="1" Text="本地 MOD" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
                             <RadioButton x:Name="SyncButton" Style="{StaticResource NavRadioButton}" Command="{Binding SyncCommand}" ToolTip="同步中心">
-                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/sync_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="SyncLabel" Grid.Column="1" Text="同步中心" VerticalAlignment="Center"/><Border Grid.Column="2" Style="{StaticResource StatusBadgeBorder}" Padding="7,2" Margin="6,0,0,0" Visibility="{Binding SyncBadgeVisibility}"><TextBlock Text="{Binding SyncBadgeText}" FontSize="10" Foreground="{StaticResource AccentBrush}"/></Border></Grid>
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/sync_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="SyncLabel" Grid.Column="1" Text="同步中心" VerticalAlignment="Center"/><Border Grid.Column="2" Style="{StaticResource StatusBadgeBorder}" Padding="{StaticResource ShellPadding7_2}" Margin="{StaticResource ShellMargin6_0_0_0}" Visibility="{Binding SyncBadgeVisibility}"><TextBlock Text="{Binding SyncBadgeText}" FontSize="{StaticResource FontMicro}" Foreground="{StaticResource AccentBrush}"/></Border></Grid>
                             </RadioButton>
                             <RadioButton x:Name="DownloadsButton" Style="{StaticResource NavRadioButton}" Command="{Binding DownloadsCommand}" ToolTip="下载任务">
-                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/download_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="DownloadsLabel" Grid.Column="1" Text="下载任务" VerticalAlignment="Center"/><Border Grid.Column="2" Style="{StaticResource StatusBadgeBorder}" Padding="7,2" Margin="6,0,0,0" Visibility="{Binding DownloadBadgeVisibility}"><TextBlock Text="{Binding DownloadBadgeText}" FontSize="10" Foreground="{StaticResource PrimaryBrightBrush}"/></Border></Grid>
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/download_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="DownloadsLabel" Grid.Column="1" Text="下载任务" VerticalAlignment="Center"/><Border Grid.Column="2" Style="{StaticResource StatusBadgeBorder}" Padding="{StaticResource ShellPadding7_2}" Margin="{StaticResource ShellMargin6_0_0_0}" Visibility="{Binding DownloadBadgeVisibility}"><TextBlock Text="{Binding DownloadBadgeText}" FontSize="{StaticResource FontMicro}" Foreground="{StaticResource PrimaryBrightBrush}"/></Border></Grid>
                             </RadioButton>
                             <RadioButton x:Name="BackupsButton" Style="{StaticResource NavRadioButton}" Command="{Binding BackupsCommand}" ToolTip="历史回滚">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/history_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="BackupsLabel" Grid.Column="1" Text="历史回滚" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
-                            <TextBlock x:Name="PublishGroupLabel" Text="内容发布" Visibility="{Binding PublicationVisibility}" Margin="24,18,0,6" Foreground="{StaticResource TextMutedBrush}" FontSize="10" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="PublishGroupLabel" Text="内容发布" Visibility="{Binding PublicationVisibility}" Style="{StaticResource NavGroupTitle}"/>
                             <RadioButton x:Name="PublishMapsButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding PublicationVisibility}" Command="{Binding PublishMapsCommand}" ToolTip="发布地图">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/map_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="PublishMapsLabel" Grid.Column="1" Text="发布地图" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
                             <RadioButton x:Name="PublishModsButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding PublicationVisibility}" Command="{Binding PublishModsCommand}" ToolTip="发布 MOD">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/box_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="PublishModsLabel" Grid.Column="1" Text="发布 MOD" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
-                            <TextBlock x:Name="MaintenanceGroupLabel" Text="内容维护" Visibility="{Binding PublicationVisibility}" Margin="24,18,0,6" Foreground="{StaticResource TextMutedBrush}" FontSize="10" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="MaintenanceGroupLabel" Text="内容维护" Visibility="{Binding PublicationVisibility}" Style="{StaticResource NavGroupTitle}"/>
                             <RadioButton x:Name="CloudHistoryButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding PublicationVisibility}" Command="{Binding CloudHistoryCommand}" ToolTip="版本档案">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/history_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="CloudHistoryLabel" Grid.Column="1" Text="版本档案" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
                             <RadioButton x:Name="DownlistedButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding PublicationVisibility}" Command="{Binding DownlistedCommand}" ToolTip="已下架内容">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/cloud_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="DownlistedLabel" Grid.Column="1" Text="已下架内容" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
-                            <TextBlock x:Name="AdminGroupLabel" Text="后台管理" Visibility="{Binding AdminToolsVisibility}" Margin="24,18,0,6" Foreground="{StaticResource TextMutedBrush}" FontSize="10" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="AdminGroupLabel" Text="后台管理" Visibility="{Binding AdminToolsVisibility}" Style="{StaticResource NavGroupTitle}"/>
                             <RadioButton x:Name="UsersButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding AdminToolsVisibility}" Command="{Binding UsersCommand}" ToolTip="用户管理">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/people_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="UsersLabel" Grid.Column="1" Text="用户管理" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
@@ -87,12 +78,12 @@
                             <RadioButton x:Name="AdminSettingsButton" Style="{StaticResource NavRadioButton}" Visibility="{Binding AdminSettingsVisibility}" Command="{Binding AdminSettingsCommand}" ToolTip="管理员设置">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/settings_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="AdminSettingsLabel" Grid.Column="1" Text="管理员设置" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
-                            <TextBlock x:Name="SystemGroupLabel" Text="系统设置" Margin="24,18,0,6" Foreground="{StaticResource TextMutedBrush}" FontSize="10" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="SystemGroupLabel" Text="系统设置" Style="{StaticResource NavGroupTitle}"/>
                             <RadioButton x:Name="DiagnosticsButton" Style="{StaticResource NavRadioButton}" Command="{Binding DiagnosticsCommand}" ToolTip="诊断中心">
-                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/document_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="DiagnosticsLabel" Grid.Column="1" Text="诊断中心" VerticalAlignment="Center"/><Border Grid.Column="2" Width="8" Height="8" CornerRadius="4" Background="{StaticResource WarningBrush}" Margin="8,0,3,0" Visibility="{Binding DiagnosticBadgeVisibility}"/></Grid>
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/document_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="DiagnosticsLabel" Grid.Column="1" Text="诊断中心" VerticalAlignment="Center"/><Border Grid.Column="2" Width="8" Height="8" CornerRadius="{StaticResource RadiusXS}" Background="{StaticResource WarningBrush}" Margin="{StaticResource ShellMargin8_0_3_0}" Visibility="{Binding DiagnosticBadgeVisibility}"/></Grid>
                             </RadioButton>
                             <RadioButton x:Name="UpdatesButton" Style="{StaticResource NavRadioButton}" Command="{Binding UpdatesCommand}" ToolTip="客户端更新">
-                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/download_filled.png"/></Border.OpacityMask></Border><TextBlock x:Name="UpdatesLabel" Grid.Column="1" Text="客户端更新" VerticalAlignment="Center"/></Grid>
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/download_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="UpdatesLabel" Grid.Column="1" Text="客户端更新" VerticalAlignment="Center"/></Grid>
                             </RadioButton>
                             <RadioButton x:Name="SettingsButton" Style="{StaticResource NavRadioButton}" Command="{Binding SettingsCommand}" ToolTip="软件设置">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/></Grid.ColumnDefinitions><Border Style="{StaticResource NavIcon}"><Border.OpacityMask><ImageBrush ImageSource="/Assets/Fluent/settings_regular.png"/></Border.OpacityMask></Border><TextBlock x:Name="SettingsLabel" Grid.Column="1" Text="软件设置" VerticalAlignment="Center"/></Grid>
@@ -100,32 +91,33 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <Border x:Name="UserCard" Grid.Row="2" Margin="12" Padding="12" Background="#0D1D30" CornerRadius="10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <Border x:Name="UserCard" Grid.Row="2" Margin="{StaticResource ShellMargin12}" Padding="{StaticResource ShellPadding12}" Background="{StaticResource ShellTint0D1D30}" CornerRadius="{StaticResource RadiusM}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="{StaticResource BorderNone}">
                         <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="72"/></Grid.ColumnDefinitions>
-                            <Button x:Name="ProfileButton" Grid.Column="0" Width="40" Height="40" MinHeight="40" Padding="0" BorderThickness="0" Background="Transparent" Style="{StaticResource ButtonBaseStyle}" Command="{Binding EditProfileCommand}" ToolTip="编辑个人资料" AutomationProperties.Name="编辑个人资料">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="48"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <Button x:Name="ProfileButton" Grid.Column="0" Width="40" Height="40" MinHeight="40" Padding="{StaticResource ShellPadding0}" BorderThickness="{StaticResource ShellBorderThickness0}" Background="Transparent" Style="{StaticResource ButtonBaseStyle}" Command="{Binding EditProfileCommand}" ToolTip="编辑个人资料" AutomationProperties.Name="编辑个人资料">
                                 <Grid Width="40" Height="40">
-                                    <Border CornerRadius="10" Background="{StaticResource PrimaryMutedBrush}"/>
-                                    <TextBlock Text="{Binding UserInitial}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="NoWrap"/>
+                                    <Border CornerRadius="{StaticResource RadiusM}" Background="{StaticResource PrimaryMutedBrush}"/>
+                                    <TextBlock Text="{Binding UserInitial}" FontSize="{StaticResource FontBody}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="NoWrap"/>
                                     <Rectangle RadiusX="10" RadiusY="10"><Rectangle.Fill><ImageBrush ImageSource="{Binding AvatarPath}" Stretch="UniformToFill"/></Rectangle.Fill></Rectangle>
                                 </Grid>
                             </Button>
-                            <StackPanel x:Name="UserIdentityPanel" Grid.Column="1" VerticalAlignment="Center" Margin="10,0,6,0"><TextBlock Text="{Binding UserDisplay}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/><TextBlock Text="{Binding RoleDisplay}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,3,0,0"/></StackPanel>
-                            <Button x:Name="LogoutButton" Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="退出登录" Command="{Binding LogoutCommand}" ToolTip="退出当前账号" Padding="9,0" MinHeight="32" Width="72"/>
+                            <StackPanel x:Name="UserIdentityPanel" Grid.Column="1" VerticalAlignment="Center" Margin="{StaticResource ShellMargin10_0_6_0}"><TextBlock Text="{Binding UserDisplay}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/><TextBlock Text="{Binding RoleDisplay}" Foreground="{StaticResource TextMutedBrush}" FontSize="{StaticResource FontMicro}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="{StaticResource ShellMargin0_3_0_0}"/></StackPanel>
+                            <Button x:Name="LogoutButton" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" Style="{StaticResource GhostButton}" Content="退出登录" Command="{Binding LogoutCommand}" ToolTip="退出当前账号" Padding="{StaticResource ShellPadding9_0}" Height="{StaticResource IconHitTarget}" MinHeight="{StaticResource IconHitTarget}" Width="{StaticResource LogoutWidth}"/>
                         </Grid>
                     </Border>
                 </Grid>
             </Border>
 
-            <Border Grid.Column="1" Background="#091421" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Border Grid.Column="1" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="{StaticResource ShellBorderThickness0_0_0_1}">
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0">
-                        <Border Width="7" Height="7" CornerRadius="4" Background="{StaticResource AccentBrush}" Margin="0,0,10,0"/>
-                        <StackPanel><TextBlock Text="{Binding CurrentPageTitle}" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{Binding CurrentPageSubtitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,2,0,0"/></StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="{StaticResource ShellMargin28_0_0_0}">
+                        <Border Width="7" Height="7" CornerRadius="{StaticResource RadiusXS}" Background="{StaticResource AccentBrush}" Margin="{StaticResource ShellMargin0_0_10_0}"/>
+                        <StackPanel><TextBlock Text="{Binding CurrentPageTitle}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/><TextBlock Text="{Binding CurrentPageSubtitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="{StaticResource FontMicro}" Margin="{StaticResource ShellMargin0_2_0_0}"/></StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                        <Border Background="#102338" CornerRadius="12" Padding="10,4" Margin="0,0,12,0" VerticalAlignment="Center"><StackPanel Orientation="Horizontal"><Border Width="6" Height="6" CornerRadius="3" Background="{StaticResource SuccessBrush}" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{Binding WorkspaceDisplay}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="10"/></StackPanel></Border>
+                        <Border Background="{StaticResource NeutralTintBrush}" CornerRadius="{StaticResource RadiusL}" Padding="{StaticResource ShellPadding10_4}" Margin="{StaticResource ShellMargin0_0_12_0}" VerticalAlignment="Center"><StackPanel Orientation="Horizontal"><Border Width="6" Height="6" CornerRadius="{StaticResource RadiusXS}" Background="{StaticResource SuccessBrush}" Margin="{StaticResource ShellMargin0_0_7_0}" VerticalAlignment="Center"/><TextBlock Text="{Binding WorkspaceDisplay}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource FontMicro}"/></StackPanel></Border>
                         <Button Style="{StaticResource WindowControlButton}" Content="—" Click="MinimizeButton_Click" ToolTip="最小化"/>
                         <Button x:Name="MaximizeButton" Style="{StaticResource WindowControlButton}" Content="□" Click="MaximizeButton_Click" ToolTip="最大化/还原"/>
                         <Button Style="{StaticResource CloseWindowButton}" Content="×" Click="CloseButton_Click" ToolTip="关闭"/>
@@ -134,35 +126,7 @@
             </Border>
 
             <Grid Grid.Column="1" Grid.Row="1" Background="{StaticResource AppBackgroundBrush}" ClipToBounds="True">
-                <Image IsHitTestVisible="False" Source="/Assets/command_deck_background.png" Stretch="UniformToFill" Opacity="0.72"/>
-                <Border IsHitTestVisible="False" Background="#4D07111C"/>
-                <Canvas IsHitTestVisible="False" Opacity="0.14" ClipToBounds="True">
-                    <Rectangle Width="1160" Height="190" Canvas.Left="-210" Canvas.Top="410" Opacity="0.24" RenderTransformOrigin="0.5,0.5">
-                        <Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#001D3B54" Offset="0"/><GradientStop Color="#3D2E647A" Offset="0.48"/><GradientStop Color="#001D3B54" Offset="1"/></LinearGradientBrush></Rectangle.Fill>
-                        <Rectangle.RenderTransform><RotateTransform Angle="-13"/></Rectangle.RenderTransform>
-                    </Rectangle>
-                    <Rectangle Width="980" Height="110" Canvas.Right="-280" Canvas.Top="180" Opacity="0.18" RenderTransformOrigin="0.5,0.5">
-                        <Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#001D5265" Offset="0"/><GradientStop Color="#2C3E7C88" Offset="0.5"/><GradientStop Color="#001D5265" Offset="1"/></LinearGradientBrush></Rectangle.Fill>
-                        <Rectangle.RenderTransform><RotateTransform Angle="-23"/></Rectangle.RenderTransform>
-                    </Rectangle>
-                    <Ellipse Width="760" Height="760" Canvas.Right="-330" Canvas.Top="-415" Fill="#07111D" Stroke="#294F6D" StrokeThickness="2"/>
-                    <Ellipse Width="690" Height="690" Canvas.Right="-295" Canvas.Top="-380" Stroke="#2B879A" StrokeThickness="1" Opacity="0.74"/>
-                    <Ellipse Width="590" Height="590" Canvas.Right="-245" Canvas.Top="-330" Stroke="#1A5571" StrokeThickness="1" Opacity="0.52"/>
-                    <Ellipse Width="520" Height="520" Fill="{StaticResource GlowBrush}" Canvas.Right="-220" Canvas.Top="-250" Opacity="0.58"/>
-                    <Ellipse Width="380" Height="380" Fill="{StaticResource GlowBrush}" Canvas.Left="-180" Canvas.Bottom="-230" Opacity="0.28"/>
-                    <Path Data="M 80,640 C 260,500 410,590 600,430 S 930,250 1220,350" Stroke="#337F98" StrokeThickness="1" Fill="Transparent" Opacity="0.76"/>
-                    <Path Data="M 10,720 C 230,610 410,700 650,520 S 1040,390 1370,480" Stroke="#28657F" StrokeThickness="1" Fill="Transparent" Opacity="0.66"/>
-                    <Path Data="M -40,760 C 210,630 420,760 690,560 S 1080,450 1460,540" Stroke="#1F536D" StrokeThickness="1" Fill="Transparent" Opacity="0.55"/>
-                    <Path Data="M 35,270 C 230,185 430,230 610,150 S 930,70 1170,145" Stroke="#27657D" StrokeThickness="1" Fill="Transparent" Opacity="0.45"/>
-                    <Path Data="M 45,300 C 235,214 430,260 618,180 S 930,100 1185,175" Stroke="#1B4B64" StrokeThickness="1" Fill="Transparent" Opacity="0.38"/>
-                    <Path Data="M 720,80 L 790,120 860,80 930,120 1000,80" Stroke="#4A92A3" StrokeThickness="1" Fill="Transparent" Opacity="0.5"/>
-                    <Path Data="M 1040,0 L 1040,82 1090,132 1090,214 1140,264 1140,350" Stroke="#357B8D" StrokeThickness="1" Fill="Transparent" Opacity="0.43"/>
-                    <Path Data="M 1100,0 L 1100,58 1150,108 1150,186 1200,236 1200,310" Stroke="#214F68" StrokeThickness="1" Fill="Transparent" Opacity="0.4"/>
-                    <Path Data="M 120,610 L 190,580 230,600 300,570 340,590 410,555" Stroke="#68A6B1" StrokeThickness="1" StrokeDashArray="1,13" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" Opacity="0.52"/>
-                    <Path Data="M 850,610 L 930,575 1000,600 1080,560 1160,584 1230,548" Stroke="#68A6B1" StrokeThickness="1" StrokeDashArray="1,15" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" Opacity="0.42"/>
-                </Canvas>
-                <Border IsHitTestVisible="False" Background="#0807111D"/>
-                <ContentControl x:Name="ContentHost" Content="{Binding CurrentPage}" Margin="30,26,30,30"/>
+                <ContentControl x:Name="ContentHost" Content="{Binding CurrentPage}" Margin="{StaticResource PagePadding}" MaxWidth="{StaticResource ContentMaxWidth}"/>
             </Grid>
         </Grid>
     </Border>

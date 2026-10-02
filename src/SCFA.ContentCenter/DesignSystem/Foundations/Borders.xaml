@@ -1,0 +1,3 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=System.Runtime" >
+<Thickness x:Key="BorderNone">0</Thickness><Thickness x:Key="BorderThin">1</Thickness><Thickness x:Key="BorderBottom">0,0,0,1</Thickness><Thickness x:Key="BorderRight">0,0,1,0</Thickness><Thickness x:Key="FocusRingMargin">2</Thickness>
+</ResourceDictionary>

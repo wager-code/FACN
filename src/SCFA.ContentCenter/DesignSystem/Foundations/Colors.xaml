@@ -1,58 +1,90 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Color x:Key="BackgroundColor">#07101C</Color>
-    <Color x:Key="BackgroundDeepColor">#040A13</Color>
-    <Color x:Key="SidebarColor">#081321</Color>
-    <Color x:Key="SurfaceColor">#0E1B2B</Color>
-    <Color x:Key="SurfaceRaisedColor">#13243A</Color>
-    <Color x:Key="SurfaceHoverColor">#192E49</Color>
-    <Color x:Key="BorderColor">#233852</Color>
-    <Color x:Key="BorderStrongColor">#315174</Color>
-    <Color x:Key="PrimaryColor">#668EFF</Color>
-    <Color x:Key="PrimaryHoverColor">#82A4FF</Color>
-    <Color x:Key="AccentColor">#43D7C4</Color>
-    <Color x:Key="SuccessColor">#43D7A8</Color>
-    <Color x:Key="WarningColor">#F3B65B</Color>
-    <Color x:Key="DangerColor">#F27078</Color>
-    <Color x:Key="TextPrimaryColor">#F3F7FC</Color>
-    <Color x:Key="TextSecondaryColor">#A9B9CD</Color>
-    <Color x:Key="TextMutedColor">#70849E</Color>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=System.Runtime" >
+<Color x:Key="BackgroundColor">#0B111A</Color>
+<Color x:Key="BackgroundDeepColor">#070C13</Color>
+<Color x:Key="SidebarColor">#0D141E</Color>
+<Color x:Key="SurfaceColor">#101B29</Color>
+<Color x:Key="SurfaceRaisedColor">#182431</Color>
+<Color x:Key="SurfaceHoverColor">#1C2B3A</Color>
+<Color x:Key="BorderColor">#1482B4DC</Color>
+<Color x:Key="BorderStrongColor">#3282B4DC</Color>
+<Color x:Key="PrimaryColor">#668EFF</Color>
+<Color x:Key="PrimaryBrightColor">#87AAFF</Color>
+<Color x:Key="AccentColor">#49CAD8</Color>
+<Color x:Key="SuccessColor">#55CF99</Color>
+<Color x:Key="WarningColor">#EAB56B</Color>
+<Color x:Key="DangerColor">#ED7C84</Color>
+<Color x:Key="TextPrimaryColor">#F3F5F8</Color>
+<Color x:Key="TextSecondaryColor">#B6C1CE</Color>
+<Color x:Key="TextMutedColor">#8F9DAE</Color>
+<Color x:Key="TextDisabledColor">#687787</Color>
+<SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+<SolidColorBrush x:Key="BackgroundDeepBrush" Color="{StaticResource BackgroundDeepColor}"/>
+<SolidColorBrush x:Key="SidebarBrush" Color="{StaticResource SidebarColor}"/>
+<SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}"/>
+<SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{StaticResource SurfaceRaisedColor}"/>
+<SolidColorBrush x:Key="SurfaceHoverBrush" Color="{StaticResource SurfaceHoverColor}"/>
+<SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+<SolidColorBrush x:Key="BorderStrongBrush" Color="{StaticResource BorderStrongColor}"/>
+<SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+<SolidColorBrush x:Key="PrimaryBrightBrush" Color="{StaticResource PrimaryBrightColor}"/>
+<SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+<SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+<SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+<SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
+<SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
+<SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
+<SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}"/>
+<SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabledColor}"/>
+<SolidColorBrush x:Key="PrimaryMutedBrush" Color="#24668EFF"/>
+<SolidColorBrush x:Key="InputBackgroundBrush" Color="#78122031"/>
+<SolidColorBrush x:Key="InputHoverBrush" Color="#AC172638"/>
+<SolidColorBrush x:Key="CardSurfaceBrush" Color="#C0081626"/>
+<SolidColorBrush x:Key="DialogSurfaceBrush" Color="#FA101B29"/>
+<SolidColorBrush x:Key="DividerBrush" Color="#1882B4DC"/>
+<SolidColorBrush x:Key="NeutralTintBrush" Color="#541B2939"/>
+<SolidColorBrush x:Key="SuccessTintBrush" Color="#1955CF99"/>
+<SolidColorBrush x:Key="WarningTintBrush" Color="#19EAB56B"/>
+<SolidColorBrush x:Key="DangerTintBrush" Color="#19ED7C84"/>
+<SolidColorBrush x:Key="CyanTintBrush" Color="#1949CAD8"/>
+<SolidColorBrush x:Key="DangerForegroundBrush" Color="#FFCFD4"/>
+<SolidColorBrush x:Key="ScrollThumbBrush" Color="#607A8C9F"/>
+<SolidColorBrush x:Key="CloseHoverBrush" Color="#AB344A"/>
+<LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#101C29" Offset="0"/><GradientStop Color="#0B111A" Offset="0.6"/><GradientStop Color="#090F17" Offset="1"/></LinearGradientBrush>
+<LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#4368CC" Offset="0"/><GradientStop Color="#385BBB" Offset="1"/></LinearGradientBrush>
+<LinearGradientBrush x:Key="HeroGradientBrush" StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#C0081626" Offset="0"/><GradientStop Color="#78081626" Offset="1"/></LinearGradientBrush>
+<RadialGradientBrush x:Key="GlowBrush"><GradientStop Color="#0B668EFF" Offset="0"/><GradientStop Color="#00668EFF" Offset="1"/></RadialGradientBrush>
+<!-- Local overlays establish safe copy/form areas without dimming the entire image. -->
+<LinearGradientBrush x:Key="LoginCopyOverlayBrush" StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#BE070C13" Offset="0"/><GradientStop Color="#64070C13" Offset="0.46"/><GradientStop Color="#00070C13" Offset="0.65"/></LinearGradientBrush>
+<LinearGradientBrush x:Key="LoginFormOverlayBrush" StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#00070C13" Offset="0.3"/><GradientStop Color="#E0070C13" Offset="0.62"/><GradientStop Color="#FA070C13" Offset="1"/></LinearGradientBrush>
+<LinearGradientBrush x:Key="LoginFooterOverlayBrush" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#00070C13" Offset="0.7"/><GradientStop Color="#B0070C13" Offset="1"/></LinearGradientBrush>
+<SolidColorBrush x:Key="CompatibilityTint00" Color="#07111E"/>
+<SolidColorBrush x:Key="CompatibilityTint01" Color="#0A1727"/>
+<SolidColorBrush x:Key="CompatibilityTint02" Color="#0C1929"/>
+<SolidColorBrush x:Key="CompatibilityTint03" Color="#0D1D31"/>
+<SolidColorBrush x:Key="CompatibilityTint04" Color="#0E1D30"/>
+<SolidColorBrush x:Key="CompatibilityTint05" Color="#13243A"/>
+<SolidColorBrush x:Key="CompatibilityTint06" Color="#14243A"/>
+<SolidColorBrush x:Key="CompatibilityTint07" Color="#14263B"/>
+<SolidColorBrush x:Key="CompatibilityTint08" Color="#14263C"/>
+<SolidColorBrush x:Key="CompatibilityTint09" Color="#152A43"/>
+<SolidColorBrush x:Key="CompatibilityTint10" Color="#172A40"/>
+<SolidColorBrush x:Key="CompatibilityTint11" Color="#172A42"/>
+<SolidColorBrush x:Key="CompatibilityTint12" Color="#182B42"/>
+<SolidColorBrush x:Key="CompatibilityTint13" Color="#1A3151"/>
+<SolidColorBrush x:Key="CompatibilityTint14" Color="#203B60"/>
+<SolidColorBrush x:Key="CompatibilityTint15" Color="#29415D"/>
+<SolidColorBrush x:Key="CompatibilityTint16" Color="#3B526D"/>
+<SolidColorBrush x:Key="CompatibilityTint17" Color="#4B222C"/>
+<SolidColorBrush x:Key="CompatibilityTint18" Color="#577392"/>
+<SolidColorBrush x:Key="CompatibilityTint19" Color="#7A3542"/>
+<SolidColorBrush x:Key="CompatibilityTint20" Color="#A83A5875"/>
+<SolidColorBrush x:Key="CompatibilityTint21" Color="#B00A1727"/>
+<SolidColorBrush x:Key="CompatibilityTint22" Color="#B23A5875"/>
+<SolidColorBrush x:Key="CompatibilityTint23" Color="#B5102035"/>
+<SolidColorBrush x:Key="CompatibilityTint24" Color="#B80E1B2B"/>
+<SolidColorBrush x:Key="CompatibilityTint25" Color="#BE091522"/>
+<SolidColorBrush x:Key="CompatibilityTint26" Color="#C213243A"/>
+<SolidColorBrush x:Key="CompatibilityTint27" Color="#FFDDE0"/>
 
-    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
-    <SolidColorBrush x:Key="BackgroundDeepBrush" Color="{StaticResource BackgroundDeepColor}"/>
-    <SolidColorBrush x:Key="SidebarBrush" Color="{StaticResource SidebarColor}"/>
-    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}"/>
-    <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{StaticResource SurfaceRaisedColor}"/>
-    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="{StaticResource SurfaceHoverColor}"/>
-    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
-    <SolidColorBrush x:Key="BorderStrongBrush" Color="{StaticResource BorderStrongColor}"/>
-    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
-    <SolidColorBrush x:Key="PrimaryBrightBrush" Color="{StaticResource PrimaryHoverColor}"/>
-    <SolidColorBrush x:Key="PrimaryMutedBrush" Color="#253E7A"/>
-    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
-    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
-    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
-    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
-    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
-    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}"/>
-
-    <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#0B1A2B" Offset="0"/><GradientStop Color="#071525" Offset="0.55"/><GradientStop Color="#050D18" Offset="1"/>
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#7398FF" Offset="0"/><GradientStop Color="#526FE8" Offset="1"/>
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="HeroGradientBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#D41B3156" Offset="0"/><GradientStop Color="#C510233A" Offset="0.56"/><GradientStop Color="#C20A1B2A" Offset="1"/>
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="BackgroundImageOverlayBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#9A040A13" Offset="0"/><GradientStop Color="#59040A13" Offset="0.56"/><GradientStop Color="#8C040A13" Offset="1"/>
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="LoginImageOverlayBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#D807101C" Offset="0"/><GradientStop Color="#A807101C" Offset="0.7"/><GradientStop Color="#3D07101C" Offset="1"/>
-    </LinearGradientBrush>
-    <RadialGradientBrush x:Key="GlowBrush" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
-        <GradientStop Color="#385FA8FF" Offset="0"/><GradientStop Color="#00668EFF" Offset="1"/>
-    </RadialGradientBrush>
+<SolidColorBrush x:Key="ShellTint0D1D30" Color="#0D1D30"/>
 </ResourceDictionary>

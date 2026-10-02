@@ -1,0 +1,3 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=System.Runtime" >
+<Duration x:Key="MotionHover">0:0:0.14</Duration><Duration x:Key="MotionPage">0:0:0.18</Duration><Duration x:Key="MotionModal">0:0:0.20</Duration><sys:Double x:Key="MotionTranslate">4</sys:Double><sys:Double x:Key="MotionScale">0.985</sys:Double>
+</ResourceDictionary>

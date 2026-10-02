@@ -1,6 +1,64 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Thickness x:Key="PagePadding">30,26,30,30</Thickness>
-    <Thickness x:Key="CardPadding">20</Thickness>
-    <Thickness x:Key="CompactPadding">12</Thickness>
-    <Thickness x:Key="ToolbarPadding">16</Thickness>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=System.Runtime" >
+<sys:Double x:Key="Space4">4</sys:Double><Thickness x:Key="Inset4">4</Thickness><Thickness x:Key="GapBelow4">0,0,0,4</Thickness><Thickness x:Key="GapAbove4">0,4,0,0</Thickness><Thickness x:Key="GapLeft4">4,0,0,0</Thickness><Thickness x:Key="GapRight4">0,0,4,0</Thickness>
+<sys:Double x:Key="Space8">8</sys:Double><Thickness x:Key="Inset8">8</Thickness><Thickness x:Key="GapBelow8">0,0,0,8</Thickness><Thickness x:Key="GapAbove8">0,8,0,0</Thickness><Thickness x:Key="GapLeft8">8,0,0,0</Thickness><Thickness x:Key="GapRight8">0,0,8,0</Thickness>
+<sys:Double x:Key="Space12">12</sys:Double><Thickness x:Key="Inset12">12</Thickness><Thickness x:Key="GapBelow12">0,0,0,12</Thickness><Thickness x:Key="GapAbove12">0,12,0,0</Thickness><Thickness x:Key="GapLeft12">12,0,0,0</Thickness><Thickness x:Key="GapRight12">0,0,12,0</Thickness>
+<sys:Double x:Key="Space16">16</sys:Double><Thickness x:Key="Inset16">16</Thickness><Thickness x:Key="GapBelow16">0,0,0,16</Thickness><Thickness x:Key="GapAbove16">0,16,0,0</Thickness><Thickness x:Key="GapLeft16">16,0,0,0</Thickness><Thickness x:Key="GapRight16">0,0,16,0</Thickness>
+<sys:Double x:Key="Space24">24</sys:Double><Thickness x:Key="Inset24">24</Thickness><Thickness x:Key="GapBelow24">0,0,0,24</Thickness><Thickness x:Key="GapAbove24">0,24,0,0</Thickness><Thickness x:Key="GapLeft24">24,0,0,0</Thickness><Thickness x:Key="GapRight24">0,0,24,0</Thickness>
+<sys:Double x:Key="Space32">32</sys:Double><Thickness x:Key="Inset32">32</Thickness><Thickness x:Key="GapBelow32">0,0,0,32</Thickness><Thickness x:Key="GapAbove32">0,32,0,0</Thickness><Thickness x:Key="GapLeft32">32,0,0,0</Thickness><Thickness x:Key="GapRight32">0,0,32,0</Thickness>
+<sys:Double x:Key="Space40">40</sys:Double><Thickness x:Key="Inset40">40</Thickness><Thickness x:Key="GapBelow40">0,0,0,40</Thickness><Thickness x:Key="GapAbove40">0,40,0,0</Thickness><Thickness x:Key="GapLeft40">40,0,0,0</Thickness><Thickness x:Key="GapRight40">0,0,40,0</Thickness>
+<sys:Double x:Key="Space48">48</sys:Double><Thickness x:Key="Inset48">48</Thickness><Thickness x:Key="GapBelow48">0,0,0,48</Thickness><Thickness x:Key="GapAbove48">0,48,0,0</Thickness><Thickness x:Key="GapLeft48">48,0,0,0</Thickness><Thickness x:Key="GapRight48">0,0,48,0</Thickness>
+<Thickness x:Key="NoSpacing">0</Thickness><Thickness x:Key="PagePadding">32</Thickness><Thickness x:Key="PagePaddingCompact">24</Thickness>
+<Thickness x:Key="CardPadding">24</Thickness><Thickness x:Key="CompactPadding">12</Thickness><Thickness x:Key="ToolbarPadding">16</Thickness>
+<Thickness x:Key="ButtonPadding">16,8</Thickness><Thickness x:Key="InputPadding">12,0</Thickness><Thickness x:Key="RowPadding">12,8</Thickness>
+<Thickness x:Key="NavMargin">12,4</Thickness><Thickness x:Key="NavPadding">16,12</Thickness><Thickness x:Key="NavPaddingCompact">12</Thickness>
+<Thickness x:Key="NavGroupMargin">24,24,0,8</Thickness><Thickness x:Key="PasswordPadding">12,0,48,0</Thickness>
+<Thickness x:Key="LoginFramePadding">48</Thickness><Thickness x:Key="LoginFormPadding">40</Thickness><Thickness x:Key="MetricPadding">0,16,24,16</Thickness>
+<Thickness x:Key="ColumnGap">32,0,0,0</Thickness><GridLength x:Key="SectionGapColumn">32</GridLength>
+<sys:Double x:Key="ContentMaxWidth">1560</sys:Double><sys:Double x:Key="LoginMaxWidth">1440</sys:Double><sys:Double x:Key="LoginFormMaxWidth">440</sys:Double>
+<sys:Double x:Key="SidebarExpandedWidth">244</sys:Double><sys:Double x:Key="SidebarCompactWidth">82</sys:Double><sys:Double x:Key="SidebarBreakpoint">1160</sys:Double>
+<sys:Double x:Key="ControlHeight">40</sys:Double><sys:Double x:Key="InputHeight">48</sys:Double>
+<sys:Double x:Key="RowHeightComfortable">48</sys:Double><sys:Double x:Key="RowHeightDefault">40</sys:Double><sys:Double x:Key="RowHeightCompact">32</sys:Double>
+<sys:Double x:Key="IconSizeSmall">16</sys:Double><sys:Double x:Key="IconSizeDefault">20</sys:Double><sys:Double x:Key="IconSizeLarge">24</sys:Double><sys:Double x:Key="IconHitTarget">32</sys:Double>
+<sys:Double x:Key="AccentRailWidth">3</sys:Double><sys:Double x:Key="StatusDotSize">8</sys:Double>
+
+<sys:Double x:Key="LogoutWidth">96</sys:Double>
+<GridLength x:Key="LogoutColumnWidth">96</GridLength>
+<Thickness x:Key="ShellMargin18_16_14_12">16,16,12,12</Thickness>
+<Thickness x:Key="ShellMargin0_0_5_5">0,0,4,4</Thickness>
+<Thickness x:Key="ShellMargin10_0_0_0">8,0,0,0</Thickness>
+<Thickness x:Key="ShellMargin0_3_0_0">0,4,0,0</Thickness>
+<Thickness x:Key="ShellMargin6_0_0_0">4,0,0,0</Thickness>
+<Thickness x:Key="ShellMargin8_0_3_0">8,0,4,0</Thickness>
+<Thickness x:Key="ShellMargin12">12</Thickness>
+<Thickness x:Key="ShellMargin10_0_6_0">8,0,4,0</Thickness>
+<Thickness x:Key="ShellMargin28_0_0_0">24,0,0,0</Thickness>
+<Thickness x:Key="ShellMargin0_0_10_0">0,0,8,0</Thickness>
+<Thickness x:Key="ShellMargin0_2_0_0">0,0,0,0</Thickness>
+<Thickness x:Key="ShellMargin0_0_12_0">0,0,12,0</Thickness>
+<Thickness x:Key="ShellMargin0_0_7_0">0,0,8,0</Thickness>
+<Thickness x:Key="ShellPadding0_4_0_10">0,4,0,8</Thickness>
+<Thickness x:Key="ShellPadding7_2">8,0</Thickness>
+<Thickness x:Key="ShellPadding12">12</Thickness>
+<Thickness x:Key="ShellPadding0">0</Thickness>
+<Thickness x:Key="ShellPadding9_0">8,0</Thickness>
+<Thickness x:Key="ShellPadding10_4">8,4</Thickness>
+<Thickness x:Key="ShellBorderThickness7">7</Thickness>
+<Thickness x:Key="ShellBorderThickness1">1</Thickness>
+<Thickness x:Key="ShellBorderThickness0_0_1_0">0,0,1,0</Thickness>
+<Thickness x:Key="ShellBorderThickness0">0</Thickness>
+<Thickness x:Key="ShellBorderThickness0_0_0_1">0,0,0,1</Thickness>
+<Thickness x:Key="ControlPadding12_8">12,8</Thickness>
+<Thickness x:Key="ControlPadding8_0">8,0</Thickness>
+<Thickness x:Key="ControlPadding8_8">8,8</Thickness>
+<Thickness x:Key="ControlMargin0_0_0_4">0,0,0,4</Thickness>
+<Thickness x:Key="ControlMargin8_4_0_4">8,4,0,4</Thickness>
+<Thickness x:Key="ControlPadding4">4</Thickness>
+<Thickness x:Key="ControlMargin0_4_0_0">0,4,0,0</Thickness>
+<Thickness x:Key="ControlMargin4">4</Thickness>
+<Thickness x:Key="ControlMargin8_0_0_0">8,0,0,0</Thickness>
+<Thickness x:Key="ControlMargin0">0</Thickness>
+<Thickness x:Key="ControlPadding0">0</Thickness>
+<Thickness x:Key="ControlPadding16_8">16,8</Thickness>
+<Thickness x:Key="ControlMargin0_0_4_0">0,0,4,0</Thickness>
+<Thickness x:Key="ControlPadding8_4">8,4</Thickness>
 </ResourceDictionary>

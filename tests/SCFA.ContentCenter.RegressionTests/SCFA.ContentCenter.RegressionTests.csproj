@@ -10,4 +10,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SCFA.ContentCenter\SCFA.ContentCenter.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="../../src/SCFA.ContentCenter/Assets/Fluent/*.png" Link="Assets/Fluent/%(Filename)%(Extension)" />
+    <Resource Include="../../src/SCFA.ContentCenter/Assets/command_deck_background.png" Link="Assets/command_deck_background.png" />
+  </ItemGroup>
 </Project>

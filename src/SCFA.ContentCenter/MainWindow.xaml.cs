@@ -25,8 +25,8 @@ public partial class MainWindow : Window
 
     private void UpdateResponsiveNavigation()
     {
-        var compact = ActualWidth < 1160;
-        SidebarColumn.Width = new GridLength(compact ? 82 : 244);
+        var compact = ActualWidth < (double)FindResource("SidebarBreakpoint");
+        SidebarColumn.Width = new GridLength(compact ? (double)FindResource("SidebarCompactWidth") : (double)FindResource("SidebarExpandedWidth"));
         BrandTextPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         CloudGroupLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         LocalGroupLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
@@ -37,16 +37,16 @@ public partial class MainWindow : Window
         SystemGroupLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         UserIdentityPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         LogoutButton.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        UserCard.Padding = compact ? new Thickness(10) : new Thickness(12);
+        UserCard.Padding = (Thickness)FindResource("CompactPadding");
         UserCard.HorizontalAlignment = compact ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         UserCard.Width = compact ? 58 : double.NaN;
         foreach (var button in _navButtons)
         {
             button.HorizontalContentAlignment = compact ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
-            button.Padding = compact ? new Thickness(13, 11, 13, 11) : new Thickness(13, 10, 13, 10);
+            button.Padding = (Thickness)FindResource(compact ? "NavPaddingCompact" : "NavPadding");
         }
         foreach (var label in _navLabels) label.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        ContentHost.Margin = ActualWidth < 1180 ? new Thickness(22, 22, 22, 26) : new Thickness(30, 26, 30, 30);
+        ContentHost.Margin = (Thickness)FindResource(compact ? "PagePaddingCompact" : "PagePadding");
     }
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
