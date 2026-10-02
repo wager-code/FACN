@@ -117,13 +117,18 @@
 
 项目目前仍在持续开发中。
 
-当前源码候选版本：**V4.0.0-dev62**（PR #5 已合并，待发行）。
+当前客户端版本：**V4.0.0-dev62**（开发版，已公开发行）。
 
-现有发行基线：**V4.0.0-dev61**。当前仍是开发版，去掉 `dev` 前需要完成实际更新通道与发布验收。
+现有发行基线：**V4.0.0-dev62**。当前仍是开发版，去掉 `dev` 前需要完成实际更新通道与发布验收。
 
-### dev62 修复（2026-10-02，已合并，待发行）
+### dev62 修复（2026-10-02，已发行）
 
 客户端和网关发行由 GitHub Actions 构建，附带 SHA-256/来源记录，开发版保留 dev 标记。修改 .github/releases/release.json 的发行请求触发完整验证，成功后发布资产。
+
+- [下载客户端 dev62](https://github.com/wager-code/FACN/releases/tag/4.0.0-dev62)：Windows x64 自包含单文件，附件提供 SHA-256、版本/来源记录和开发通道更新清单。
+- [下载网关 gateway-v62](https://github.com/wager-code/FACN/releases/tag/gateway-v62)：Linux x64 自包含包，附件提供 SHA-256，包内提供 gateway-build.json 来源身份；安装到服务器需另外完成部署验收。
+- [发行验证记录](https://github.com/wager-code/FACN/actions/runs/36955679741)：客户端核心、三项 WPF 检查、实际便携包升级/失败回滚和 Linux 网关/updater 验证通过后发行。
+
 
 本轮修复汇总在 [PR #5](https://github.com/wager-code/FACN/pull/5)：
 
