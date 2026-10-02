@@ -108,6 +108,8 @@ internal static class DesignSystemVisualRegression
                             $"真实版本在{w}x{h}左下角完整可见");
                         var account=(ComboBox)login.FindName("AccountBox");
                         var offline=(Button)login.FindName("OfflineButton");
+                        check(account.ActualHeight==(h>=900?64:48) && account.FontSize==(h>=900?18:14),
+                            $"登录控件在{w}x{h}使用正确的响应式字阶和高度");
                         var p=offline.TranslatePoint(new Point(),root);
                         check(account.ActualWidth>=280 && p.Y>=0 && p.Y+offline.ActualHeight<=h,
                             $"账号输入和离线操作在{w}x{h}完整可用");
@@ -154,7 +156,9 @@ internal static class DesignSystemVisualRegression
         root.DataContext=window.DataContext;
         root.Width=width; root.Height=height;
         var host=new Decorator {Child=root,Width=width,Height=height};
-        TextElement.SetFontFamily(host,(FontFamily)Application.Current.FindResource("FontUI"));
+        TextElement.SetFontFamily(host,window.FontFamily);
+        TextElement.SetFontSize(host,window.FontSize);
+        TextElement.SetForeground(host,window.Foreground);
         host.Measure(new Size(width,height)); host.Arrange(new Rect(0,0,width,height)); host.UpdateLayout();
         var until=DateTime.UtcNow.AddMilliseconds(240);
         while(DateTime.UtcNow<until)

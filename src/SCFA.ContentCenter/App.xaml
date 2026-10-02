@@ -23,6 +23,7 @@
                 <ResourceDictionary Source="DesignSystem/Controls/DataGrid.xaml"/>
                 <ResourceDictionary Source="DesignSystem/Controls/Tabs.xaml"/>
                 <ResourceDictionary Source="DesignSystem/Controls/States.xaml"/>
+                <ResourceDictionary Source="DesignSystem/Controls/Login.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         <DataTemplate DataType="{x:Type vm:DashboardPageViewModel}"><views:DashboardView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:CloudPageViewModel}"><views:CloudContentView/></DataTemplate>

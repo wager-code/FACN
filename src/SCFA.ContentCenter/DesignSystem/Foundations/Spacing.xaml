@@ -84,4 +84,5 @@
 <sys:Double x:Key="LayoutSize48">48</sys:Double>
 <sys:Double x:Key="CompactUserCardWidth">58</sys:Double>
 <sys:Double x:Key="LoginFormMaxHeight">840</sys:Double>
+<sys:Double x:Key="LoginInputSpaciousHeight">64</sys:Double>
 </ResourceDictionary>

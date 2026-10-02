@@ -30,4 +30,5 @@
 <Style x:Key="IssueMetricValue" TargetType="TextBlock" BasedOn="{StaticResource MetricValue}"><Setter Property="Foreground" Value="{StaticResource WarningBrush}"/><Style.Triggers><DataTrigger Binding="{Binding IssueCount}" Value="0"><Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/></DataTrigger></Style.Triggers></Style>
 <!-- Cinematic display is the large variant of the Display tier, opt-in for login art. -->
 <sys:Double x:Key="FontCinematicDisplay">48</sys:Double><Style x:Key="TypeCinematicDisplay" TargetType="TextBlock" BasedOn="{StaticResource TypeDisplay}"><Setter Property="FontSize" Value="{StaticResource FontCinematicDisplay}"/><Setter Property="TextWrapping" Value="Wrap"/></Style>
+<sys:Double x:Key="FontCinematicHero">56</sys:Double>
 </ResourceDictionary>

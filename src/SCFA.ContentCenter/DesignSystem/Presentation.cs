@@ -129,3 +129,13 @@ public static class Motion
         transform.BeginAnimation(TranslateTransform.YProperty,new DoubleAnimation((double)element.FindResource("MotionTranslate"),0,duration){EasingFunction=ease});
     }
 }
+
+/// <summary>Presentation-only viewport threshold; never reads or changes application settings.</summary>
+public sealed class MinimumViewportConverter : IValueConverter
+{
+    public double Minimum { get; set; }
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is double size && size >= Minimum;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
