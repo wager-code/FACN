@@ -126,7 +126,7 @@ public sealed class MainViewModel : ViewModelBase
         BackupsCommand = new RelayCommand(() => Navigate(_backupsPage.Value, "历史回滚", "浏览安装快照并恢复内容"));
         CloudHistoryCommand = new RelayCommand(() =>
         {
-            Navigate(_cloudHistoryPage.Value, "地图版本", "管理员查看正式与历史版本");
+            Navigate(_cloudHistoryPage.Value, "版本档案", "查看地图与 MOD 的正式及历史版本");
             _cloudHistoryPage.Value.Open(false);
         }, () => PublicationVisibility == Visibility.Visible);
         DownlistedCommand = new RelayCommand(() =>

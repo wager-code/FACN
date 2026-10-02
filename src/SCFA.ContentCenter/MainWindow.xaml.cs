@@ -15,8 +15,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         var viewModel = new MainViewModel();
         DataContext = viewModel;
-        _navButtons = [HomeButton, CloudMapsButton, CloudModsButton, LocalMapsButton, LocalModsButton, SyncButton, DownloadsButton, BackupsButton, CloudHistoryButton, DownlistedButton, PublishMapsButton, PublishModsButton, AdminSettingsButton, UsersButton, OperationsButton, DiagnosticsButton, UpdatesButton, SettingsButton];
-        _navLabels = [HomeLabel, CloudMapsLabel, CloudModsLabel, LocalMapsLabel, LocalModsLabel, SyncLabel, DownloadsLabel, BackupsLabel, CloudHistoryLabel, DownlistedLabel, PublishMapsLabel, PublishModsLabel, AdminSettingsLabel, UsersLabel, OperationsLabel, DiagnosticsLabel, UpdatesLabel, SettingsLabel];
+        _navButtons = [HomeButton, CloudMapsButton, CloudModsButton, LocalMapsButton, LocalModsButton, SyncButton, DownloadsButton, BackupsButton, PublishMapsButton, PublishModsButton, CloudHistoryButton, DownlistedButton, UsersButton, OperationsButton, AdminSettingsButton, DiagnosticsButton, UpdatesButton, SettingsButton];
+        _navLabels = [HomeLabel, CloudMapsLabel, CloudModsLabel, LocalMapsLabel, LocalModsLabel, SyncLabel, DownloadsLabel, BackupsLabel, PublishMapsLabel, PublishModsLabel, CloudHistoryLabel, DownlistedLabel, UsersLabel, OperationsLabel, AdminSettingsLabel, DiagnosticsLabel, UpdatesLabel, SettingsLabel];
         if (viewModel.CurrentPage is not SetupPageViewModel) HomeButton.IsChecked = true;
         SizeChanged += (_, _) => UpdateResponsiveNavigation();
         Loaded += (_, _) => UpdateResponsiveNavigation();
@@ -30,7 +30,10 @@ public partial class MainWindow : Window
         BrandTextPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         CloudGroupLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         LocalGroupLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        AdminGroupLabel.Visibility = compact ? Visibility.Collapsed : ((MainViewModel)DataContext).AdminToolsVisibility;
+        var viewModel = (MainViewModel)DataContext;
+        PublishGroupLabel.SetCurrentValue(VisibilityProperty, compact ? Visibility.Collapsed : viewModel.PublicationVisibility);
+        MaintenanceGroupLabel.SetCurrentValue(VisibilityProperty, compact ? Visibility.Collapsed : viewModel.PublicationVisibility);
+        AdminGroupLabel.SetCurrentValue(VisibilityProperty, compact ? Visibility.Collapsed : viewModel.AdminToolsVisibility);
         SystemGroupLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         UserIdentityPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         LogoutButton.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;

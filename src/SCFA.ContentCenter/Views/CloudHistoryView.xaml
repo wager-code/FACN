@@ -4,8 +4,8 @@
         <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="ADMIN VERSION ARCHIVE" Style="{StaticResource EyebrowText}"/>
-                <TextBlock Text="地图版本与已下架内容" Style="{StaticResource PageTitle}" Margin="0,3,0,0"/>
+                <TextBlock Text="内容维护" Style="{StaticResource EyebrowText}"/>
+                <TextBlock Text="内容版本与下架档案" Style="{StaticResource PageTitle}" Margin="0,3,0,0"/>
                 <TextBlock Text="选择内容和版本。恢复前会核验云端 ZIP；玩家只看到正式版本。" Style="{StaticResource CaptionText}" Margin="0,5,0,0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
